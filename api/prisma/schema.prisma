@@ -1,0 +1,573 @@
+// Pátio — modelo de dados (Prisma 7)
+//
+// O banco é criado pelas migrações SQL em prisma/migrations (SQL-first):
+// elas têm as regras que o Prisma não expressa (CHECKs, gatilhos, RLS e as
+// chaves compostas com SET NULL de uma coluna só). Este arquivo descreve as
+// mesmas tabelas para gerar o cliente tipado. Ao mudar o banco, altere os
+// dois e rode `npm run db:conferir`.
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "cjs"
+  importFileExtension = ""
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────── Tipos enumerados ─────────────────────────
+
+enum PapelUsuario {
+  ALUNO
+  COORDENACAO
+
+  @@map("papel_usuario")
+}
+
+enum StatusConta {
+  ATIVA
+  SUSPENSA
+  EXCLUIDA
+
+  @@map("status_conta")
+}
+
+enum Turno {
+  MANHA
+  TARDE
+  NOITE
+  INTEGRAL
+
+  @@map("turno")
+}
+
+enum RelacaoDisciplina {
+  CURSANDO
+  POSSO_AJUDAR
+  PRECISO_AJUDA
+
+  @@map("relacao_disciplina")
+}
+
+enum CategoriaPost {
+  GERAL
+  EVENTO
+  ESTUDOS
+  VAGA
+  ACHADOS
+
+  @@map("categoria_post")
+}
+
+enum PapelGrupo {
+  CRIADOR
+  MEMBRO
+
+  @@map("papel_grupo")
+}
+
+enum MotivoDenuncia {
+  PERFIL_FALSO
+  ASSEDIO
+  CONTEUDO_IMPROPRIO
+  SPAM
+  VENDA_DE_TRABALHOS
+  OUTRO
+
+  @@map("motivo_denuncia")
+}
+
+enum StatusDenuncia {
+  ABERTA
+  RESOLVIDA
+
+  @@map("status_denuncia")
+}
+
+enum AcaoDenuncia {
+  ARQUIVADA
+  ADVERTENCIA
+  SUSPENSAO
+
+  @@map("acao_denuncia")
+}
+
+enum TipoAtor {
+  ADMIN_PLATAFORMA
+  COORDENACAO
+  SISTEMA
+
+  @@map("tipo_ator")
+}
+
+// ───────────────────────── Plataforma ─────────────────────────
+
+model Instituicao {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome        String   @db.VarChar(120)
+  sigla       String   @db.VarChar(20)
+  corPrimaria String   @default("#1F6FEB") @map("cor_primaria") @db.VarChar(7)
+  cidade      String   @db.VarChar(80)
+  uf          String   @db.Char(2)
+  ativa       Boolean  @default(true)
+  criadoEm    DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  dominios           DominioEmail[]
+  auditoria          Auditoria[]
+  cursos             Curso[]
+  disciplinas        Disciplina[]
+  usuarios           Usuario[]
+  usuarioDisciplinas UsuarioDisciplina[]
+  codigos            CodigoVerificacao[]
+  sessoes            Sessao[]
+  curtidas           Curtida[]
+  recusas            Recusa[]
+  matches            Match[]
+  mensagens          Mensagem[]
+  bloqueios          Bloqueio[]
+  posts              Post[]
+  comentarios        Comentario[]
+  curtidasPost       CurtidaPost[]
+  presencas          PresencaEvento[]
+  grupos             GrupoEstudo[]
+  grupoMembros       GrupoMembro[]
+  grupoMensagens     GrupoMensagem[]
+  avisos             Aviso[]
+  denuncias          Denuncia[]
+
+  @@map("instituicoes")
+}
+
+model DominioEmail {
+  id            String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId String @map("instituicao_id") @db.Uuid
+  dominio       String @unique(map: "dominios_email_dominio_key") @db.VarChar(120)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+
+  @@index([instituicaoId], map: "dominios_email_instituicao_idx")
+  @@map("dominios_email")
+}
+
+model Administrador {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome             String   @db.VarChar(120)
+  email            String   @unique(map: "administradores_email_key") @db.VarChar(160)
+  senhaHash        String   @map("senha_hash") @db.VarChar(100)
+  doisFatoresAtivo Boolean  @default(false) @map("dois_fatores_ativo")
+  criadoEm         DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  @@map("administradores")
+}
+
+model Auditoria {
+  id            BigInt   @id @default(autoincrement())
+  instituicaoId String?  @map("instituicao_id") @db.Uuid
+  atorTipo      TipoAtor @map("ator_tipo")
+  atorId        String?  @map("ator_id") @db.Uuid
+  acao          String   @db.VarChar(60)
+  alvoTipo      String?  @map("alvo_tipo") @db.VarChar(40)
+  alvoId        String?  @map("alvo_id") @db.Uuid
+  detalhes      Json     @default("{}")
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao? @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+
+  @@index([instituicaoId, criadoEm(sort: Desc)], map: "auditoria_instituicao_idx")
+  @@map("auditoria")
+}
+
+// ───────────────────────── Catálogo da faculdade ─────────────────────────
+
+model Curso {
+  id            String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId String @map("instituicao_id") @db.Uuid
+  nome          String @db.VarChar(120)
+
+  instituicao Instituicao  @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  disciplinas Disciplina[]
+  usuarios    Usuario[]
+
+  @@unique([instituicaoId, id], map: "cursos_instituicao_id_key")
+  @@unique([instituicaoId, nome], map: "cursos_nome_key")
+  @@map("cursos")
+}
+
+model Disciplina {
+  id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId String  @map("instituicao_id") @db.Uuid
+  cursoId       String? @map("curso_id") @db.Uuid
+  nome          String  @db.VarChar(120)
+
+  instituicao Instituicao         @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  curso       Curso?              @relation(fields: [instituicaoId, cursoId], references: [instituicaoId, id], onDelete: Cascade, map: "disciplinas_curso_fk")
+  alunos      UsuarioDisciplina[]
+  grupos      GrupoEstudo[]
+
+  @@unique([instituicaoId, id], map: "disciplinas_instituicao_id_key")
+  @@unique([instituicaoId, nome], map: "disciplinas_nome_key")
+  @@index([cursoId], map: "disciplinas_curso_idx")
+  @@map("disciplinas")
+}
+
+// ───────────────────────── Contas ─────────────────────────
+
+model Usuario {
+  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId     String       @map("instituicao_id") @db.Uuid
+  cursoId           String?      @map("curso_id") @db.Uuid
+  papel             PapelUsuario @default(ALUNO)
+  nome              String       @db.VarChar(120)
+  apelido           String       @db.VarChar(40)
+  email             String       @unique(map: "usuarios_email_key") @db.VarChar(160)
+  senhaHash         String       @map("senha_hash") @db.VarChar(100)
+  dataNascimento    DateTime?    @map("data_nascimento") @db.Date
+  semestre          Int?         @db.SmallInt
+  turno             Turno?
+  frase             String?      @db.VarChar(140)
+  sobre             String?      @db.VarChar(1000)
+  fotoUrl           String?      @map("foto_url") @db.VarChar(300)
+  objetivos         String[]     @default([])
+  interesses        String[]     @default([])
+  habilidades       String[]     @default([])
+  horariosLivres    String[]     @default([]) @map("horarios_livres")
+  contatos          Json         @default("{}")
+  status            StatusConta  @default(ATIVA)
+  advertencias      Int          @default(0) @db.SmallInt
+  emailVerificadoEm DateTime?    @map("email_verificado_em") @db.Timestamptz(6)
+  criadoEm          DateTime     @default(now()) @map("criado_em") @db.Timestamptz(6)
+  atualizadoEm      DateTime     @default(now()) @map("atualizado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  // No banco: ON DELETE SET NULL (curso_id), só a coluna do curso.
+  curso       Curso?      @relation(fields: [instituicaoId, cursoId], references: [instituicaoId, id], onDelete: NoAction, map: "usuarios_curso_fk")
+
+  disciplinas         UsuarioDisciplina[]
+  sessoes             Sessao[]
+  curtidasFeitas      Curtida[]           @relation("CurtidaDe")
+  curtidasRecebidas   Curtida[]           @relation("CurtidaPara")
+  recusasFeitas       Recusa[]            @relation("RecusaDe")
+  recusasRecebidas    Recusa[]            @relation("RecusaPara")
+  matchesComoA        Match[]             @relation("MatchA")
+  matchesComoB        Match[]             @relation("MatchB")
+  mensagens           Mensagem[]
+  bloqueiosFeitos     Bloqueio[]          @relation("Bloqueador")
+  bloqueiosRecebidos  Bloqueio[]          @relation("Bloqueado")
+  posts               Post[]
+  comentarios         Comentario[]
+  curtidasPost        CurtidaPost[]
+  presencas           PresencaEvento[]
+  gruposCriados       GrupoEstudo[]
+  grupos              GrupoMembro[]
+  grupoMensagens      GrupoMensagem[]
+  avisos              Aviso[]
+  denunciasFeitas     Denuncia[]          @relation("Denunciante")
+  denunciasRecebidas  Denuncia[]          @relation("Denunciado")
+  denunciasResolvidas Denuncia[]          @relation("ResolvidaPor")
+
+  @@unique([instituicaoId, id], map: "usuarios_instituicao_id_key")
+  @@index([instituicaoId, status], map: "usuarios_instituicao_idx")
+  @@map("usuarios")
+}
+
+model UsuarioDisciplina {
+  instituicaoId String            @map("instituicao_id") @db.Uuid
+  usuarioId     String            @map("usuario_id") @db.Uuid
+  disciplinaId  String            @map("disciplina_id") @db.Uuid
+  relacao       RelacaoDisciplina
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  usuario     Usuario     @relation(fields: [instituicaoId, usuarioId], references: [instituicaoId, id], onDelete: Cascade, map: "usuario_disciplinas_usuario_fk")
+  disciplina  Disciplina  @relation(fields: [instituicaoId, disciplinaId], references: [instituicaoId, id], onDelete: Cascade, map: "usuario_disciplinas_disciplina_fk")
+
+  @@id([usuarioId, disciplinaId, relacao])
+  @@index([disciplinaId, relacao], map: "usuario_disciplinas_disciplina_idx")
+  @@map("usuario_disciplinas")
+}
+
+model CodigoVerificacao {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId String    @map("instituicao_id") @db.Uuid
+  email         String    @db.VarChar(160)
+  codigoHash    String    @map("codigo_hash") @db.VarChar(100)
+  tentativas    Int       @default(0) @db.SmallInt
+  expiraEm      DateTime  @map("expira_em") @db.Timestamptz(6)
+  usadoEm       DateTime? @map("usado_em") @db.Timestamptz(6)
+  criadoEm      DateTime  @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+
+  @@index([email, criadoEm(sort: Desc)], map: "codigos_verificacao_email_idx")
+  @@map("codigos_verificacao")
+}
+
+model Sessao {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId    String    @map("instituicao_id") @db.Uuid
+  usuarioId        String    @map("usuario_id") @db.Uuid
+  refreshTokenHash String    @unique(map: "sessoes_refresh_token_hash_key") @map("refresh_token_hash") @db.VarChar(100)
+  dispositivo      String?   @db.VarChar(120)
+  criadoEm         DateTime  @default(now()) @map("criado_em") @db.Timestamptz(6)
+  expiraEm         DateTime  @map("expira_em") @db.Timestamptz(6)
+  revogadaEm       DateTime? @map("revogada_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  usuario     Usuario     @relation(fields: [instituicaoId, usuarioId], references: [instituicaoId, id], onDelete: Cascade, map: "sessoes_usuario_fk")
+
+  @@index([usuarioId], map: "sessoes_usuario_idx")
+  @@map("sessoes")
+}
+
+// ───────────────────────── Conexões ─────────────────────────
+
+model Curtida {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  deId          String   @map("de_id") @db.Uuid
+  paraId        String   @map("para_id") @db.Uuid
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  de          Usuario     @relation("CurtidaDe", fields: [instituicaoId, deId], references: [instituicaoId, id], onDelete: Cascade, map: "curtidas_de_fk")
+  para        Usuario     @relation("CurtidaPara", fields: [instituicaoId, paraId], references: [instituicaoId, id], onDelete: Cascade, map: "curtidas_para_fk")
+
+  @@unique([deId, paraId], map: "curtidas_par_key")
+  @@index([paraId], map: "curtidas_para_idx")
+  @@map("curtidas")
+}
+
+model Recusa {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  deId          String   @map("de_id") @db.Uuid
+  paraId        String   @map("para_id") @db.Uuid
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  de          Usuario     @relation("RecusaDe", fields: [instituicaoId, deId], references: [instituicaoId, id], onDelete: Cascade, map: "recusas_de_fk")
+  para        Usuario     @relation("RecusaPara", fields: [instituicaoId, paraId], references: [instituicaoId, id], onDelete: Cascade, map: "recusas_para_fk")
+
+  @@unique([deId, paraId], map: "recusas_par_key")
+  @@map("recusas")
+}
+
+model Match {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId String    @map("instituicao_id") @db.Uuid
+  usuarioAId    String    @map("usuario_a_id") @db.Uuid
+  usuarioBId    String    @map("usuario_b_id") @db.Uuid
+  criadoEm      DateTime  @default(now()) @map("criado_em") @db.Timestamptz(6)
+  desfeitoEm    DateTime? @map("desfeito_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  usuarioA    Usuario     @relation("MatchA", fields: [instituicaoId, usuarioAId], references: [instituicaoId, id], onDelete: Cascade, map: "matches_a_fk")
+  usuarioB    Usuario     @relation("MatchB", fields: [instituicaoId, usuarioBId], references: [instituicaoId, id], onDelete: Cascade, map: "matches_b_fk")
+  mensagens   Mensagem[]
+
+  @@unique([usuarioAId, usuarioBId], map: "matches_par_key")
+  @@unique([instituicaoId, id], map: "matches_instituicao_id_key")
+  @@index([usuarioBId], map: "matches_b_idx")
+  @@map("matches")
+}
+
+model Mensagem {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId String    @map("instituicao_id") @db.Uuid
+  matchId       String    @map("match_id") @db.Uuid
+  autorId       String    @map("autor_id") @db.Uuid
+  texto         String    @db.VarChar(1000)
+  criadoEm      DateTime  @default(now()) @map("criado_em") @db.Timestamptz(6)
+  lidaEm        DateTime? @map("lida_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  match       Match       @relation(fields: [instituicaoId, matchId], references: [instituicaoId, id], onDelete: Cascade, map: "mensagens_match_fk")
+  autor       Usuario     @relation(fields: [instituicaoId, autorId], references: [instituicaoId, id], onDelete: Cascade, map: "mensagens_autor_fk")
+
+  @@index([matchId, criadoEm], map: "mensagens_match_idx")
+  @@map("mensagens")
+}
+
+model Bloqueio {
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  bloqueadorId  String   @map("bloqueador_id") @db.Uuid
+  bloqueadoId   String   @map("bloqueado_id") @db.Uuid
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  bloqueador  Usuario     @relation("Bloqueador", fields: [instituicaoId, bloqueadorId], references: [instituicaoId, id], onDelete: Cascade, map: "bloqueios_bloqueador_fk")
+  bloqueado   Usuario     @relation("Bloqueado", fields: [instituicaoId, bloqueadoId], references: [instituicaoId, id], onDelete: Cascade, map: "bloqueios_bloqueado_fk")
+
+  @@id([bloqueadorId, bloqueadoId])
+  @@index([bloqueadoId], map: "bloqueios_bloqueado_idx")
+  @@map("bloqueios")
+}
+
+// ───────────────────────── Feed ─────────────────────────
+
+model Post {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId String        @map("instituicao_id") @db.Uuid
+  autorId       String        @map("autor_id") @db.Uuid
+  categoria     CategoriaPost @default(GERAL)
+  texto         String        @db.VarChar(500)
+  imagemUrl     String?       @map("imagem_url") @db.VarChar(300)
+  eventoInicio  DateTime?     @map("evento_inicio") @db.Timestamptz(6)
+  eventoLocal   String?       @map("evento_local") @db.VarChar(120)
+  criadoEm      DateTime      @default(now()) @map("criado_em") @db.Timestamptz(6)
+  removidoEm    DateTime?     @map("removido_em") @db.Timestamptz(6)
+
+  instituicao Instituicao      @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  autor       Usuario          @relation(fields: [instituicaoId, autorId], references: [instituicaoId, id], onDelete: Cascade, map: "posts_autor_fk")
+  comentarios Comentario[]
+  curtidas    CurtidaPost[]
+  presencas   PresencaEvento[]
+
+  @@unique([instituicaoId, id], map: "posts_instituicao_id_key")
+  @@map("posts")
+}
+
+model Comentario {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  postId        String   @map("post_id") @db.Uuid
+  autorId       String   @map("autor_id") @db.Uuid
+  texto         String   @db.VarChar(300)
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  post        Post        @relation(fields: [instituicaoId, postId], references: [instituicaoId, id], onDelete: Cascade, map: "comentarios_post_fk")
+  autor       Usuario     @relation(fields: [instituicaoId, autorId], references: [instituicaoId, id], onDelete: Cascade, map: "comentarios_autor_fk")
+
+  @@index([postId, criadoEm], map: "comentarios_post_idx")
+  @@map("comentarios")
+}
+
+model CurtidaPost {
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  postId        String   @map("post_id") @db.Uuid
+  usuarioId     String   @map("usuario_id") @db.Uuid
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  post        Post        @relation(fields: [instituicaoId, postId], references: [instituicaoId, id], onDelete: Cascade, map: "curtidas_post_post_fk")
+  usuario     Usuario     @relation(fields: [instituicaoId, usuarioId], references: [instituicaoId, id], onDelete: Cascade, map: "curtidas_post_usuario_fk")
+
+  @@id([postId, usuarioId])
+  @@map("curtidas_post")
+}
+
+model PresencaEvento {
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  postId        String   @map("post_id") @db.Uuid
+  usuarioId     String   @map("usuario_id") @db.Uuid
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  post        Post        @relation(fields: [instituicaoId, postId], references: [instituicaoId, id], onDelete: Cascade, map: "presencas_evento_post_fk")
+  usuario     Usuario     @relation(fields: [instituicaoId, usuarioId], references: [instituicaoId, id], onDelete: Cascade, map: "presencas_evento_usuario_fk")
+
+  @@id([postId, usuarioId])
+  @@map("presencas_evento")
+}
+
+// ───────────────────────── Grupos de estudo ─────────────────────────
+
+model GrupoEstudo {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  disciplinaId  String?  @map("disciplina_id") @db.Uuid
+  criadorId     String   @map("criador_id") @db.Uuid
+  nome          String   @db.VarChar(80)
+  descricao     String?  @db.VarChar(300)
+  encontro      String?  @db.VarChar(80)
+  local         String?  @db.VarChar(80)
+  vagas         Int      @default(10) @db.SmallInt
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao     @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  // No banco: ON DELETE SET NULL (disciplina_id), só a coluna da disciplina.
+  disciplina  Disciplina?     @relation(fields: [instituicaoId, disciplinaId], references: [instituicaoId, id], onDelete: NoAction, map: "grupos_estudo_disciplina_fk")
+  criador     Usuario         @relation(fields: [instituicaoId, criadorId], references: [instituicaoId, id], onDelete: Cascade, map: "grupos_estudo_criador_fk")
+  membros     GrupoMembro[]
+  mensagens   GrupoMensagem[]
+
+  @@unique([instituicaoId, id], map: "grupos_estudo_instituicao_id_key")
+  @@index([instituicaoId, criadoEm(sort: Desc)], map: "grupos_estudo_instituicao_idx")
+  @@map("grupos_estudo")
+}
+
+model GrupoMembro {
+  instituicaoId String     @map("instituicao_id") @db.Uuid
+  grupoId       String     @map("grupo_id") @db.Uuid
+  usuarioId     String     @map("usuario_id") @db.Uuid
+  papel         PapelGrupo @default(MEMBRO)
+  entrouEm      DateTime   @default(now()) @map("entrou_em") @db.Timestamptz(6)
+  lidoAte       DateTime?  @map("lido_ate") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  grupo       GrupoEstudo @relation(fields: [instituicaoId, grupoId], references: [instituicaoId, id], onDelete: Cascade, map: "grupo_membros_grupo_fk")
+  usuario     Usuario     @relation(fields: [instituicaoId, usuarioId], references: [instituicaoId, id], onDelete: Cascade, map: "grupo_membros_usuario_fk")
+
+  @@id([grupoId, usuarioId])
+  @@index([usuarioId], map: "grupo_membros_usuario_idx")
+  @@map("grupo_membros")
+}
+
+model GrupoMensagem {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  grupoId       String   @map("grupo_id") @db.Uuid
+  autorId       String   @map("autor_id") @db.Uuid
+  texto         String   @db.VarChar(1000)
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  grupo       GrupoEstudo @relation(fields: [instituicaoId, grupoId], references: [instituicaoId, id], onDelete: Cascade, map: "grupo_mensagens_grupo_fk")
+  autor       Usuario     @relation(fields: [instituicaoId, autorId], references: [instituicaoId, id], onDelete: Cascade, map: "grupo_mensagens_autor_fk")
+
+  @@index([grupoId, criadoEm], map: "grupo_mensagens_grupo_idx")
+  @@map("grupo_mensagens")
+}
+
+// ───────────────────────── Coordenação ─────────────────────────
+
+model Aviso {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId String    @map("instituicao_id") @db.Uuid
+  autorId       String    @map("autor_id") @db.Uuid
+  titulo        String    @db.VarChar(80)
+  texto         String    @db.VarChar(500)
+  fixado        Boolean   @default(true)
+  criadoEm      DateTime  @default(now()) @map("criado_em") @db.Timestamptz(6)
+  removidoEm    DateTime? @map("removido_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  autor       Usuario     @relation(fields: [instituicaoId, autorId], references: [instituicaoId, id], onDelete: Cascade, map: "avisos_autor_fk")
+
+  @@map("avisos")
+}
+
+model Denuncia {
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId  String         @map("instituicao_id") @db.Uuid
+  denuncianteId  String         @map("denunciante_id") @db.Uuid
+  denunciadoId   String         @map("denunciado_id") @db.Uuid
+  motivo         MotivoDenuncia
+  detalhe        String?        @db.VarChar(500)
+  status         StatusDenuncia @default(ABERTA)
+  acao           AcaoDenuncia?
+  resolvidaPorId String?        @map("resolvida_por_id") @db.Uuid
+  resolvidaEm    DateTime?      @map("resolvida_em") @db.Timestamptz(6)
+  criadoEm       DateTime       @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  instituicao  Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  denunciante  Usuario     @relation("Denunciante", fields: [instituicaoId, denuncianteId], references: [instituicaoId, id], onDelete: Cascade, map: "denuncias_denunciante_fk")
+  denunciado   Usuario     @relation("Denunciado", fields: [instituicaoId, denunciadoId], references: [instituicaoId, id], onDelete: Cascade, map: "denuncias_denunciado_fk")
+  // No banco: ON DELETE SET NULL (resolvida_por_id), só a coluna de quem decidiu.
+  resolvidaPor Usuario?    @relation("ResolvidaPor", fields: [instituicaoId, resolvidaPorId], references: [instituicaoId, id], onDelete: NoAction, map: "denuncias_resolvida_por_fk")
+
+  @@index([instituicaoId, status, criadoEm], map: "denuncias_fila_idx")
+  @@map("denuncias")
+}

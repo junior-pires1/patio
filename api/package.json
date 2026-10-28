@@ -11,24 +11,37 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/servidor.js",
     "tipos": "tsc --noEmit",
-    "test": "jest",
-    "test:cobertura": "jest --coverage"
+    "test": "vitest run",
+    "test:observar": "vitest",
+    "test:cobertura": "vitest run --coverage",
+    "postinstall": "prisma generate",
+    "db:gerar": "prisma generate",
+    "db:migrar": "prisma migrate deploy",
+    "db:nova-migracao": "prisma migrate dev --create-only",
+    "db:semear": "prisma db seed",
+    "db:resetar": "prisma migrate reset",
+    "db:estudio": "prisma studio"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
-    "@types/jest": "^30.0.0",
     "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
     "@types/supertest": "^7.2.1",
-    "jest": "^30.5.2",
+    "@vitest/coverage-v8": "^5.0.5",
+    "prisma": "7.10.1",
     "supertest": "^7.3.1",
-    "ts-jest": "^29.4.15",
-    "tsx": "^4.23.15"
+    "tsx": "^4.23.15",
+    "vitest": "^5.0.5"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "express": "^5.3.0",
     "helmet": "^8.3.0",
+    "pg": "^8.23.1",
     "zod": "^4.6.7"
   }
 }
