@@ -9,12 +9,12 @@ Todas as ferramentas usadas são gratuitas.
 
 ## Estrutura do repositório
 
-| Pasta | Conteúdo | Situação |
-|---|---|---|
-| `api/` | API em Node.js, Express, Socket.IO, Prisma e PostgreSQL | Em construção |
-| `app/` | Aplicativo do aluno (React Native + Expo) | Planejado (Sprint 4) |
-| `painel/` | Painel web da coordenação e da plataforma (Next.js) | Planejado (Sprint 5) |
-| `docs/` | Documentação do projeto | — |
+| Pasta     | Conteúdo                                                | Situação             |
+| --------- | ------------------------------------------------------- | -------------------- |
+| `api/`    | API em Node.js, Express, Socket.IO, Prisma e PostgreSQL | Em construção        |
+| `app/`    | Aplicativo do aluno (React Native + Expo)               | Planejado (Sprint 4) |
+| `painel/` | Painel web da coordenação e da plataforma (Next.js)     | Planejado (Sprint 5) |
+| `docs/`   | Documentação do projeto                                 | —                    |
 
 ## Pré-requisitos
 
@@ -32,13 +32,13 @@ npm run verificar    # formatação + análise estática + tipos + testes
 
 ## Comandos da raiz
 
-| Comando | O que faz |
-|---|---|
+| Comando             | O que faz                                  |
+| ------------------- | ------------------------------------------ |
 | `npm run verificar` | Roda tudo o que a integração contínua roda |
-| `npm run lint` | Análise estática (ESLint) |
-| `npm run formatar` | Formata o código (Prettier) |
-| `npm run tipos` | Confere os tipos (TypeScript) |
-| `npm test` | Testes automatizados |
+| `npm run lint`      | Análise estática (ESLint)                  |
+| `npm run formatar`  | Formata o código (Prettier)                |
+| `npm run tipos`     | Confere os tipos (TypeScript)              |
+| `npm test`          | Testes automatizados                       |
 
 ## Como trabalhamos
 
