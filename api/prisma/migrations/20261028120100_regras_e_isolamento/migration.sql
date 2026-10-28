@@ -73,6 +73,9 @@ BEGIN
 END
 $$;
 
+-- Os erros dos gatilhos começam com [nome_da_regra]: a API usa esse nome para
+-- devolver uma mensagem amigável (o driver não repassa o campo CONSTRAINT).
+
 -- ───────────────────────── Gatilhos: usuarios ─────────────────────────
 -- E-mail do domínio da faculdade (subdomínios aceitos) e idade mínima de 18 anos.
 CREATE FUNCTION usuarios_validar() RETURNS TRIGGER
@@ -87,13 +90,13 @@ BEGIN
      WHERE d.instituicao_id = NEW.instituicao_id
        AND (dominio_email = d.dominio OR dominio_email LIKE '%.' || d.dominio)
   ) THEN
-    RAISE EXCEPTION 'O e-mail % não pertence a um domínio da faculdade', NEW.email
+    RAISE EXCEPTION '[usuarios_dominio_ck] O e-mail % não pertence a um domínio da faculdade', NEW.email
       USING ERRCODE = 'check_violation', CONSTRAINT = 'usuarios_dominio_ck';
   END IF;
 
   IF NEW.data_nascimento IS NOT NULL
      AND NEW.data_nascimento > (current_date - INTERVAL '18 years') THEN
-    RAISE EXCEPTION 'É preciso ter pelo menos 18 anos'
+    RAISE EXCEPTION '[usuarios_idade_ck] É preciso ter pelo menos 18 anos'
       USING ERRCODE = 'check_violation', CONSTRAINT = 'usuarios_idade_ck';
   END IF;
 
@@ -131,7 +134,7 @@ BEGIN
        AND m.desfeito_em IS NULL
        AND NEW.autor_id IN (m.usuario_a_id, m.usuario_b_id)
   ) THEN
-    RAISE EXCEPTION 'O autor não participa de uma conexão ativa'
+    RAISE EXCEPTION '[mensagens_autor_ck] O autor não participa de uma conexão ativa'
       USING ERRCODE = 'check_violation', CONSTRAINT = 'mensagens_autor_ck';
   END IF;
   RETURN NEW;
@@ -155,7 +158,7 @@ BEGIN
   SELECT vagas INTO limite FROM grupos_estudo WHERE id = NEW.grupo_id FOR UPDATE;
   SELECT count(*) INTO ocupadas FROM grupo_membros WHERE grupo_id = NEW.grupo_id;
   IF ocupadas >= limite THEN
-    RAISE EXCEPTION 'O grupo está cheio'
+    RAISE EXCEPTION '[grupo_membros_vagas_ck] O grupo está cheio'
       USING ERRCODE = 'check_violation', CONSTRAINT = 'grupo_membros_vagas_ck';
   END IF;
   RETURN NEW;
@@ -174,7 +177,7 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM grupo_membros WHERE grupo_id = NEW.grupo_id AND usuario_id = NEW.autor_id
   ) THEN
-    RAISE EXCEPTION 'O autor não é membro do grupo'
+    RAISE EXCEPTION '[grupo_mensagens_autor_ck] O autor não é membro do grupo'
       USING ERRCODE = 'check_violation', CONSTRAINT = 'grupo_mensagens_autor_ck';
   END IF;
   RETURN NEW;

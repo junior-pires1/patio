@@ -1,23 +1,36 @@
 import request from 'supertest';
-import { criarApp } from '../../src/app';
+import { appDeTeste } from '../apoio/app';
 
-const app = criarApp({ origensPermitidas: ['http://localhost:3000'] });
+const t = appDeTeste();
+afterAll(() => t.fechar());
 
 describe('GET /saude', () => {
   test('responde ok', async () => {
-    const r = await request(app).get('/saude');
+    const r = await request(t.app).get('/saude');
     expect(r.status).toBe(200);
     expect(r.body.status).toBe('ok');
   });
 
   test('envia cabeçalhos de segurança', async () => {
-    const r = await request(app).get('/saude');
+    const r = await request(t.app).get('/saude');
     expect(r.headers['x-content-type-options']).toBe('nosniff');
+    expect(r.headers['x-powered-by']).toBeUndefined();
   });
 
   test('rota inexistente devolve 404 no formato padrão', async () => {
-    const r = await request(app).get('/nao-existe');
-    expect(r.status).toBe(404);
-    expect(r.body.erro).toBe('rota_inexistente');
+    for (const caminho of ['/nao-existe', '/auth/nao-existe']) {
+      const r = await request(t.app).get(caminho);
+      expect(r.status).toBe(404);
+      expect(r.body.erro).toBe('rota_inexistente');
+    }
+  });
+
+  test('JSON malformado devolve 400 no formato padrão', async () => {
+    const r = await request(t.app)
+      .post('/auth/login')
+      .set('Content-Type', 'application/json')
+      .send('{"email":');
+    expect(r.status).toBe(400);
+    expect(r.body.erro).toBe('json_invalido');
   });
 });

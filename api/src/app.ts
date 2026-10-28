@@ -1,23 +1,65 @@
 import cors from 'cors';
 import express from 'express';
+import { ipKeyGenerator, rateLimit } from 'express-rate-limit';
 import helmet from 'helmet';
-import type { Ambiente } from './config/ambiente';
+import type { Contexto } from './contexto';
+import { ErroApp, tratarErros } from './erros';
+import { rotasAuth } from './modulos/auth/rotas';
+import { rotasCatalogo } from './modulos/catalogo/rotas';
+import { rotasPerfil } from './modulos/perfil/rotas';
+
+export type OpcoesApp = Contexto & {
+  origensPermitidas: string[];
+  /** Requisições por minuto. Os testes usam valores maiores. */
+  limites?: { geral: number; credenciais: number };
+};
+
+const muitasRequisicoes = new ErroApp(
+  429,
+  'muitas_requisicoes',
+  'Muitas tentativas em pouco tempo. Aguarde um minuto.',
+);
 
 /** Monta a aplicação Express. As dependências entram por parâmetro, o que facilita os testes. */
-export function criarApp(ambiente: Pick<Ambiente, 'origensPermitidas'>) {
+export function criarApp(opcoes: OpcoesApp) {
+  const { origensPermitidas, limites = { geral: 300, credenciais: 10 }, ...ctx } = opcoes;
   const app = express();
+  app.set('trust proxy', 1); // a hospedagem (Render) fica atrás de um proxy
   app.use(helmet());
-  app.use(cors({ origin: ambiente.origensPermitidas }));
+  app.use(cors({ origin: origensPermitidas }));
   app.use(express.json({ limit: '100kb' }));
+
+  const limitar = (limite: number, porEmail: boolean) =>
+    rateLimit({
+      windowMs: 60_000,
+      limit: limite,
+      standardHeaders: 'draft-8',
+      legacyHeaders: false,
+      // RNF: rotas de credenciais contam por IP + e-mail; as demais, por IP.
+      keyGenerator: (req) => {
+        const ip = ipKeyGenerator(req.ip ?? '');
+        const email: unknown = porEmail ? req.body?.email : undefined;
+        return typeof email === 'string' ? `${ip}|${email.trim().toLowerCase()}` : ip;
+      },
+      handler: (_req, _res, next) => next(muitasRequisicoes),
+    });
 
   // Usada pela hospedagem para saber se o serviço está no ar
   app.get('/saude', (_req, res) => {
     res.json({ status: 'ok', horario: new Date().toISOString() });
   });
 
+  app.use(limitar(limites.geral, false));
+  app.use('/auth', rotasAuth(ctx, limitar(limites.credenciais, true)));
+
+  // Rotas que exigem login (cada rota declara o middleware `logado`)
+  app.use(rotasPerfil(ctx));
+  app.use(rotasCatalogo(ctx));
+
   app.use((_req, res) => {
     res.status(404).json({ erro: 'rota_inexistente', mensagem: 'Rota não encontrada.' });
   });
+  app.use(tratarErros);
 
   return app;
 }

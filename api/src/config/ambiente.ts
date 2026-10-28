@@ -10,6 +10,8 @@ const esquema = z.object({
     protocol: /^postgres(ql)?$/,
     error: 'informe a URL do PostgreSQL',
   }),
+  // Assina os tokens de acesso. Gere um valor longo e aleatório para cada ambiente.
+  JWT_SEGREDO: z.string().min(32, 'use pelo menos 32 caracteres'),
 });
 
 export function lerAmbiente(variaveis: NodeJS.ProcessEnv = process.env) {

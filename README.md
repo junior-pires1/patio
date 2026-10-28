@@ -73,6 +73,28 @@ para gerar o cliente tipado; ao mudar o banco, altere os dois.
 token. Mesmo uma consulta sem filtro só enxerga dados daquela faculdade; os testes em
 `api/tests/banco` comprovam isso.
 
+## Rotas da API (até a Sprint 3)
+
+Respostas de erro sempre no formato `{ "erro": "codigo", "mensagem": "texto", "campos": { ... } }`.
+
+| Método e rota         | Login? | O que faz                                                              |
+| --------------------- | ------ | ---------------------------------------------------------------------- |
+| `GET /saude`          | não    | Verifica se a API está no ar                                           |
+| `POST /auth/codigo`   | não    | Envia código de 6 números ao e-mail institucional (vale 10 min)        |
+| `POST /auth/cadastro` | não    | Cria a conta com o código (5 tentativas; 18 anos; senha forte)         |
+| `POST /auth/login`    | não    | Entra com e-mail e senha; devolve token de acesso (15 min) e renovação |
+| `POST /auth/renovar`  | não    | Troca o token de renovação por um novo par (rotação, 30 dias)          |
+| `POST /auth/sair`     | não    | Encerra a sessão deste aparelho                                        |
+| `GET /eu`             | sim    | Perfil próprio                                                         |
+| `PATCH /eu`           | sim    | Atualiza o perfil                                                      |
+| `PUT /eu/disciplinas` | sim    | Define cursando / posso ajudar / preciso de ajuda                      |
+| `GET /usuarios/:id`   | sim    | Perfil público de um colega da mesma faculdade                         |
+| `GET /cursos`         | sim    | Cursos da faculdade                                                    |
+| `GET /disciplinas`    | sim    | Disciplinas da faculdade (`?cursoId=` filtra pelo curso)               |
+
+Rotas com login usam o cabeçalho `Authorization: Bearer <acessoToken>`. Em desenvolvimento, o código
+de verificação aparece no terminal da API em vez de ir por e-mail.
+
 ## Como trabalhamos
 
 Veja [CONTRIBUTING.md](CONTRIBUTING.md): ramos, commits, revisão e Definição de Pronto.
