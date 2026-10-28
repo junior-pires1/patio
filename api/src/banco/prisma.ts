@@ -26,9 +26,12 @@ export async function naFaculdade<T>(
   if (!UUID.test(instituicaoId)) {
     throw new Error('Identificador de faculdade inválido');
   }
-  return prisma.$transaction(async (tx) => {
-    await tx.$executeRaw`SET LOCAL ROLE patio_app`;
-    await tx.$executeRaw`SELECT set_config('app.instituicao_id', ${instituicaoId}, true)`;
-    return fn(tx);
-  });
+  return prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SET LOCAL ROLE patio_app`;
+      await tx.$executeRaw`SELECT set_config('app.instituicao_id', ${instituicaoId}, true)`;
+      return fn(tx);
+    },
+    { maxWait: 5_000, timeout: 10_000 },
+  );
 }

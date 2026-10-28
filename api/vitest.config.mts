@@ -4,6 +4,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    // Testes de integração usam o banco de verdade; margem para máquinas lentas.
+    testTimeout: 20_000,
+    hookTimeout: 30_000,
     include: ['tests/**/*.test.ts'],
     setupFiles: ['tests/apoio/carregar-env.ts'],
     // Recria o banco de testes, aplica as migrações e grava o seed, uma vez.
