@@ -5,7 +5,8 @@ import { z } from 'zod';
 const esquema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3333),
-  CORS_ORIGENS: z.string().default('http://localhost:3000'),
+  // 3000: painel web; 8081: app aberto no navegador pelo Expo (tecla w)
+  CORS_ORIGENS: z.string().default('http://localhost:3000,http://localhost:8081'),
   DATABASE_URL: z.url({
     protocol: /^postgres(ql)?$/,
     error: 'informe a URL do PostgreSQL',

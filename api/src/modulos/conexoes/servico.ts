@@ -30,8 +30,9 @@ export const emOrdem = (x: string, y: string): [string, string] =>
   x < y ? [x, y] : [y, x];
 
 /**
- * RF: cartas de descoberta, da maior para a menor afinidade. Ficam de fora
- * quem já foi curtido ou pulado, quem já é conexão e bloqueios.
+ * RF: cartas de descoberta. Primeiro quem já curtiu a pessoa (assim a
+ * curtida recebida vira match logo), depois da maior para a menor afinidade.
+ * Ficam de fora quem já foi curtido ou pulado, quem já é conexão e bloqueios.
  */
 export function descobrir(ctx: Contexto, eu: Autenticado) {
   return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
@@ -47,17 +48,26 @@ export function descobrir(ctx: Contexto, eu: Autenticado) {
         matchesComoA: { none: { usuarioBId: eu.id } },
         matchesComoB: { none: { usuarioAId: eu.id } },
       },
-      select: { ...PERFIL_AFINIDADE, criadoEm: true },
+      select: {
+        ...PERFIL_AFINIDADE,
+        criadoEm: true,
+        curtidasFeitas: { where: { paraId: eu.id }, select: { id: true } },
+      },
       orderBy: { criadoEm: 'desc' },
       take: CANDIDATOS_ANALISADOS,
     });
 
     return candidatos
-      .map(({ cursoId: _curso, criadoEm: _criado, ...perfil }) => ({
+      .map(({ cursoId, criadoEm: _criado, curtidasFeitas, ...perfil }) => ({
         ...perfil,
-        afinidade: calcularAfinidade(meu, { ...perfil, cursoId: _curso }),
+        curtiuVoce: curtidasFeitas.length > 0,
+        afinidade: calcularAfinidade(meu, { ...perfil, cursoId }),
       }))
-      .sort((a, b) => b.afinidade.pontos - a.afinidade.pontos)
+      .sort(
+        (a, b) =>
+          Number(b.curtiuVoce) - Number(a.curtiuVoce) ||
+          b.afinidade.pontos - a.afinidade.pontos,
+      )
       .slice(0, LIMITE_CARTAS);
   });
 }
@@ -78,15 +88,38 @@ async function travarPar(tx: Transacao, x: string, y: string) {
 }
 
 /**
- * RF: curtir. Se a outra pessoa já tinha curtido, nasce o match e os dois
- * recebem o evento `match:novo` em tempo real.
+ * Curtidas recebidas que ainda esperam resposta: quem curtiu a pessoa e
+ * ainda não foi curtido de volta nem pulado.
+ */
+function curtidasPendentes(eu: Autenticado): Prisma.CurtidaWhereInput {
+  return {
+    paraId: eu.id,
+    de: {
+      ...colegasVisiveis(eu.id),
+      curtidasRecebidas: { none: { deId: eu.id } },
+      recusasRecebidas: { none: { deId: eu.id } },
+    },
+  };
+}
+
+/** RF: quantas pessoas curtiram e esperam resposta (para o aviso no app). */
+export function contarCurtidasRecebidas(ctx: Contexto, eu: Autenticado) {
+  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => ({
+    total: await tx.curtida.count({ where: curtidasPendentes(eu) }),
+  }));
+}
+
+/**
+ * RF: curtir. A outra pessoa recebe `curtida:nova` (sem saber quem foi até
+ * abrir as cartas). Se ela já tinha curtido, nasce o match e os dois
+ * recebem `match:novo` em tempo real.
  */
 export async function curtir(ctx: Contexto, eu: Autenticado, paraId: string) {
   const resultado = await naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
     await exigirColega(tx, eu, paraId);
     await travarPar(tx, eu.id, paraId);
 
-    await tx.curtida.createMany({
+    const { count: nova } = await tx.curtida.createMany({
       data: [{ instituicaoId: eu.instituicaoId, deId: eu.id, paraId }],
       skipDuplicates: true,
     });
@@ -96,7 +129,13 @@ export async function curtir(ctx: Contexto, eu: Autenticado, paraId: string) {
       where: { deId_paraId: { deId: paraId, paraId: eu.id } },
       select: { id: true },
     });
-    if (!reciproca) return { match: null, novo: false };
+    if (!reciproca) {
+      if (nova === 0) return { match: null, novo: false };
+      const pendentes = await tx.curtida.count({
+        where: curtidasPendentes({ ...eu, id: paraId }),
+      });
+      return { match: null, novo: false, pendentesDoAlvo: pendentes };
+    }
 
     const [usuarioAId, usuarioBId] = emOrdem(eu.id, paraId);
     const existente = await tx.match.findUnique({
@@ -113,6 +152,9 @@ export async function curtir(ctx: Contexto, eu: Autenticado, paraId: string) {
 
   if (resultado.novo && resultado.match) {
     ctx.notificar.enviar([eu.id, paraId], 'match:novo', { matchId: resultado.match.id });
+  }
+  if ('pendentesDoAlvo' in resultado) {
+    ctx.notificar.enviar([paraId], 'curtida:nova', { total: resultado.pendentesDoAlvo });
   }
   return { match: resultado.match ? { id: resultado.match.id } : null };
 }

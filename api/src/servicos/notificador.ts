@@ -1,5 +1,5 @@
 /** Eventos em tempo real enviados ao aplicativo. */
-export type Evento = 'match:novo' | 'mensagem:nova' | 'match:desfeito';
+export type Evento = 'curtida:nova' | 'match:novo' | 'mensagem:nova' | 'match:desfeito';
 
 /** Envia um evento para os aparelhos conectados de cada usuário. */
 export interface Notificador {

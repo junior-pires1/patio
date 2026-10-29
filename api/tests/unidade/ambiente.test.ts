@@ -8,7 +8,7 @@ describe('lerAmbiente', () => {
     const a = lerAmbiente({ DATABASE_URL: BANCO, JWT_SEGREDO: SEGREDO });
     expect(a.PORT).toBe(3333);
     expect(a.NODE_ENV).toBe('development');
-    expect(a.origensPermitidas).toEqual(['http://localhost:3000']);
+    expect(a.origensPermitidas).toEqual(['http://localhost:3000', 'http://localhost:8081']);
   });
 
   test('separa várias origens por vírgula', () => {

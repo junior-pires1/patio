@@ -147,3 +147,50 @@ describe('curtidas e match', () => {
     ).toBe(404);
   });
 });
+
+describe('curtidas recebidas', () => {
+  const recebidas = (s: Sessao) => request(t.app).get('/curtidas/recebidas').set(auth(s));
+
+  test('quem recebe a curtida é avisado em tempo real, sem duplicar', async () => {
+    const [a, b] = await Promise.all([t.cadastrarNovo(), t.cadastrarNovo()]);
+    expect((await recebidas(b)).body).toEqual({ total: 0 });
+
+    await curtir(a, b.usuario.id);
+    const avisos = () =>
+      t.eventos.filter(
+        (e) => e.evento === 'curtida:nova' && e.usuarioIds[0] === b.usuario.id,
+      );
+    expect(avisos()).toHaveLength(1);
+    expect(avisos()[0]?.dados).toEqual({ total: 1 });
+    expect((await recebidas(b)).body).toEqual({ total: 1 });
+
+    // Curtir de novo não avisa de novo
+    await curtir(a, b.usuario.id);
+    expect(avisos()).toHaveLength(1);
+  });
+
+  test('quem curtiu aparece primeiro nas cartas, marcado como "curtiu você"', async () => {
+    const [a, b] = await Promise.all([t.cadastrarNovo(), t.cadastrarNovo()]);
+    await curtir(a, b.usuario.id);
+    const cartas = await request(t.app).get('/descobrir').set(auth(b));
+    expect(cartas.body[0]).toMatchObject({ id: a.usuario.id, curtiuVoce: true });
+    expect(cartas.body.slice(1).every((c: { curtiuVoce: boolean }) => !c.curtiuVoce)).toBe(
+      true,
+    );
+  });
+
+  test('responder (curtir de volta ou pular) tira da contagem', async () => {
+    const [a, b, c] = await Promise.all([
+      t.cadastrarNovo(),
+      t.cadastrarNovo(),
+      t.cadastrarNovo(),
+    ]);
+    await curtir(a, c.usuario.id);
+    await curtir(b, c.usuario.id);
+    expect((await recebidas(c)).body).toEqual({ total: 2 });
+
+    await curtir(c, a.usuario.id); // vira match
+    await request(t.app).post('/pulos').set(auth(c)).send({ paraId: b.usuario.id });
+    expect((await recebidas(c)).body).toEqual({ total: 0 });
+  });
+});

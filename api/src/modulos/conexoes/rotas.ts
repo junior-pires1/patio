@@ -21,6 +21,10 @@ export function rotasConexoes(ctx: Contexto) {
     res.status(201).json(await servico.curtir(ctx, quem(req), paraId));
   });
 
+  r.get('/curtidas/recebidas', ...aluno, async (req, res) => {
+    res.json(await servico.contarCurtidasRecebidas(ctx, quem(req)));
+  });
+
   r.post('/pulos', ...aluno, async (req, res) => {
     const { paraId } = alvo.parse(req.body);
     await servico.pular(ctx, quem(req), paraId);
