@@ -5,6 +5,10 @@ import type { PrismaClient } from '../../src/generated/prisma/client';
 import { urlTeste } from '../apoio/banco';
 import { carregarFixtures, type Fixtures } from '../apoio/fixtures';
 
+// Código SQLSTATE 42501 (insufficient_privilege): vale para RLS e para falta
+// de permissão, em qualquer idioma do PostgreSQL (a mensagem muda com o idioma).
+const SEM_PERMISSAO = /42501/;
+
 let prisma: PrismaClient;
 let pool: Pool;
 let f: Fixtures;
@@ -53,13 +57,13 @@ describe('naFaculdade: isolamento por RLS', () => {
       naFaculdade(prisma, f.fh, (tx) =>
         tx.curso.create({ data: { instituicaoId: f.ua, nome: `Invasão ${randomUUID()}` } }),
       ),
-    ).rejects.toThrow(/row-level security/);
+    ).rejects.toThrow(SEM_PERMISSAO);
   });
 
   test('a tabela de administradores é inacessível para a aplicação', async () => {
     await expect(
       naFaculdade(prisma, f.fh, (tx) => tx.administrador.findMany()),
-    ).rejects.toThrow(/permission denied/);
+    ).rejects.toThrow(SEM_PERMISSAO);
   });
 
   test('sem faculdade definida nenhuma linha é visível', async () => {
