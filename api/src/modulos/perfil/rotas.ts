@@ -6,7 +6,7 @@ import * as servico from './servico';
 
 export function rotasPerfil(ctx: Contexto) {
   const r = Router();
-  const logado = autenticar(ctx.segredoJwt);
+  const logado = autenticar(ctx);
 
   r.get('/eu', logado, async (req, res) => {
     res.json(await servico.meuPerfil(ctx, quem(req)));

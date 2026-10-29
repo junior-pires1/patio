@@ -10,7 +10,7 @@ const idMatch = z.object({ id: z.uuid('Identificador inválido') });
 /** Descoberta, curtidas, pulos e conexões (só alunos). */
 export function rotasConexoes(ctx: Contexto) {
   const r = Router();
-  const aluno = [autenticar(ctx.segredoJwt), exigirPapel('ALUNO')];
+  const aluno = [autenticar(ctx), exigirPapel('ALUNO')];
 
   r.get('/descobrir', ...aluno, async (req, res) => {
     res.json(await servico.descobrir(ctx, quem(req)));

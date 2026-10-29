@@ -9,7 +9,7 @@ const filtroDisciplinas = z.object({ cursoId: z.uuid().optional() });
 /** Cursos e disciplinas da faculdade de quem está logado. */
 export function rotasCatalogo(ctx: Contexto) {
   const r = Router();
-  const logado = autenticar(ctx.segredoJwt);
+  const logado = autenticar(ctx);
 
   r.get('/cursos', logado, async (req, res) => {
     const cursos = await naFaculdade(ctx.prisma, quem(req).instituicaoId, (tx) =>

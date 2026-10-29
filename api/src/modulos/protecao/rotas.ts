@@ -22,7 +22,7 @@ const denuncia = z.object({
 /** Bloqueios e denúncias (segurança dos alunos). */
 export function rotasProtecao(ctx: Contexto) {
   const r = Router();
-  const aluno = [autenticar(ctx.segredoJwt), exigirPapel('ALUNO')];
+  const aluno = [autenticar(ctx), exigirPapel('ALUNO')];
 
   r.get('/bloqueios', ...aluno, async (req, res) => {
     res.json(await servico.listarBloqueios(ctx, quem(req)));

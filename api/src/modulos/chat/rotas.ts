@@ -17,7 +17,7 @@ const novaMensagem = z.object({
 /** Chat das conexões. O envio é por REST; a entrega instantânea, por Socket.IO. */
 export function rotasChat(ctx: Contexto) {
   const r = Router();
-  const aluno = [autenticar(ctx.segredoJwt), exigirPapel('ALUNO')];
+  const aluno = [autenticar(ctx), exigirPapel('ALUNO')];
 
   r.get('/matches/:id/mensagens', ...aluno, async (req, res) => {
     const { id } = idMatch.parse(req.params);

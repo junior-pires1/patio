@@ -5,9 +5,11 @@ import helmet from 'helmet';
 import type { Contexto } from './contexto';
 import { ErroApp, tratarErros } from './erros';
 import { rotasAuth } from './modulos/auth/rotas';
+import { rotasAvisos } from './modulos/avisos/rotas';
 import { rotasCatalogo } from './modulos/catalogo/rotas';
 import { rotasChat } from './modulos/chat/rotas';
 import { rotasConexoes } from './modulos/conexoes/rotas';
+import { rotasCoordenacao } from './modulos/coordenacao/rotas';
 import { rotasPerfil } from './modulos/perfil/rotas';
 import { rotasProtecao } from './modulos/protecao/rotas';
 
@@ -66,6 +68,8 @@ export function criarApp(opcoes: OpcoesApp) {
   app.use(rotasConexoes(ctx));
   app.use(rotasChat(ctx));
   app.use(rotasProtecao(ctx));
+  app.use(rotasAvisos(ctx));
+  app.use(rotasCoordenacao(ctx));
 
   app.use((_req, res) => {
     res.status(404).json({ erro: 'rota_inexistente', mensagem: 'Rota não encontrada.' });
