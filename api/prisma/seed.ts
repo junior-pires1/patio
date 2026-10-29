@@ -186,92 +186,99 @@ export async function semear(
   const senhaHash = await bcrypt.hash(SENHA_DEMONSTRACAO, 10);
   const nascimento = new Date('2003-05-10');
 
-  await prisma.$transaction(async (tx) => {
-    await tx.administrador.create({
-      data: {
-        nome: 'Administração Pátio',
-        email: 'admin@patio.app',
-        // Na internet a senha da plataforma vem do ambiente, não do README.
-        senhaHash: opcoes.senhaAdmin ? await bcrypt.hash(opcoes.senhaAdmin, 10) : senhaHash,
-      },
-    });
-
-    for (const f of FACULDADES) {
-      const inst = await tx.instituicao.create({
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.administrador.create({
         data: {
-          nome: f.nome,
-          sigla: f.sigla,
-          corPrimaria: f.cor,
-          cidade: f.cidade,
-          uf: f.uf,
-          dominios: { create: [{ dominio: f.dominio }] },
+          nome: 'Administração Pátio',
+          email: 'admin@patio.app',
+          // Na internet a senha da plataforma vem do ambiente, não do README.
+          senhaHash: opcoes.senhaAdmin
+            ? await bcrypt.hash(opcoes.senhaAdmin, 10)
+            : senhaHash,
         },
       });
 
-      const cursos: { id: string }[] = [];
-      for (const nome of f.cursos) {
-        cursos.push(await tx.curso.create({ data: { instituicaoId: inst.id, nome } }));
-      }
-      const disciplinas: { id: string }[] = [];
-      for (const [nome, curso] of f.disciplinas) {
-        disciplinas.push(
-          await tx.disciplina.create({
-            data: {
-              instituicaoId: inst.id,
-              nome,
-              cursoId: curso === null ? null : cursos[curso]?.id,
-            },
-          }),
-        );
-      }
+      for (const f of FACULDADES) {
+        const inst = await tx.instituicao.create({
+          data: {
+            nome: f.nome,
+            sigla: f.sigla,
+            corPrimaria: f.cor,
+            cidade: f.cidade,
+            uf: f.uf,
+            dominios: { create: [{ dominio: f.dominio }] },
+          },
+        });
 
-      await tx.usuario.create({
-        data: {
-          instituicaoId: inst.id,
-          papel: 'COORDENACAO',
-          nome: `Coordenação ${f.sigla}`,
-          apelido: 'Coordenação',
-          email: `coordenacao@${f.dominio}`,
-          senhaHash,
-          emailVerificadoEm: new Date(),
-        },
-      });
+        const cursos: { id: string }[] = [];
+        for (const nome of f.cursos) {
+          cursos.push(await tx.curso.create({ data: { instituicaoId: inst.id, nome } }));
+        }
+        const disciplinas: { id: string }[] = [];
+        for (const [nome, curso] of f.disciplinas) {
+          disciplinas.push(
+            await tx.disciplina.create({
+              data: {
+                instituicaoId: inst.id,
+                nome,
+                cursoId: curso === null ? null : cursos[curso]?.id,
+              },
+            }),
+          );
+        }
 
-      for (const a of f.alunos) {
-        const relacoes = [
-          ...a.cursando.map((d) => ({ d, relacao: 'CURSANDO' as const })),
-          ...a.ajudo.map((d) => ({ d, relacao: 'POSSO_AJUDAR' as const })),
-          ...a.preciso.map((d) => ({ d, relacao: 'PRECISO_AJUDA' as const })),
-        ];
-        const aluno = await tx.usuario.create({
+        await tx.usuario.create({
           data: {
             instituicaoId: inst.id,
-            cursoId: cursos[a.curso]?.id,
-            nome: a.nome,
-            apelido: a.apelido,
-            email: a.usuarioEmail,
+            papel: 'COORDENACAO',
+            nome: `Coordenação ${f.sigla}`,
+            apelido: 'Coordenação',
+            email: `coordenacao@${f.dominio}`,
             senhaHash,
-            dataNascimento: nascimento,
-            semestre: a.semestre,
-            turno: a.turno,
-            frase: a.frase,
-            interesses: a.interesses,
-            habilidades: a.habilidades,
-            objetivos: a.objetivos,
-            horariosLivres: a.horarios,
             emailVerificadoEm: new Date(),
           },
         });
-        await tx.usuarioDisciplina.createMany({
-          data: relacoes.map(({ d, relacao }) => ({
-            instituicaoId: inst.id,
-            usuarioId: aluno.id,
-            disciplinaId: disciplinas[d]!.id,
-            relacao,
-          })),
-        });
+
+        for (const a of f.alunos) {
+          const relacoes = [
+            ...a.cursando.map((d) => ({ d, relacao: 'CURSANDO' as const })),
+            ...a.ajudo.map((d) => ({ d, relacao: 'POSSO_AJUDAR' as const })),
+            ...a.preciso.map((d) => ({ d, relacao: 'PRECISO_AJUDA' as const })),
+          ];
+          const aluno = await tx.usuario.create({
+            data: {
+              instituicaoId: inst.id,
+              cursoId: cursos[a.curso]?.id,
+              nome: a.nome,
+              apelido: a.apelido,
+              email: a.usuarioEmail,
+              senhaHash,
+              dataNascimento: nascimento,
+              semestre: a.semestre,
+              turno: a.turno,
+              frase: a.frase,
+              interesses: a.interesses,
+              habilidades: a.habilidades,
+              objetivos: a.objetivos,
+              horariosLivres: a.horarios,
+              emailVerificadoEm: new Date(),
+            },
+          });
+          await tx.usuarioDisciplina.createMany({
+            data: relacoes.map(({ d, relacao }) => ({
+              instituicaoId: inst.id,
+              usuarioId: aluno.id,
+              disciplinaId: disciplinas[d]!.id,
+              relacao,
+            })),
+          });
+        }
       }
-    }
-  });
+      // Banco na nuvem: cada comando leva dezenas de milissegundos e o seed faz
+      // mais de cem. O limite padrão de 5 s não basta.
+    },
+    { maxWait: 30_000, timeout: 180_000 },
+  );
   return true;
 }
