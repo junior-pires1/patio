@@ -140,6 +140,47 @@ export async function pedirCodigo(
 }
 
 /**
+ * Confere o código de 6 dígitos (RN02) e o marca como usado. Os erros são
+ * devolvidos, não lançados, para que o aumento de tentativas seja gravado
+ * mesmo quando a operação não continua.
+ */
+async function usarCodigo(
+  tx: Transacao,
+  email: string,
+  digitado: string,
+): Promise<ErroApp | null> {
+  const codigo = await tx.codigoVerificacao.findFirst({
+    where: { email: email, usadoEm: null },
+    orderBy: { criadoEm: 'desc' },
+  });
+  if (!codigo || codigo.expiraEm < new Date()) {
+    return new ErroApp(422, 'codigo_expirado', 'O código expirou. Peça um novo código.');
+  }
+  if (codigo.tentativas >= MAX_TENTATIVAS) {
+    return new ErroApp(429, 'codigo_bloqueado', 'Muitas tentativas. Peça um novo código.');
+  }
+  if (!(await conferir(digitado, codigo.codigoHash))) {
+    const { tentativas } = await tx.codigoVerificacao.update({
+      where: { id: codigo.id },
+      data: { tentativas: { increment: 1 } },
+    });
+    const restantes = MAX_TENTATIVAS - tentativas;
+    return new ErroApp(
+      422,
+      'codigo_incorreto',
+      restantes > 0
+        ? `Código incorreto. Você ainda tem ${restantes} tentativa(s).`
+        : 'Código incorreto. Peça um novo código.',
+    );
+  }
+  await tx.codigoVerificacao.update({
+    where: { id: codigo.id },
+    data: { usadoEm: new Date() },
+  });
+  return null;
+}
+
+/**
  * RF: cria a conta depois de conferir o código. Os erros de código são
  * devolvidos (e não lançados) dentro da transação para que o aumento do
  * número de tentativas seja gravado.
@@ -152,38 +193,8 @@ export async function cadastrar(
   const senhaHash = await gerarHash(dados.senha);
 
   const resultado = await naFaculdade(ctx.prisma, faculdade.id, async (tx) => {
-    const codigo = await tx.codigoVerificacao.findFirst({
-      where: { email: dados.email, usadoEm: null },
-      orderBy: { criadoEm: 'desc' },
-    });
-    if (!codigo || codigo.expiraEm < new Date()) {
-      return new ErroApp(422, 'codigo_expirado', 'O código expirou. Peça um novo código.');
-    }
-    if (codigo.tentativas >= MAX_TENTATIVAS) {
-      return new ErroApp(
-        429,
-        'codigo_bloqueado',
-        'Muitas tentativas. Peça um novo código.',
-      );
-    }
-    if (!(await conferir(dados.codigo, codigo.codigoHash))) {
-      const { tentativas } = await tx.codigoVerificacao.update({
-        where: { id: codigo.id },
-        data: { tentativas: { increment: 1 } },
-      });
-      const restantes = MAX_TENTATIVAS - tentativas;
-      return new ErroApp(
-        422,
-        'codigo_incorreto',
-        restantes > 0
-          ? `Código incorreto. Você ainda tem ${restantes} tentativa(s).`
-          : 'Código incorreto. Peça um novo código.',
-      );
-    }
-    await tx.codigoVerificacao.update({
-      where: { id: codigo.id },
-      data: { usadoEm: new Date() },
-    });
+    const falha = await usarCodigo(tx, dados.email, dados.codigo);
+    if (falha) return falha;
 
     if (dados.cursoId && !(await tx.curso.findUnique({ where: { id: dados.cursoId } }))) {
       throw new ErroApp(422, 'curso_inexistente', 'Curso não encontrado.', {
