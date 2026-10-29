@@ -6,6 +6,7 @@ import type { Contexto } from './contexto';
 import { ErroApp, tratarErros } from './erros';
 import { rotasAuth } from './modulos/auth/rotas';
 import { rotasCatalogo } from './modulos/catalogo/rotas';
+import { rotasConexoes } from './modulos/conexoes/rotas';
 import { rotasPerfil } from './modulos/perfil/rotas';
 
 export type OpcoesApp = Contexto & {
@@ -60,6 +61,7 @@ export function criarApp(opcoes: OpcoesApp) {
   // Rotas que exigem login (cada rota declara o middleware `logado`)
   app.use(rotasPerfil(ctx));
   app.use(rotasCatalogo(ctx));
+  app.use(rotasConexoes(ctx));
 
   app.use((_req, res) => {
     res.status(404).json({ erro: 'rota_inexistente', mensagem: 'Rota não encontrada.' });
