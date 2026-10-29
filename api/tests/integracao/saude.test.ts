@@ -11,6 +11,12 @@ describe('GET /saude', () => {
     expect(r.body.status).toBe('ok');
   });
 
+  test('a raiz identifica a API', async () => {
+    const r = await request(t.app).get('/');
+    expect(r.status).toBe(200);
+    expect(r.body.nome).toBe('API do Pátio');
+  });
+
   test('envia cabeçalhos de segurança', async () => {
     const r = await request(t.app).get('/saude');
     expect(r.headers['x-content-type-options']).toBe('nosniff');

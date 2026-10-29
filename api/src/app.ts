@@ -44,6 +44,11 @@ export function criarApp(opcoes: OpcoesApp) {
       handler: (_req, _res, next) => next(muitasRequisicoes),
     });
 
+  // Página inicial: só confirma que é a API do Pátio
+  app.get('/', (_req, res) => {
+    res.json({ nome: 'API do Pátio', status: 'no ar', saude: '/saude' });
+  });
+
   // Usada pela hospedagem para saber se o serviço está no ar
   app.get('/saude', (_req, res) => {
     res.json({ status: 'ok', horario: new Date().toISOString() });
