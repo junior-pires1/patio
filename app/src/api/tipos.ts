@@ -76,3 +76,12 @@ export type MotivoDenuncia =
   | 'SPAM'
   | 'VENDA_DE_TRABALHOS'
   | 'OUTRO';
+
+export type Aviso = {
+  id: string;
+  titulo: string;
+  texto: string;
+  fixado: boolean;
+  criadoEm: string;
+  autor: { id: string; nome: string };
+};
