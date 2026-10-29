@@ -176,7 +176,10 @@ export const FACULDADES: Faculdade[] = [
 ];
 
 /** Grava os dados de demonstração. Devolve false se o banco já tinha dados. */
-export async function semear(prisma: PrismaClient): Promise<boolean> {
+export async function semear(
+  prisma: PrismaClient,
+  opcoes: { senhaAdmin?: string } = {},
+): Promise<boolean> {
   if ((await prisma.instituicao.count()) > 0) return false;
 
   // Custo menor que o da API (12): o seed cria dezenas de contas de uma vez.
@@ -185,7 +188,12 @@ export async function semear(prisma: PrismaClient): Promise<boolean> {
 
   await prisma.$transaction(async (tx) => {
     await tx.administrador.create({
-      data: { nome: 'Administração Pátio', email: 'admin@patio.app', senhaHash },
+      data: {
+        nome: 'Administração Pátio',
+        email: 'admin@patio.app',
+        // Na internet a senha da plataforma vem do ambiente, não do README.
+        senhaHash: opcoes.senhaAdmin ? await bcrypt.hash(opcoes.senhaAdmin, 10) : senhaHash,
+      },
     });
 
     for (const f of FACULDADES) {

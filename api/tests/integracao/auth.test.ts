@@ -48,6 +48,18 @@ describe('POST /auth/codigo', () => {
     expect(r.body.erro).toBe('email_ja_cadastrado');
   });
 
+  test('se o e-mail não sai, o código é descartado e dá para pedir de novo', async () => {
+    const enviar = vi
+      .spyOn(t.caixa.enviador, 'enviarCodigo')
+      .mockRejectedValueOnce(Object.assign(new Error('fora do ar'), {}));
+    const email = emailNovo();
+    const falhou = await request(t.app).post('/auth/codigo').send({ email });
+    expect(falhou.status).toBe(500);
+    expect(await t.prisma.codigoVerificacao.count({ where: { email } })).toBe(0);
+    expect((await pedirCodigo(email)).r.status).toBe(202);
+    enviar.mockRestore();
+  });
+
   test('só deixa pedir outro código depois de 1 minuto', async () => {
     const email = emailNovo();
     expect((await pedirCodigo(email)).r.status).toBe(202);

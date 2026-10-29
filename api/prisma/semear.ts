@@ -7,7 +7,7 @@ async function principal(): Promise<void> {
   if (!url) throw new Error('Defina DATABASE_URL (veja api/.env.example)');
   const prisma = criarPrisma(url);
   try {
-    const gravou = await semear(prisma);
+    const gravou = await semear(prisma, { senhaAdmin: process.env.SENHA_ADMIN_PLATAFORMA });
     console.warn(
       gravou
         ? `Dados de demonstração gravados. Senha das contas: ${SENHA_DEMONSTRACAO}`

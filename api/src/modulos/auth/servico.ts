@@ -96,7 +96,7 @@ export async function pedirCodigo(
   const codigo = randomInt(0, 1_000_000).toString().padStart(6, '0');
   const codigoHash = await gerarHash(codigo);
 
-  await naFaculdade(ctx.prisma, faculdade.id, async (tx) => {
+  const criado = await naFaculdade(ctx.prisma, faculdade.id, async (tx) => {
     if (await tx.usuario.findUnique({ where: { email }, select: { id: true } })) {
       throw new ErroApp(
         409,
@@ -116,17 +116,26 @@ export async function pedirCodigo(
         'Aguarde um minuto para pedir outro código.',
       );
     }
-    await tx.codigoVerificacao.create({
+    return tx.codigoVerificacao.create({
       data: {
         instituicaoId: faculdade.id,
         email,
         codigoHash,
         expiraEm: new Date(Date.now() + VALIDADE_CODIGO_MS),
       },
+      select: { id: true },
     });
   });
 
-  await ctx.email.enviarCodigo(email, codigo, faculdade.nome);
+  try {
+    await ctx.email.enviarCodigo(email, codigo, faculdade.nome);
+  } catch (erro) {
+    // O e-mail não saiu: apaga o código para a pessoa poder pedir outro na hora.
+    await naFaculdade(ctx.prisma, faculdade.id, (tx) =>
+      tx.codigoVerificacao.delete({ where: { id: criado.id } }),
+    );
+    throw erro;
+  }
   return faculdade;
 }
 

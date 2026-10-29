@@ -13,6 +13,9 @@ const esquema = z.object({
   }),
   // Assina os tokens de acesso. Gere um valor longo e aleatório para cada ambiente.
   JWT_SEGREDO: z.string().min(32, 'use pelo menos 32 caracteres'),
+  // E-mail de verdade (opcional): sem eles, o código aparece no terminal.
+  BREVO_API_KEY: z.string().min(10).optional(),
+  EMAIL_REMETENTE: z.email().optional(),
 });
 
 export function lerAmbiente(variaveis: NodeJS.ProcessEnv = process.env) {
