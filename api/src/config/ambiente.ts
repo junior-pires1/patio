@@ -19,7 +19,13 @@ const esquema = z.object({
 });
 
 export function lerAmbiente(variaveis: NodeJS.ProcessEnv = process.env) {
-  const resultado = esquema.safeParse(variaveis);
+  // Variável em branco (comum nos painéis de hospedagem) conta como ausente.
+  const preenchidas = Object.fromEntries(
+    Object.entries(variaveis).filter(
+      ([, valor]) => valor !== undefined && valor.trim() !== '',
+    ),
+  );
+  const resultado = esquema.safeParse(preenchidas);
   if (!resultado.success) {
     const problemas = resultado.error.issues
       .map((i) => `${i.path.join('.')}: ${i.message}`)

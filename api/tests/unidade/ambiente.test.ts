@@ -36,4 +36,17 @@ describe('lerAmbiente', () => {
       /JWT_SEGREDO/,
     );
   });
+
+  test('variáveis em branco contam como ausentes', () => {
+    const a = lerAmbiente({
+      DATABASE_URL: BANCO,
+      JWT_SEGREDO: SEGREDO,
+      BREVO_API_KEY: '',
+      EMAIL_REMETENTE: '  ',
+      PORT: '',
+    });
+    expect(a.BREVO_API_KEY).toBeUndefined();
+    expect(a.EMAIL_REMETENTE).toBeUndefined();
+    expect(a.PORT).toBe(3333);
+  });
 });
