@@ -26,6 +26,12 @@ export default function LayoutAbas() {
     queryFn: () => api.get<Conexao[]>('/matches'),
   });
   const naoLidas = conexoes.data?.reduce((soma, c) => soma + c.naoLidas, 0) ?? 0;
+  // Curtidas recebidas que esperam resposta: aparecem no ícone de Descobrir.
+  const curtidas = useQuery({
+    queryKey: ['curtidas-recebidas'],
+    queryFn: () => api.get<{ total: number }>('/curtidas/recebidas'),
+  });
+  const pendentes = curtidas.data?.total ?? 0;
 
   return (
     <Tabs
@@ -36,7 +42,11 @@ export default function LayoutAbas() {
     >
       <Tabs.Screen
         name="index"
-        options={{ title: 'Descobrir', tabBarIcon: icone('albums-outline') }}
+        options={{
+          title: 'Descobrir',
+          tabBarIcon: icone('albums-outline'),
+          tabBarBadge: pendentes > 0 ? pendentes : undefined,
+        }}
       />
       <Tabs.Screen
         name="conexoes"

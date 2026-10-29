@@ -34,12 +34,18 @@ export default function Descobrir() {
         setMatch({ id: r.match.id, apelido: c.apelido });
         void queryClient.invalidateQueries({ queryKey: ['matches'] });
       }
+      if (c.curtiuVoce)
+        void queryClient.invalidateQueries({ queryKey: ['curtidas-recebidas'] });
       proxima();
     },
   });
   const pular = useMutation({
     mutationFn: (c: Carta) => api.post('/pulos', { paraId: c.id }),
-    onSuccess: proxima,
+    onSuccess: (_r, c) => {
+      if (c.curtiuVoce)
+        void queryClient.invalidateQueries({ queryKey: ['curtidas-recebidas'] });
+      proxima();
+    },
   });
 
   function recarregar() {
@@ -92,6 +98,13 @@ export default function Descobrir() {
                 <Text style={estilosBase.subtitulo}>{resumo(carta)}</Text>
               </View>
             </View>
+            {carta.curtiuVoce ? (
+              <View style={[estilos.curtiu, { backgroundColor: cor }]}>
+                <Text style={estilos.curtiuTexto}>
+                  💙 Curtiu você: curta de volta para conversar
+                </Text>
+              </View>
+            ) : null}
             {carta.frase ? <Text style={estilos.frase}>“{carta.frase}”</Text> : null}
 
             {carta.afinidade.motivos.length > 0 ? (
@@ -199,6 +212,8 @@ const estilos = StyleSheet.create({
   },
   cartaConteudo: { padding: espaco.g, gap: espaco.m },
   cabecalho: { flexDirection: 'row', alignItems: 'center', gap: espaco.m },
+  curtiu: { borderRadius: raio.m, paddingVertical: 8, paddingHorizontal: 12 },
+  curtiuTexto: { color: '#fff', fontWeight: '700', fontSize: 14 },
   frase: { fontSize: 17, fontStyle: 'italic', color: cores.texto },
   motivos: { borderRadius: raio.m, padding: espaco.m, gap: 4 },
   motivo: { fontSize: 14, color: cores.texto, fontWeight: '500' },

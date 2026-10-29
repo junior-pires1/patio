@@ -45,7 +45,10 @@ export type Sessao = {
   usuario: MeuPerfil;
 };
 
-export type Carta = PerfilPublico & { afinidade: { pontos: number; motivos: string[] } };
+export type Carta = PerfilPublico & {
+  curtiuVoce: boolean;
+  afinidade: { pontos: number; motivos: string[] };
+};
 
 export type Mensagem = {
   id: string;

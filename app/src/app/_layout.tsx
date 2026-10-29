@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { Carregando } from '@/componentes/Estados';
+import { ProvedorDeNotificacoes } from '@/componentes/Notificacoes';
 import { ProvedorDeSessao, useSessao } from '@/sessao';
 import { useTempoReal } from '@/tempo-real';
 
@@ -13,8 +14,10 @@ export default function Raiz() {
   return (
     <QueryClientProvider client={queryClient}>
       <ProvedorDeSessao>
-        <StatusBar style="dark" />
-        <Navegacao />
+        <ProvedorDeNotificacoes>
+          <StatusBar style="dark" />
+          <Navegacao />
+        </ProvedorDeNotificacoes>
       </ProvedorDeSessao>
     </QueryClientProvider>
   );
