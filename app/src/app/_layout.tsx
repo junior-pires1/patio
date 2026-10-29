@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Carregando } from '@/componentes/Estados';
 import { ProvedorDeNotificacoes } from '@/componentes/Notificacoes';
 import { ProvedorDeSessao, useSessao } from '@/sessao';
+import { usePush } from '@/push';
 import { useTempoReal } from '@/tempo-real';
 
 export default function Raiz() {
@@ -27,6 +28,7 @@ export default function Raiz() {
 function Navegacao() {
   const { estado } = useSessao();
   useTempoReal();
+  usePush();
   if (estado.tipo === 'carregando') return <Carregando />;
   const logado = estado.tipo === 'logado';
 

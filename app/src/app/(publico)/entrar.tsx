@@ -62,6 +62,9 @@ export default function Entrar() {
         desabilitado={!email || !senha}
       />
 
+      <Link href="/esqueci" style={estilos.linkSimples}>
+        Esqueci minha senha
+      </Link>
       <Link href="/cadastro" style={estilos.link}>
         Primeira vez? <Text style={estilos.linkForte}>Criar conta</Text>
       </Link>
@@ -72,6 +75,7 @@ export default function Entrar() {
 const estilos = StyleSheet.create({
   topo: { marginTop: 48, marginBottom: 16, gap: 8 },
   marca: { fontSize: 40, fontWeight: '800', color: cores.padrao },
+  linkSimples: { textAlign: 'center', color: cores.textoSuave, fontSize: 14 },
   link: { textAlign: 'center', marginTop: 8, color: cores.textoSuave, fontSize: 15 },
   linkForte: { color: cores.padrao, fontWeight: '700' },
 });

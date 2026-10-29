@@ -13,6 +13,7 @@ import { Platform } from 'react-native';
 import { criarCliente, type Armazenamento, type Cliente } from './api/cliente';
 import type { MeuPerfil, Sessao } from './api/tipos';
 import { API_URL } from './config';
+import { tokenRegistrado } from './push';
 import { cores } from './tema';
 
 const CHAVE = 'patio.renovacao';
@@ -41,6 +42,8 @@ type ValorSessao = {
   api: Cliente;
   entrar: (email: string, senha: string) => Promise<void>;
   cadastrar: (dados: Record<string, unknown>) => Promise<void>;
+  /** Para fluxos que já devolvem uma sessão (ex.: redefinir a senha). */
+  entrarComSessao: (sessao: Sessao) => void;
   sair: () => Promise<void>;
   atualizarUsuario: (usuario: MeuPerfil) => void;
 };
@@ -81,7 +84,11 @@ export function ProvedorDeSessao({ children }: { children: ReactNode }) {
       api,
       entrar: async (email, senha) => aoEntrar(await api.entrar(email, senha)),
       cadastrar: async (dados) => aoEntrar(await api.cadastrar(dados)),
+      entrarComSessao: aoEntrar,
       sair: async () => {
+        // Este aparelho deixa de receber notificações desta conta.
+        const token = tokenRegistrado();
+        if (token) await api.delete('/eu/push', { token }).catch(() => undefined);
         await api.sair();
         queryClient.clear();
         setEstado({ tipo: 'anonimo' });

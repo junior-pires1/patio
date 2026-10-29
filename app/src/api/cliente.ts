@@ -45,15 +45,21 @@ export function criarCliente(opcoes: Opcoes) {
   let acesso: string | null = null;
   let renovando: Promise<boolean> | null = null;
 
-  async function chamar(metodo: Metodo, caminho: string, corpo?: unknown) {
+  async function chamar(metodo: Metodo, caminho: string, corpo?: unknown, tipo?: string) {
     const cabecalhos: Record<string, string> = { Accept: 'application/json' };
-    if (corpo !== undefined) cabecalhos['Content-Type'] = 'application/json';
+    const binario = tipo !== undefined;
+    if (corpo !== undefined) cabecalhos['Content-Type'] = tipo ?? 'application/json';
     if (acesso) cabecalhos.Authorization = `Bearer ${acesso}`;
     try {
       return await buscar(`${opcoes.baseUrl}${caminho}`, {
         method: metodo,
         headers: cabecalhos,
-        body: corpo === undefined ? undefined : JSON.stringify(corpo),
+        body:
+          corpo === undefined
+            ? undefined
+            : binario
+              ? (corpo as BodyInit)
+              : JSON.stringify(corpo),
       });
     } catch {
       throw ERRO_DE_REDE;
@@ -114,11 +120,12 @@ export function criarCliente(opcoes: Opcoes) {
     metodo: Metodo,
     caminho: string,
     corpo?: unknown,
+    tipo?: string,
   ): Promise<T> {
-    let resposta = await chamar(metodo, caminho, corpo);
+    let resposta = await chamar(metodo, caminho, corpo, tipo);
     if (resposta.status === 401 && acesso !== null) {
       if (await renovarUmaVez()) {
-        resposta = await chamar(metodo, caminho, corpo);
+        resposta = await chamar(metodo, caminho, corpo, tipo);
       } else {
         opcoes.aoPerderSessao?.();
       }
@@ -132,7 +139,11 @@ export function criarCliente(opcoes: Opcoes) {
       requisitar<T>('POST', caminho, corpo ?? {}),
     patch: <T>(caminho: string, corpo: unknown) => requisitar<T>('PATCH', caminho, corpo),
     put: <T>(caminho: string, corpo: unknown) => requisitar<T>('PUT', caminho, corpo),
-    delete: (caminho: string) => requisitar<void>('DELETE', caminho),
+    delete: (caminho: string, corpo?: unknown) =>
+      requisitar<void>('DELETE', caminho, corpo),
+    /** Envia bytes (ex.: foto) com o tipo informado. */
+    enviarArquivo: <T>(caminho: string, arquivo: Blob, tipo: string) =>
+      requisitar<T>('PUT', caminho, arquivo, tipo),
 
     /** Token atual, para o Socket.IO. */
     tokenDeAcesso: () => acesso,
@@ -148,6 +159,23 @@ export function criarCliente(opcoes: Opcoes) {
 
     async cadastrar(dados: Record<string, unknown>): Promise<Sessao> {
       const sessao = await requisitar<Sessao>('POST', '/auth/cadastro', dados);
+      await guardarSessao(sessao);
+      return sessao;
+    },
+
+    /** Redefine a senha com o código do e-mail (RF39) e já entra. */
+    async redefinirSenha(dados: Record<string, unknown>): Promise<Sessao> {
+      const sessao = await requisitar<Sessao>('POST', '/auth/senha/redefinir', dados);
+      await guardarSessao(sessao);
+      return sessao;
+    },
+
+    /** Troca a senha estando logado; a API devolve uma sessão nova. */
+    async trocarSenha(senhaAtual: string, novaSenha: string): Promise<Sessao> {
+      const sessao = await requisitar<Sessao>('PUT', '/auth/senha', {
+        senhaAtual,
+        novaSenha,
+      });
       await guardarSessao(sessao);
       return sessao;
     },

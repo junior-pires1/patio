@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ErroApi } from '@/api/cliente';
 import type { Curso, Disciplina, MeuPerfil, Relacao, Turno } from '@/api/tipos';
 import { Avatar } from '@/componentes/Avatar';
@@ -13,6 +13,7 @@ import { useCorDaFaculdade, useSessao, useUsuario } from '@/sessao';
 import { cores, espaco, estilosBase, raio, suave } from '@/tema';
 import { DIAS, OBJETIVOS, PERIODOS, RELACOES, TURNOS } from '@/utils/opcoes';
 import { alerta } from '@/utils/alerta';
+import { escolherFoto } from '@/utils/foto';
 
 const alternar = (lista: string[], item: string) =>
   lista.includes(item) ? lista.filter((x) => x !== item) : [...lista, item];
@@ -110,6 +111,46 @@ export default function Perfil() {
     }
   }
 
+  const [enviandoFoto, setEnviandoFoto] = useState(false);
+  async function trocarFoto() {
+    try {
+      const foto = await escolherFoto();
+      if (!foto) return;
+      setEnviandoFoto(true);
+      await api.enviarArquivo('/eu/foto', foto, 'image/jpeg');
+      atualizarUsuario(await api.get<MeuPerfil>('/eu'));
+    } catch (e) {
+      alerta('Não foi possível trocar a foto', e instanceof Error ? e.message : undefined);
+    } finally {
+      setEnviandoFoto(false);
+    }
+  }
+  async function removerFoto() {
+    await api.delete('/eu/foto');
+    atualizarUsuario(await api.get<MeuPerfil>('/eu'));
+  }
+
+  const [senhas, setSenhas] = useState({ atual: '', nova: '' });
+  const [errosSenha, setErrosSenha] = useState<Record<string, string>>({});
+  const [trocandoSenha, setTrocandoSenha] = useState(false);
+  async function trocarSenha() {
+    setErrosSenha({});
+    setTrocandoSenha(true);
+    try {
+      await api.trocarSenha(senhas.atual, senhas.nova);
+      setSenhas({ atual: '', nova: '' });
+      alerta('Senha trocada', 'Os outros aparelhos vão precisar entrar de novo.');
+    } catch (e) {
+      setErrosSenha(
+        e instanceof ErroApi
+          ? { ...e.campos, _: e.message }
+          : { _: 'Não foi possível trocar.' },
+      );
+    } finally {
+      setTrocandoSenha(false);
+    }
+  }
+
   function confirmarSaida() {
     alerta('Sair da conta?', 'Você vai precisar entrar de novo neste aparelho.', [
       { text: 'Cancelar', style: 'cancel' },
@@ -120,13 +161,32 @@ export default function Perfil() {
   return (
     <Tela rolagem semTopo>
       <View style={[estilos.cartao, { backgroundColor: suave(cor) }]}>
-        <Avatar nome={form.apelido || eu.nome} fotoUrl={eu.fotoUrl} tamanho={64} />
+        <Pressable
+          onPress={trocarFoto}
+          disabled={enviandoFoto}
+          accessibilityRole="button"
+          accessibilityLabel="Trocar foto de perfil"
+        >
+          <Avatar nome={form.apelido || eu.nome} fotoUrl={eu.fotoUrl} tamanho={72} />
+          <Text style={[estilos.trocarFoto, { color: cor }]}>
+            {enviandoFoto ? 'Enviando…' : eu.fotoUrl ? 'Trocar foto' : 'Pôr foto'}
+          </Text>
+        </Pressable>
         <View style={estilos.flex}>
           <Text style={estilosBase.secao}>{eu.nome}</Text>
           <Text style={estilosBase.subtitulo}>{eu.email}</Text>
           <Text style={[estilos.faculdade, { color: cor }]}>
             {eu.instituicao.sigla} · {eu.instituicao.nome}
           </Text>
+          {eu.fotoUrl ? (
+            <Text
+              onPress={removerFoto}
+              style={estilos.removerFoto}
+              accessibilityRole="button"
+            >
+              Remover foto
+            </Text>
+          ) : null}
         </View>
       </View>
 
@@ -271,6 +331,32 @@ export default function Perfil() {
 
       <MensagemDeErro texto={erro} />
       <Botao titulo="Salvar perfil" aoTocar={salvar} carregando={salvando} />
+
+      <Text style={estilosBase.secao}>Trocar senha</Text>
+      <Campo
+        rotulo="Senha atual"
+        secureTextEntry
+        value={senhas.atual}
+        onChangeText={(v) => setSenhas((x) => ({ ...x, atual: v }))}
+        erro={errosSenha.senhaAtual}
+      />
+      <Campo
+        rotulo="Nova senha"
+        secureTextEntry
+        ajuda="Pelo menos 8 caracteres, com letras e números"
+        value={senhas.nova}
+        onChangeText={(v) => setSenhas((x) => ({ ...x, nova: v }))}
+        erro={errosSenha.novaSenha}
+      />
+      <MensagemDeErro texto={errosSenha._} />
+      <Botao
+        titulo="Trocar senha"
+        variante="contorno"
+        aoTocar={trocarSenha}
+        carregando={trocandoSenha}
+        desabilitado={!senhas.atual || !senhas.nova}
+      />
+
       <Botao titulo="Sair da conta" variante="perigo" aoTocar={confirmarSaida} />
     </Tela>
   );
@@ -278,6 +364,8 @@ export default function Perfil() {
 
 const estilos = StyleSheet.create({
   flex: { flex: 1 },
+  trocarFoto: { fontSize: 12, fontWeight: '700', textAlign: 'center', marginTop: 4 },
+  removerFoto: { fontSize: 13, color: cores.erro, marginTop: 6 },
   cartao: {
     flexDirection: 'row',
     alignItems: 'center',

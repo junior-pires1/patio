@@ -1,6 +1,7 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { useCorDaFaculdade } from '@/sessao';
 import { suave } from '@/tema';
+import { enderecoDaFoto } from '@/utils/endereco';
 
 /** Foto da pessoa ou, sem foto, a inicial do apelido na cor da faculdade. */
 export function Avatar({
@@ -14,10 +15,12 @@ export function Avatar({
 }) {
   const cor = useCorDaFaculdade();
   const dimensao = { width: tamanho, height: tamanho, borderRadius: tamanho / 2 };
-  if (fotoUrl)
+  const endereco = enderecoDaFoto(fotoUrl);
+  if (endereco) {
     return (
-      <Image source={{ uri: fotoUrl }} style={dimensao} accessibilityIgnoresInvertColors />
+      <Image source={{ uri: endereco }} style={dimensao} accessibilityIgnoresInvertColors />
     );
+  }
   return (
     <View style={[estilos.circulo, dimensao, { backgroundColor: suave(cor) }]}>
       <Text style={[estilos.inicial, { color: cor, fontSize: tamanho * 0.42 }]}>

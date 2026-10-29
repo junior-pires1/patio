@@ -3,14 +3,13 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { Carta } from '@/api/tipos';
-import { BlocoAvisos } from '@/componentes/BlocoAvisos';
 import { Avatar } from '@/componentes/Avatar';
 import { Botao } from '@/componentes/Botao';
 import { Chip } from '@/componentes/Chip';
 import { Aviso, Carregando } from '@/componentes/Estados';
 import { useCorDaFaculdade, useSessao, useUsuario } from '@/sessao';
 import { cores, espaco, estilosBase, raio, suave } from '@/tema';
-import { RELACOES, resumo } from '@/utils/opcoes';
+import { OBJETIVOS, RELACOES, resumo } from '@/utils/opcoes';
 
 /** Descobrir: uma carta por vez, da maior para a menor afinidade. */
 export default function Descobrir() {
@@ -21,10 +20,22 @@ export default function Descobrir() {
   const [indice, setIndice] = useState(0);
   const [match, setMatch] = useState<{ id: string; apelido: string } | null>(null);
 
+  // RF09: filtros por objetivo e por quem pode ajudar numa disciplina em que preciso de ajuda
+  const [filtro, setFiltro] = useState<{ objetivo?: string; ajudaEm?: string }>({});
+  const precisoDeAjuda = eu.disciplinas.filter((d) => d.relacao === 'PRECISO_AJUDA');
   const cartas = useQuery({
-    queryKey: ['descobrir'],
-    queryFn: () => api.get<Carta[]>('/descobrir'),
+    queryKey: ['descobrir', filtro],
+    queryFn: () => {
+      const q = new URLSearchParams();
+      if (filtro.objetivo) q.set('objetivo', filtro.objetivo);
+      if (filtro.ajudaEm) q.set('ajudaEm', filtro.ajudaEm);
+      return api.get<Carta[]>(`/descobrir?${q.toString()}`);
+    },
   });
+  const mudarFiltro = (novo: typeof filtro) => {
+    setIndice(0);
+    setFiltro(novo);
+  };
 
   const proxima = () => setIndice((i) => i + 1);
   const curtir = useMutation({
@@ -70,7 +81,44 @@ export default function Descobrir() {
 
   return (
     <View style={estilos.fundo}>
-      <BlocoAvisos />
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={estilos.barraFiltros}
+        contentContainerStyle={estilos.filtros}
+      >
+        <Chip
+          texto="Todos"
+          ativo={!filtro.objetivo && !filtro.ajudaEm}
+          aoTocar={() => mudarFiltro({})}
+        />
+        {OBJETIVOS.map((o) => (
+          <Chip
+            key={o.valor}
+            texto={o.rotulo}
+            ativo={filtro.objetivo === o.valor}
+            aoTocar={() =>
+              mudarFiltro({
+                ...filtro,
+                objetivo: filtro.objetivo === o.valor ? undefined : o.valor,
+              })
+            }
+          />
+        ))}
+        {precisoDeAjuda.map((d) => (
+          <Chip
+            key={d.disciplina.id}
+            texto={`Ajuda em ${d.disciplina.nome}`}
+            ativo={filtro.ajudaEm === d.disciplina.id}
+            aoTocar={() =>
+              mudarFiltro({
+                ...filtro,
+                ajudaEm: filtro.ajudaEm === d.disciplina.id ? undefined : d.disciplina.id,
+              })
+            }
+          />
+        ))}
+      </ScrollView>
 
       {perfilIncompleto ? (
         <View style={[estilos.dica, { backgroundColor: suave(cor) }]}>
@@ -88,7 +136,11 @@ export default function Descobrir() {
       {!carta ? (
         <Aviso
           titulo="Por enquanto é só"
-          texto="Você já viu todos os colegas sugeridos. Volte mais tarde: chegam pessoas novas toda semana."
+          texto={
+            filtro.objetivo || filtro.ajudaEm
+              ? 'Ninguém com esse filtro por enquanto. Tente outro filtro ou "Todos".'
+              : 'Você já viu todos os colegas sugeridos. Volte mais tarde: chegam pessoas novas toda semana.'
+          }
           acao={{ titulo: 'Procurar de novo', aoTocar: recarregar }}
         />
       ) : (
@@ -204,6 +256,8 @@ export default function Descobrir() {
 const estilos = StyleSheet.create({
   fundo: { flex: 1, backgroundColor: cores.fundo, padding: espaco.g, gap: espaco.m },
   flex: { flex: 1 },
+  barraFiltros: { flexGrow: 0, flexShrink: 0 },
+  filtros: { gap: 6, paddingBottom: 2, alignItems: 'center' },
   dica: { borderRadius: raio.m, padding: espaco.m, gap: espaco.p },
   dicaTexto: { color: cores.texto, fontSize: 14 },
   carta: {
