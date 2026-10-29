@@ -6,6 +6,10 @@ import * as servico from './servico';
 
 const alvo = z.object({ paraId: z.uuid('Identificador inválido') });
 const idMatch = z.object({ id: z.uuid('Identificador inválido') });
+const filtroDescobrir = z.object({
+  objetivo: z.enum(['GRUPO_ESTUDOS', 'MONITORIA', 'PROJETOS', 'AMIZADE']).optional(),
+  ajudaEm: z.uuid('Disciplina inválida').optional(),
+});
 
 /** Descoberta, curtidas, pulos e conexões (só alunos). */
 export function rotasConexoes(ctx: Contexto) {
@@ -13,7 +17,7 @@ export function rotasConexoes(ctx: Contexto) {
   const aluno = [autenticar(ctx), exigirPapel('ALUNO')];
 
   r.get('/descobrir', ...aluno, async (req, res) => {
-    res.json(await servico.descobrir(ctx, quem(req)));
+    res.json(await servico.descobrir(ctx, quem(req), filtroDescobrir.parse(req.query)));
   });
 
   r.post('/curtidas', ...aluno, async (req, res) => {

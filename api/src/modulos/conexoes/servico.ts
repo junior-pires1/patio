@@ -34,7 +34,9 @@ export const emOrdem = (x: string, y: string): [string, string] =>
  * curtida recebida vira match logo), depois da maior para a menor afinidade.
  * Ficam de fora quem já foi curtido ou pulado, quem já é conexão e bloqueios.
  */
-export function descobrir(ctx: Contexto, eu: Autenticado) {
+export type FiltroDescobrir = { objetivo?: string; ajudaEm?: string };
+
+export function descobrir(ctx: Contexto, eu: Autenticado, filtro: FiltroDescobrir = {}) {
   return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
     const meu = await tx.usuario.findUniqueOrThrow({
       where: { id: eu.id },
@@ -47,6 +49,15 @@ export function descobrir(ctx: Contexto, eu: Autenticado) {
         recusasRecebidas: { none: { deId: eu.id } },
         matchesComoA: { none: { usuarioBId: eu.id } },
         matchesComoB: { none: { usuarioAId: eu.id } },
+        // RF09: filtros opcionais por objetivo e por quem pode ajudar numa disciplina
+        ...(filtro.objetivo ? { objetivos: { has: filtro.objetivo } } : {}),
+        ...(filtro.ajudaEm
+          ? {
+              disciplinas: {
+                some: { disciplinaId: filtro.ajudaEm, relacao: 'POSSO_AJUDAR' },
+              },
+            }
+          : {}),
       },
       select: {
         ...PERFIL_AFINIDADE,

@@ -60,6 +60,30 @@ describe('GET /descobrir', () => {
     expect(ids).not.toContain(diego);
   });
 
+  test('filtra por objetivo e por quem pode ajudar numa disciplina (RF09)', async () => {
+    const calculo = await t.prisma.disciplina.findFirstOrThrow({
+      where: { instituicao: { sigla: 'FH' }, nome: 'Cálculo I' },
+    });
+    const ajudam = await request(t.app)
+      .get(`/descobrir?ajudaEm=${calculo.id}`)
+      .set(auth(eu));
+    expect(ajudam.body.map((c: { apelido: string }) => c.apelido)).toEqual(['Bruno']);
+
+    const monitoria = await request(t.app)
+      .get('/descobrir?objetivo=MONITORIA')
+      .set(auth(eu));
+    expect(monitoria.body.length).toBeGreaterThan(0);
+    expect(
+      monitoria.body.every((c: { objetivos: string[] }) =>
+        c.objetivos.includes('MONITORIA'),
+      ),
+    ).toBe(true);
+
+    expect(
+      (await request(t.app).get('/descobrir?objetivo=NAMORO').set(auth(eu))).status,
+    ).toBe(400);
+  });
+
   test('a coordenação não usa a descoberta', async () => {
     const coord = await t.entrar('coordenacao@horizonte.edu.br');
     const r = await request(t.app).get('/descobrir').set(auth(coord));
