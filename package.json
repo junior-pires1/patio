@@ -7,7 +7,8 @@
     "node": ">=22"
   },
   "workspaces": [
-    "api"
+    "api",
+    "app"
   ],
   "scripts": {
     "prepare": "husky",
@@ -16,7 +17,9 @@
     "formatacao": "prettier --check .",
     "tipos": "npm run tipos --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
-    "verificar": "npm run formatacao && npm run lint && npm run tipos && npm test"
+    "verificar": "npm run formatacao && npm run lint && npm run tipos && npm test",
+    "api": "npm run dev -w api",
+    "app": "npm run start -w app"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",
@@ -43,6 +46,7 @@
   "overrides": {
     "prisma": "7.10.1",
     "@prisma/client": "7.10.1",
-    "@prisma/adapter-pg": "7.10.1"
+    "@prisma/adapter-pg": "7.10.1",
+    "react": "19.3.0"
   }
 }

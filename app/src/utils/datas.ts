@@ -1,0 +1,38 @@
+/** "15/01/2000" → "2000-01-15". Devolve null se a data não existir. */
+export function dataBrParaIso(texto: string): string | null {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(texto.trim());
+  if (!m) return null;
+  const [, dia, mes, ano] = m;
+  const data = new Date(Date.UTC(Number(ano), Number(mes) - 1, Number(dia)));
+  const valida =
+    data.getUTCFullYear() === Number(ano) &&
+    data.getUTCMonth() === Number(mes) - 1 &&
+    data.getUTCDate() === Number(dia);
+  return valida ? `${ano}-${mes}-${dia}` : null;
+}
+
+/** Coloca as barras enquanto a pessoa digita: "15012000" → "15/01/2000". */
+export function mascaraData(texto: string): string {
+  const d = texto.replace(/\D/g, '').slice(0, 8);
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
+  return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
+}
+
+const doisDigitos = (n: number) => String(n).padStart(2, '0');
+
+/** Horário curto para listas e mensagens: "agora", "5 min", "14:32", "ontem", "12/10". */
+export function quando(iso: string, agora = new Date()): string {
+  const data = new Date(iso);
+  const segundos = Math.floor((agora.getTime() - data.getTime()) / 1000);
+  if (segundos < 60) return 'agora';
+  if (segundos < 3600) return `${Math.floor(segundos / 60)} min`;
+
+  const inicioDoDia = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const dias = Math.round((inicioDoDia(agora) - inicioDoDia(data)) / 86_400_000);
+  if (dias === 0)
+    return `${doisDigitos(data.getHours())}:${doisDigitos(data.getMinutes())}`;
+  if (dias === 1) return 'ontem';
+  return `${doisDigitos(data.getDate())}/${doisDigitos(data.getMonth() + 1)}`;
+}

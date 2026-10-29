@@ -2,10 +2,18 @@ import js from '@eslint/js';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
+import reactHooks from 'eslint-plugin-react-hooks';
 
 export default tseslint.config(
   {
-    ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**', '**/src/generated/**'],
+    ignores: [
+      '**/dist/**',
+      '**/coverage/**',
+      '**/node_modules/**',
+      '**/src/generated/**',
+      'app/.expo/**',
+      'app/expo-env.d.ts',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -17,6 +25,13 @@ export default tseslint.config(
       eqeqeq: ['error', 'always'],
       'no-console': ['warn', { allow: ['warn', 'error'] }],
     },
+  },
+  // Aplicativo (React Native): regras dos hooks do React
+  {
+    files: ['app/**/*.{ts,tsx}'],
+    plugins: { 'react-hooks': reactHooks },
+    languageOptions: { globals: { ...globals.browser } },
+    rules: reactHooks.configs.recommended.rules,
   },
   { files: ['**/*.js', '**/*.mjs'], ...tseslint.configs.disableTypeChecked },
   prettier,
