@@ -20,7 +20,8 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
-      DATABASE_URL_TESTE: postgresql://postgres:postgres@localhost:5432/patio_teste
+      # Os testes rodam com um usuário comum (sem superusuário), como no Neon
+      DATABASE_URL_TESTE: postgresql://patio_ci:patio_ci@localhost:5432/patio_teste
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -31,10 +32,13 @@ jobs:
       - name: Mensagens de commit (somente em pull request)
         if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
         run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }}
+      - name: Usuário do banco sem superusuário (igual aos serviços gerenciados)
+        run: psql postgresql://postgres:postgres@localhost:5432/postgres -c "CREATE ROLE patio_ci LOGIN CREATEROLE CREATEDB PASSWORD 'patio_ci'"
       - run: npm run formatacao
       - run: npm run lint
       - run: npm run tipos
       - run: npm run test --workspace api -- --coverage
       - run: npm run test --workspace app
       - run: npm run test --workspace painel
+      - run: npm run build --workspace api
       - run: npm run build --workspace painel
