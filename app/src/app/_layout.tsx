@@ -29,7 +29,8 @@ function Navegacao() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={logado}>
+      {/* Sem sessão, qualquer tela protegida leva ao login (e vice-versa). */}
+      <Stack.Protected guard={logado} redirectTo="/entrar">
         <Stack.Screen name="(abas)" />
         <Stack.Screen name="chat/[id]" options={{ headerShown: true, title: 'Conversa' }} />
         <Stack.Screen
@@ -37,7 +38,7 @@ function Navegacao() {
           options={{ headerShown: true, title: 'Denunciar', presentation: 'modal' }}
         />
       </Stack.Protected>
-      <Stack.Protected guard={!logado}>
+      <Stack.Protected guard={!logado} redirectTo="/">
         <Stack.Screen name="(publico)" />
       </Stack.Protected>
     </Stack>
