@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
-  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -21,6 +20,7 @@ import { Aviso, Carregando } from '@/componentes/Estados';
 import { useCorDaFaculdade, useSessao } from '@/sessao';
 import { cores, espaco } from '@/tema';
 import { quando } from '@/utils/datas';
+import { alerta } from '@/utils/alerta';
 
 /** RF19: publicação com os comentários. */
 export default function TelaPost() {
@@ -51,7 +51,7 @@ export default function TelaPost() {
       setTexto('');
       atualizar();
     },
-    onError: (e) => Alert.alert('Comentário não enviado', e.message),
+    onError: (e) => alerta('Comentário não enviado', e.message),
   });
   const apagar = useMutation({
     mutationFn: (cid: string) => api.delete(`/comentarios/${cid}`),

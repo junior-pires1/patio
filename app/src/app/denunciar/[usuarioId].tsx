@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Switch, StyleSheet, Text, View } from 'react-native';
+import { Switch, StyleSheet, Text, View } from 'react-native';
 import { ErroApi } from '@/api/cliente';
 import type { MotivoDenuncia } from '@/api/tipos';
 import { Botao } from '@/componentes/Botao';
@@ -12,6 +12,7 @@ import { Tela } from '@/componentes/Tela';
 import { useSessao } from '@/sessao';
 import { estilosBase } from '@/tema';
 import { MOTIVOS } from '@/utils/opcoes';
+import { alerta } from '@/utils/alerta';
 
 /** Denúncia para a coordenação da faculdade, com opção de bloquear junto. */
 export default function Denunciar() {
@@ -39,7 +40,7 @@ export default function Denunciar() {
         bloquear,
       });
       void queryClient.invalidateQueries({ queryKey: ['matches'] });
-      Alert.alert(
+      alerta(
         'Denúncia enviada',
         'A coordenação da sua faculdade vai analisar. Obrigado por avisar.',
       );

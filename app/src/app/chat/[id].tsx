@@ -4,7 +4,6 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
   ActionSheetIOS,
-  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -20,6 +19,7 @@ import { Aviso, Carregando } from '@/componentes/Estados';
 import { useCorDaFaculdade, useSessao, useUsuario } from '@/sessao';
 import { cores, espaco, raio } from '@/tema';
 import { quando } from '@/utils/datas';
+import { alerta } from '@/utils/alerta';
 
 type Pagina = { mensagens: Mensagem[]; temMais: boolean };
 
@@ -52,7 +52,7 @@ export default function Chat() {
       );
       void queryClient.invalidateQueries({ queryKey: ['matches'] });
     },
-    onError: (e) => Alert.alert('Mensagem não enviada', e.message),
+    onError: (e) => alerta('Mensagem não enviada', e.message),
   });
 
   const pessoa = conexao.data?.pessoa;
@@ -74,7 +74,7 @@ export default function Chat() {
     const opcoes = ['Desfazer conexão', 'Bloquear', 'Denunciar', 'Cancelar'] as const;
     const escolher = (i: number) => {
       const confirmar = (titulo: string, texto: string, acao: () => Promise<void>) =>
-        Alert.alert(titulo, texto, [
+        alerta(titulo, texto, [
           { text: 'Cancelar', style: 'cancel' },
           { text: 'Confirmar', style: 'destructive', onPress: () => void acao() },
         ]);
@@ -102,16 +102,12 @@ export default function Chat() {
         escolher,
       );
     } else {
-      Alert.alert(
-        pessoa.apelido,
-        undefined,
-        [
-          { text: 'Desfazer conexão', onPress: () => escolher(0) },
-          { text: 'Bloquear', onPress: () => escolher(1) },
-          { text: 'Denunciar', onPress: () => escolher(2) },
-        ],
-        { cancelable: true },
-      );
+      alerta(pessoa.apelido, undefined, [
+        { text: 'Desfazer conexão', onPress: () => escolher(0) },
+        { text: 'Bloquear', onPress: () => escolher(1) },
+        { text: 'Denunciar', onPress: () => escolher(2) },
+        { text: 'Cancelar', style: 'cancel' },
+      ]);
     }
   }
 

@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
-  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -19,6 +18,7 @@ import { Aviso, Carregando } from '@/componentes/Estados';
 import { useCorDaFaculdade, useSessao, useUsuario } from '@/sessao';
 import { cores, espaco, raio } from '@/tema';
 import { quando } from '@/utils/datas';
+import { alerta } from '@/utils/alerta';
 
 type Pagina = { mensagens: MensagemGrupo[]; temMais: boolean };
 
@@ -46,7 +46,7 @@ export default function ChatDoGrupo() {
           : p,
       );
     },
-    onError: (e) => Alert.alert('Mensagem não enviada', e.message),
+    onError: (e) => alerta('Mensagem não enviada', e.message),
   });
 
   const titulo = <Stack.Screen options={{ title: nome ?? 'Chat do grupo' }} />;

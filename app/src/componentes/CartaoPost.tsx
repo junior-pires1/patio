@@ -1,13 +1,14 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Post } from '@/api/tipos';
 import { useCorDaFaculdade, useSessao } from '@/sessao';
 import { cores, espaco, raio, suave } from '@/tema';
 import { dataDoEvento, quando } from '@/utils/datas';
 import { categoria } from '@/utils/opcoes';
 import { Avatar } from './Avatar';
+import { alerta } from '@/utils/alerta';
 
 type Props = { post: Post; detalhe?: boolean };
 
@@ -67,7 +68,7 @@ export function CartaoPost({ post, detalhe = false }: Props) {
   });
 
   function confirmarRemocao() {
-    Alert.alert('Remover publicação?', 'Ela some do feed para todos.', [
+    alerta('Remover publicação?', 'Ela some do feed para todos.', [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Remover', style: 'destructive', onPress: () => remover.mutate() },
     ]);

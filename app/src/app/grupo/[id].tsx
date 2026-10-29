@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import type { GrupoDetalhe } from '@/api/tipos';
 import { Avatar } from '@/componentes/Avatar';
 import { Botao } from '@/componentes/Botao';
@@ -8,6 +8,7 @@ import { Aviso, Carregando } from '@/componentes/Estados';
 import { Tela } from '@/componentes/Tela';
 import { useCorDaFaculdade, useSessao } from '@/sessao';
 import { cores, espaco, estilosBase, raio, suave } from '@/tema';
+import { alerta } from '@/utils/alerta';
 
 /** Detalhe do grupo: informações, membros, entrar/sair e acesso ao chat. */
 export default function TelaGrupo() {
@@ -27,7 +28,7 @@ export default function TelaGrupo() {
   const entrar = useMutation({
     mutationFn: () => api.post(`/grupos/${id}/entrar`),
     onSuccess: atualizar,
-    onError: (e) => Alert.alert('Não foi possível entrar', e.message),
+    onError: (e) => alerta('Não foi possível entrar', e.message),
   });
   const sair = useMutation({
     mutationFn: () => api.post<{ grupoApagado: boolean }>(`/grupos/${id}/sair`),
@@ -75,7 +76,7 @@ export default function TelaGrupo() {
             variante="contorno"
             carregando={sair.isPending}
             aoTocar={() =>
-              Alert.alert(
+              alerta(
                 'Sair do grupo?',
                 g.membros === 1
                   ? 'Você é o último membro: o grupo será apagado.'

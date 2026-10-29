@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { ErroApi } from '@/api/cliente';
 import type { Curso, Disciplina, MeuPerfil, Relacao, Turno } from '@/api/tipos';
 import { Avatar } from '@/componentes/Avatar';
@@ -12,6 +12,7 @@ import { Tela } from '@/componentes/Tela';
 import { useCorDaFaculdade, useSessao, useUsuario } from '@/sessao';
 import { cores, espaco, estilosBase, raio, suave } from '@/tema';
 import { DIAS, OBJETIVOS, PERIODOS, RELACOES, TURNOS } from '@/utils/opcoes';
+import { alerta } from '@/utils/alerta';
 
 const alternar = (lista: string[], item: string) =>
   lista.includes(item) ? lista.filter((x) => x !== item) : [...lista, item];
@@ -96,7 +97,7 @@ export default function Perfil() {
       atualizarUsuario(atualizado);
       // As cartas dependem do perfil: busca de novo com os dados atualizados.
       void queryClient.invalidateQueries({ queryKey: ['descobrir'] });
-      Alert.alert('Perfil salvo', 'Suas cartas vão levar isso em conta.');
+      alerta('Perfil salvo', 'Suas cartas vão levar isso em conta.');
     } catch (e) {
       if (e instanceof ErroApi) {
         setErro(e.message);
@@ -110,7 +111,7 @@ export default function Perfil() {
   }
 
   function confirmarSaida() {
-    Alert.alert('Sair da conta?', 'Você vai precisar entrar de novo neste aparelho.', [
+    alerta('Sair da conta?', 'Você vai precisar entrar de novo neste aparelho.', [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Sair', style: 'destructive', onPress: () => void sair() },
     ]);
