@@ -137,6 +137,7 @@ model Instituicao {
   avisos             Aviso[]
   denuncias          Denuncia[]
   fotos              Foto[]
+  dispositivosPush   DispositivoPush[]
 
   @@map("instituicoes")
 }
@@ -268,6 +269,7 @@ model Usuario {
   denunciasRecebidas  Denuncia[]          @relation("Denunciado")
   denunciasResolvidas Denuncia[]          @relation("ResolvidaPor")
   foto                Foto?
+  dispositivosPush    DispositivoPush[]
 
   @@unique([instituicaoId, id], map: "usuarios_instituicao_id_key")
   @@index([instituicaoId, status], map: "usuarios_instituicao_idx")
@@ -589,4 +591,20 @@ model Foto {
 
   @@unique([instituicaoId, usuarioId], map: "fotos_instituicao_usuario_key")
   @@map("fotos")
+}
+
+// ───────────────────────── Notificações push (migração 5) ─────────────────────────
+
+model DispositivoPush {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  usuarioId     String   @map("usuario_id") @db.Uuid
+  token         String   @unique(map: "dispositivos_push_token_key") @db.VarChar(200)
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  usuario     Usuario     @relation(fields: [instituicaoId, usuarioId], references: [instituicaoId, id], onDelete: Cascade, map: "dispositivos_push_usuario_fk")
+
+  @@index([usuarioId], map: "dispositivos_push_usuario_idx")
+  @@map("dispositivos_push")
 }

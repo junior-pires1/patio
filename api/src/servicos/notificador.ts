@@ -9,3 +9,12 @@ export interface Notificador {
 
 /** Não envia nada (útil em scripts e em testes que não olham o tempo real). */
 export const notificadorMudo: Notificador = { enviar() {} };
+
+/** Junta vários notificadores (ex.: tempo real pelo Socket.IO + push da Expo). */
+export function combinar(...lista: Notificador[]): Notificador {
+  return {
+    enviar(usuarioIds, evento, dados) {
+      for (const n of lista) n.enviar(usuarioIds, evento, dados);
+    },
+  };
+}

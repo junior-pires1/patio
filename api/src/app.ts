@@ -15,6 +15,7 @@ import { rotasFotos } from './modulos/fotos/rotas';
 import { rotasGrupos } from './modulos/grupos/rotas';
 import { rotasPerfil } from './modulos/perfil/rotas';
 import { rotasPlataforma } from './modulos/plataforma/rotas';
+import { rotasPush } from './modulos/push/rotas';
 import { rotasProtecao } from './modulos/protecao/rotas';
 
 export type OpcoesApp = Contexto & {
@@ -78,6 +79,7 @@ export function criarApp(opcoes: OpcoesApp) {
   app.use(rotasCoordenacao(ctx));
   app.use(rotasFeed(ctx));
   app.use(rotasFotos(ctx));
+  app.use(rotasPush(ctx));
   app.use(rotasGrupos(ctx));
 
   app.use((_req, res) => {
