@@ -2,6 +2,7 @@ import { randomInt } from 'node:crypto';
 import type { z } from 'zod';
 import { naFaculdade, type Transacao } from '../../banco/prisma';
 import type { Contexto } from '../../contexto';
+import type { Finalidade } from '../../servicos/email';
 import { ErroApp } from '../../erros';
 import { conferir, gerarHash } from '../../seguranca/senha';
 import {
@@ -87,23 +88,24 @@ async function abrirSessao(
 
 export type Sessao = Awaited<ReturnType<typeof abrirSessao>>;
 
-/** RF: envia um código de 6 dígitos, válido por 10 minutos, ao e-mail institucional. */
-export async function pedirCodigo(
+type Faculdade = Awaited<ReturnType<typeof exigirFaculdade>>;
+
+/**
+ * Gera o código de 6 dígitos (válido por 10 minutos, reenvio após 1 minuto)
+ * e manda por e-mail. Se o e-mail não sai, o código é descartado.
+ */
+async function emitirCodigo(
   ctx: Contexto,
-  { email }: z.infer<typeof esquemas.pedirCodigo>,
+  faculdade: Faculdade,
+  email: string,
+  finalidade: Finalidade,
+  validar: (tx: Transacao) => Promise<void>,
 ) {
-  const faculdade = await exigirFaculdade(ctx, email);
   const codigo = randomInt(0, 1_000_000).toString().padStart(6, '0');
   const codigoHash = await gerarHash(codigo);
 
   const criado = await naFaculdade(ctx.prisma, faculdade.id, async (tx) => {
-    if (await tx.usuario.findUnique({ where: { email }, select: { id: true } })) {
-      throw new ErroApp(
-        409,
-        'email_ja_cadastrado',
-        'Este e-mail já tem conta. Faça login.',
-      );
-    }
+    await validar(tx);
     const ultimo = await tx.codigoVerificacao.findFirst({
       where: { email },
       orderBy: { criadoEm: 'desc' },
@@ -128,7 +130,7 @@ export async function pedirCodigo(
   });
 
   try {
-    await ctx.email.enviarCodigo(email, codigo, faculdade.nome);
+    await ctx.email.enviarCodigo(email, codigo, faculdade.nome, finalidade);
   } catch (erro) {
     // O e-mail não saiu: apaga o código para a pessoa poder pedir outro na hora.
     await naFaculdade(ctx.prisma, faculdade.id, (tx) =>
@@ -136,7 +138,102 @@ export async function pedirCodigo(
     );
     throw erro;
   }
+}
+
+/** RF01: envia um código de 6 dígitos, válido por 10 minutos, ao e-mail institucional. */
+export async function pedirCodigo(
+  ctx: Contexto,
+  { email }: z.infer<typeof esquemas.pedirCodigo>,
+) {
+  const faculdade = await exigirFaculdade(ctx, email);
+  await emitirCodigo(ctx, faculdade, email, 'cadastro', async (tx) => {
+    if (await tx.usuario.findUnique({ where: { email }, select: { id: true } })) {
+      throw new ErroApp(
+        409,
+        'email_ja_cadastrado',
+        'Este e-mail já tem conta. Faça login.',
+      );
+    }
+  });
   return faculdade;
+}
+
+/**
+ * RF39: pede código para redefinir a senha. A resposta é a mesma exista
+ * a conta ou não, para não revelar quem tem cadastro.
+ */
+export async function pedirCodigoDeSenha(ctx: Contexto, email: string): Promise<void> {
+  const faculdade = await faculdadeDoEmail(ctx, email);
+  if (!faculdade) return;
+  const conta = await naFaculdade(ctx.prisma, faculdade.id, (tx) =>
+    tx.usuario.findUnique({ where: { email }, select: { status: true } }),
+  );
+  if (!conta || conta.status !== 'ATIVA') return;
+  await emitirCodigo(ctx, faculdade, email, 'senha', async () => undefined);
+}
+
+/** RF39: redefine a senha com o código, encerra as outras sessões e já entra. */
+export async function redefinirSenha(
+  ctx: Contexto,
+  dados: { email: string; codigo: string; senha: string; dispositivo?: string },
+): Promise<Sessao> {
+  const faculdade = await faculdadeDoEmail(ctx, dados.email);
+  const invalido = new ErroApp(
+    422,
+    'codigo_expirado',
+    'O código expirou. Peça um novo código.',
+  );
+  if (!faculdade) throw invalido;
+  const senhaHash = await gerarHash(dados.senha);
+
+  const resultado = await naFaculdade(ctx.prisma, faculdade.id, async (tx) => {
+    const conta = await tx.usuario.findUnique({
+      where: { email: dados.email },
+      select: { id: true, status: true },
+    });
+    if (!conta || conta.status !== 'ATIVA') return invalido;
+    const falha = await usarCodigo(tx, dados.email, dados.codigo);
+    if (falha) return falha;
+    await tx.usuario.update({ where: { id: conta.id }, data: { senhaHash } });
+    await tx.sessao.updateMany({
+      where: { usuarioId: conta.id, revogadaEm: null },
+      data: { revogadaEm: new Date() },
+    });
+    return abrirSessao(ctx, tx, conta.id, dados.dispositivo);
+  });
+  if (resultado instanceof ErroApp) throw resultado;
+  return resultado;
+}
+
+/**
+ * Trocar a senha estando logado (ex.: senha provisória da coordenação).
+ * Encerra todas as sessões e devolve uma nova para este aparelho.
+ */
+export async function trocarSenha(
+  ctx: Contexto,
+  eu: { id: string; instituicaoId: string },
+  dados: { senhaAtual: string; novaSenha: string },
+): Promise<Sessao> {
+  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
+    const conta = await tx.usuario.findUniqueOrThrow({
+      where: { id: eu.id },
+      select: { senhaHash: true },
+    });
+    if (!(await conferir(dados.senhaAtual, conta.senhaHash))) {
+      throw new ErroApp(422, 'senha_atual_incorreta', 'A senha atual está incorreta.', {
+        senhaAtual: 'Senha atual incorreta',
+      });
+    }
+    await tx.usuario.update({
+      where: { id: eu.id },
+      data: { senhaHash: await gerarHash(dados.novaSenha) },
+    });
+    await tx.sessao.updateMany({
+      where: { usuarioId: eu.id, revogadaEm: null },
+      data: { revogadaEm: new Date() },
+    });
+    return abrirSessao(ctx, tx, eu.id);
+  });
 }
 
 /**

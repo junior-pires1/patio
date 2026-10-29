@@ -29,12 +29,18 @@ export function dadosDeCadastro(email: string, codigo: string) {
 /** E-mail falso: guarda o último código enviado para cada endereço. */
 export function caixaDeEntrada() {
   const codigos = new Map<string, string>();
+  const finalidades = new Map<string, string>();
   const enviador: EnviadorEmail = {
-    async enviarCodigo(destino, codigo) {
+    async enviarCodigo(destino, codigo, _faculdade, finalidade = 'cadastro') {
       codigos.set(destino, codigo);
+      finalidades.set(destino, finalidade);
     },
   };
-  return { enviador, codigo: (email: string) => codigos.get(email) };
+  return {
+    enviador,
+    codigo: (email: string) => codigos.get(email),
+    finalidade: (email: string) => finalidades.get(email),
+  };
 }
 
 /** App completo ligado ao banco de testes. Chame `fechar()` no afterAll. */

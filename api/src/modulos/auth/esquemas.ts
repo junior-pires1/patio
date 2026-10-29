@@ -53,3 +53,20 @@ export const login = z.object({
 });
 
 export const renovacao = z.object({ refreshToken: z.string().min(10).max(200) });
+
+export const redefinirSenha = z.object({
+  email,
+  codigo: z.string().regex(/^\d{6}$/, 'O código tem 6 números'),
+  senha,
+  dispositivo,
+});
+
+export const trocarSenha = z
+  .object({
+    senhaAtual: z.string().min(1, 'Informe a senha atual').max(72),
+    novaSenha: senha,
+  })
+  .refine((d) => d.senhaAtual !== d.novaSenha, {
+    message: 'A nova senha precisa ser diferente da atual',
+    path: ['novaSenha'],
+  });

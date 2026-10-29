@@ -1,25 +1,41 @@
 import { ErroApp } from '../erros';
 
 /** Envio de e-mails (código de confirmação do cadastro). */
+export type Finalidade = 'cadastro' | 'senha';
+
 export interface EnviadorEmail {
-  enviarCodigo(destino: string, codigo: string, faculdade: string): Promise<void>;
+  enviarCodigo(
+    destino: string,
+    codigo: string,
+    faculdade: string,
+    finalidade?: Finalidade,
+  ): Promise<void>;
 }
 
 /** Desenvolvimento: mostra o código no terminal em vez de mandar e-mail. */
 export const emailNoTerminal: EnviadorEmail = {
-  async enviarCodigo(destino, codigo, faculdade) {
-    console.warn(`[e-mail] Código para ${destino} (${faculdade}): ${codigo}`);
+  async enviarCodigo(destino, codigo, faculdade, finalidade = 'cadastro') {
+    const para = finalidade === 'senha' ? 'redefinir a senha' : 'cadastro';
+    console.warn(`[e-mail] Código (${para}) para ${destino} (${faculdade}): ${codigo}`);
   },
 };
 
-export function textoDoCodigo(codigo: string, faculdade: string) {
-  const assunto = `${codigo} é o seu código do Pátio`;
+export function textoDoCodigo(
+  codigo: string,
+  faculdade: string,
+  finalidade: Finalidade = 'cadastro',
+) {
+  const acao = finalidade === 'senha' ? 'redefinir a sua senha' : 'confirmar o seu e-mail';
+  const assunto =
+    finalidade === 'senha'
+      ? `${codigo} é o código para redefinir a senha do Pátio`
+      : `${codigo} é o seu código do Pátio`;
   const texto =
-    `Olá! Use o código ${codigo} para confirmar o seu e-mail no Pátio (${faculdade}).\n` +
+    `Olá! Use o código ${codigo} para ${acao} no Pátio (${faculdade}).\n` +
     'Ele vale por 10 minutos. Se não foi você, pode ignorar esta mensagem.';
   const html =
     `<div style="font-family:Arial,sans-serif;font-size:16px;color:#14171A">` +
-    `<p>Olá!</p><p>Use o código abaixo para confirmar o seu e-mail no <b>Pátio</b> (${faculdade}):</p>` +
+    `<p>Olá!</p><p>Use o código abaixo para ${acao} no <b>Pátio</b> (${faculdade}):</p>` +
     `<p style="font-size:32px;font-weight:bold;letter-spacing:6px">${codigo}</p>` +
     `<p>Ele vale por 10 minutos. Se não foi você, pode ignorar esta mensagem.</p></div>`;
   return { assunto, texto, html };
@@ -37,8 +53,8 @@ export function emailPeloBrevo(opcoes: {
 }): EnviadorEmail {
   const buscar = opcoes.fetch ?? fetch;
   return {
-    async enviarCodigo(destino, codigo, faculdade) {
-      const { assunto, texto, html } = textoDoCodigo(codigo, faculdade);
+    async enviarCodigo(destino, codigo, faculdade, finalidade = 'cadastro') {
+      const { assunto, texto, html } = textoDoCodigo(codigo, faculdade, finalidade);
       let resposta: Response;
       try {
         resposta = await buscar('https://api.brevo.com/v3/smtp/email', {
