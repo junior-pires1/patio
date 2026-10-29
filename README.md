@@ -12,7 +12,7 @@ Todas as ferramentas usadas são gratuitas.
 | Pasta     | Conteúdo                                                | Situação             |
 | --------- | ------------------------------------------------------- | -------------------- |
 | `api/`    | API em Node.js, Express, Socket.IO, Prisma e PostgreSQL | Em construção        |
-| `app/`    | Aplicativo do aluno (React Native + Expo)               | Planejado (Sprint 4) |
+| `app/`    | Aplicativo do aluno (React Native + Expo)               | Em construção        |
 | `painel/` | Painel web da coordenação e da plataforma (Next.js)     | Planejado (Sprint 5) |
 | `docs/`   | Documentação do projeto                                 | —                    |
 
@@ -52,6 +52,8 @@ Sem Docker: instale o PostgreSQL 16, crie um usuário e os bancos `patio` e `pat
 | `npm run formatar`  | Formata o código (Prettier)                |
 | `npm run tipos`     | Confere os tipos (TypeScript)              |
 | `npm test`          | Testes automatizados (Vitest)              |
+| `npm run api`       | Liga a API em modo de desenvolvimento      |
+| `npm run app`       | Liga o Expo para abrir o app no celular    |
 
 ## Banco de dados (`api/prisma`)
 
@@ -72,6 +74,24 @@ para gerar o cliente tipado; ao mudar o banco, altere os dois.
 (`api/src/banco/prisma.ts`), que abre uma transação com o papel restrito `patio_app` e a faculdade do
 token. Mesmo uma consulta sem filtro só enxerga dados daquela faculdade; os testes em
 `api/tests/banco` comprovam isso.
+
+## Aplicativo do aluno (`app`)
+
+Feito com Expo SDK 58 e Expo Router. Telas: entrar, criar conta (e-mail institucional + código),
+descobrir colegas (cartas com os motivos da afinidade), conexões, chat em tempo real, perfil
+(curso, turno, horários, disciplinas, contatos) e denúncia. As cores seguem a faculdade de quem entrou.
+
+**Rodar no celular (Expo Go):**
+
+1. Instale o **Expo Go** no celular (Play Store ou App Store).
+2. Celular e computador na **mesma rede Wi-Fi**.
+3. Descubra o IP do computador (Windows: `ipconfig`, linha "Endereço IPv4").
+4. `copy app\.env.example app\.env` e troque o IP em `EXPO_PUBLIC_API_URL`.
+5. Em um terminal: `npm run api`. Em outro: `npm run app`.
+6. Leia o QR code com o Expo Go (Android) ou com a câmera (iPhone).
+
+Se o Windows perguntar sobre o firewall do Node.js, permita em **redes privadas**.
+Também dá para abrir no navegador apertando `w` no terminal do Expo.
 
 ## Rotas da API (até a Sprint 4)
 
