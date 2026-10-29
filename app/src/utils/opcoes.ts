@@ -1,4 +1,4 @@
-import type { MotivoDenuncia, Relacao, Turno } from '@/api/tipos';
+import type { CategoriaPost, MotivoDenuncia, Relacao, Turno } from '@/api/tipos';
 
 export const TURNOS: { valor: Turno; rotulo: string }[] = [
   { valor: 'MANHA', rotulo: 'Manhã' },
@@ -60,3 +60,14 @@ export function resumo(p: {
     .filter(Boolean)
     .join(' · ');
 }
+
+export const CATEGORIAS: { valor: CategoriaPost; rotulo: string; emoji: string }[] = [
+  { valor: 'GERAL', rotulo: 'Geral', emoji: '💬' },
+  { valor: 'ESTUDOS', rotulo: 'Estudos', emoji: '📚' },
+  { valor: 'EVENTO', rotulo: 'Evento', emoji: '📅' },
+  { valor: 'VAGA', rotulo: 'Vagas', emoji: '💼' },
+  { valor: 'ACHADOS', rotulo: 'Achados', emoji: '🔎' },
+];
+
+export const categoria = (valor: CategoriaPost) =>
+  CATEGORIAS.find((c) => c.valor === valor) ?? CATEGORIAS[0]!;

@@ -37,6 +37,23 @@ function Navegacao() {
         <Stack.Screen name="(abas)" />
         <Stack.Screen name="chat/[id]" options={{ headerShown: true, title: 'Conversa' }} />
         <Stack.Screen
+          name="post/[id]"
+          options={{ headerShown: true, title: 'Publicação' }}
+        />
+        <Stack.Screen
+          name="publicar"
+          options={{ headerShown: true, title: 'Nova publicação', presentation: 'modal' }}
+        />
+        <Stack.Screen name="grupo/[id]" options={{ headerShown: true, title: 'Grupo' }} />
+        <Stack.Screen
+          name="grupo-chat/[id]"
+          options={{ headerShown: true, title: 'Chat do grupo' }}
+        />
+        <Stack.Screen
+          name="grupos/novo"
+          options={{ headerShown: true, title: 'Novo grupo', presentation: 'modal' }}
+        />
+        <Stack.Screen
           name="denunciar/[usuarioId]"
           options={{ headerShown: true, title: 'Denunciar', presentation: 'modal' }}
         />

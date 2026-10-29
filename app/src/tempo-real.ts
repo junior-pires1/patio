@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { router, usePathname } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
-import type { Mensagem } from './api/tipos';
+import type { Mensagem, MensagemGrupo } from './api/tipos';
 import { useNotificar } from './componentes/Notificacoes';
 import { API_URL } from './config';
 import { useSessao } from './sessao';
@@ -63,6 +63,18 @@ export function useTempoReal() {
           texto: evento.mensagem.texto,
           aoTocar: () =>
             router.push({ pathname: '/chat/[id]', params: { id: evento.matchId } }),
+        });
+      }
+    });
+    socket.on('grupo:mensagem', (evento: { grupoId: string; mensagem: MensagemGrupo }) => {
+      atualizar(['grupo-mensagens', evento.grupoId], ['grupos'], ['grupo', evento.grupoId]);
+      const noChat = caminhoAtual.current === `/grupo-chat/${evento.grupoId}`;
+      if (evento.mensagem.autor.id !== euId && !noChat) {
+        notificar({
+          titulo: `${evento.mensagem.autor.apelido} no grupo`,
+          texto: evento.mensagem.texto,
+          aoTocar: () =>
+            router.push({ pathname: '/grupo-chat/[id]', params: { id: evento.grupoId } }),
         });
       }
     });

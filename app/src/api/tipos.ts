@@ -85,3 +85,68 @@ export type Aviso = {
   criadoEm: string;
   autor: { id: string; nome: string };
 };
+
+export type CategoriaPost = 'GERAL' | 'EVENTO' | 'ESTUDOS' | 'VAGA' | 'ACHADOS';
+
+export type AutorResumo = {
+  id: string;
+  apelido: string;
+  fotoUrl: string | null;
+  papel: 'ALUNO' | 'COORDENACAO';
+};
+
+export type Post = {
+  id: string;
+  categoria: CategoriaPost;
+  texto: string;
+  imagemUrl: string | null;
+  eventoInicio: string | null;
+  eventoLocal: string | null;
+  criadoEm: string;
+  autor: AutorResumo;
+  curtidas: number;
+  comentarios: number;
+  presencas: number;
+  curti: boolean;
+  vou: boolean;
+  meu: boolean;
+};
+
+export type Comentario = {
+  id: string;
+  texto: string;
+  criadoEm: string;
+  autor: AutorResumo;
+  meu: boolean;
+};
+
+export type Grupo = {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  encontro: string | null;
+  local: string | null;
+  vagas: number;
+  criadoEm: string;
+  disciplina: { id: string; nome: string } | null;
+  criador: { id: string; apelido: string };
+  membros: number;
+  vagasLivres: number;
+  souMembro: boolean;
+  naoLidas: number;
+};
+
+export type GrupoDetalhe = Grupo & {
+  listaDeMembros: {
+    papel: 'CRIADOR' | 'MEMBRO';
+    entrouEm: string;
+    usuario: { id: string; apelido: string; fotoUrl: string | null };
+  }[];
+};
+
+export type MensagemGrupo = {
+  id: string;
+  texto: string;
+  criadoEm: string;
+  autor: { id: string; apelido: string };
+};

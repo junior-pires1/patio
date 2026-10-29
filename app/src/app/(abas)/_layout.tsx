@@ -49,6 +49,14 @@ export default function LayoutAbas() {
         }}
       />
       <Tabs.Screen
+        name="feed"
+        options={{ title: 'Feed', tabBarIcon: icone('newspaper-outline') }}
+      />
+      <Tabs.Screen
+        name="grupos"
+        options={{ title: 'Grupos', tabBarIcon: icone('people-outline') }}
+      />
+      <Tabs.Screen
         name="conexoes"
         options={{
           title: 'Conexões',

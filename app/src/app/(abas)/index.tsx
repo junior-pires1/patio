@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import type { Aviso as AvisoOficial, Carta } from '@/api/tipos';
+import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import type { Carta } from '@/api/tipos';
+import { BlocoAvisos } from '@/componentes/BlocoAvisos';
 import { Avatar } from '@/componentes/Avatar';
 import { Botao } from '@/componentes/Botao';
 import { Chip } from '@/componentes/Chip';
@@ -24,13 +25,6 @@ export default function Descobrir() {
     queryKey: ['descobrir'],
     queryFn: () => api.get<Carta[]>('/descobrir'),
   });
-  // RF21: aviso oficial da coordenação fixado no topo
-  const avisos = useQuery({
-    queryKey: ['avisos'],
-    queryFn: () => api.get<AvisoOficial[]>('/avisos'),
-  });
-  const aviso = avisos.data?.find((a) => a.fixado);
-  const [avisoAberto, setAvisoAberto] = useState(false);
 
   const proxima = () => setIndice((i) => i + 1);
   const curtir = useMutation({
@@ -76,18 +70,7 @@ export default function Descobrir() {
 
   return (
     <View style={estilos.fundo}>
-      {aviso ? (
-        <Pressable
-          onPress={() => setAvisoAberto((v) => !v)}
-          accessibilityRole="button"
-          accessibilityLabel={`Aviso da coordenação: ${aviso.titulo}`}
-          style={[estilos.aviso, { borderColor: cor }]}
-        >
-          <Text style={[estilos.avisoRotulo, { color: cor }]}>📢 Aviso da coordenação</Text>
-          <Text style={estilos.avisoTitulo}>{aviso.titulo}</Text>
-          {avisoAberto ? <Text style={estilos.avisoTexto}>{aviso.texto}</Text> : null}
-        </Pressable>
-      ) : null}
+      <BlocoAvisos />
 
       {perfilIncompleto ? (
         <View style={[estilos.dica, { backgroundColor: suave(cor) }]}>
@@ -221,16 +204,6 @@ export default function Descobrir() {
 const estilos = StyleSheet.create({
   fundo: { flex: 1, backgroundColor: cores.fundo, padding: espaco.g, gap: espaco.m },
   flex: { flex: 1 },
-  aviso: {
-    backgroundColor: cores.superficie,
-    borderWidth: 1.5,
-    borderRadius: raio.m,
-    padding: espaco.m,
-    gap: 2,
-  },
-  avisoRotulo: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
-  avisoTitulo: { fontSize: 15, fontWeight: '700', color: cores.texto },
-  avisoTexto: { fontSize: 14, color: cores.texto, marginTop: 4, lineHeight: 20 },
   dica: { borderRadius: raio.m, padding: espaco.m, gap: espaco.p },
   dicaTexto: { color: cores.texto, fontSize: 14 },
   carta: {

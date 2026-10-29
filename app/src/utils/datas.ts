@@ -36,3 +36,26 @@ export function quando(iso: string, agora = new Date()): string {
   if (dias === 1) return 'ontem';
   return `${doisDigitos(data.getDate())}/${doisDigitos(data.getMonth() + 1)}`;
 }
+
+/** "10/11/2026" + "19:00" → instante no fuso do aparelho (ISO). Null se inválido. */
+export function dataHoraBrParaIso(data: string, hora: string): string | null {
+  const dia = dataBrParaIso(data);
+  const h = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(hora.trim());
+  if (!dia || !h) return null;
+  const [ano, mes, d] = dia.split('-').map(Number) as [number, number, number];
+  return new Date(ano, mes - 1, d, Number(h[1]), Number(h[2])).toISOString();
+}
+
+/** Coloca os dois-pontos enquanto digita: "1930" → "19:30". */
+export function mascaraHora(texto: string): string {
+  const d = texto.replace(/\D/g, '').slice(0, 4);
+  return d.length <= 2 ? d : `${d.slice(0, 2)}:${d.slice(2)}`;
+}
+
+const DIAS_DA_SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+
+/** Data do evento: "ter, 10/11 às 19:00". */
+export function dataDoEvento(iso: string): string {
+  const d = new Date(iso);
+  return `${DIAS_DA_SEMANA[d.getDay()]}, ${doisDigitos(d.getDate())}/${doisDigitos(d.getMonth() + 1)} às ${doisDigitos(d.getHours())}:${doisDigitos(d.getMinutes())}`;
+}

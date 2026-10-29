@@ -79,8 +79,9 @@ token. Mesmo uma consulta sem filtro só enxerga dados daquela faculdade; os tes
 ## Aplicativo do aluno (`app`)
 
 Feito com Expo SDK 58 e Expo Router. Telas: entrar, criar conta (e-mail institucional + código),
-descobrir colegas (cartas com os motivos da afinidade), conexões, chat em tempo real, perfil
-(curso, turno, horários, disciplinas, contatos) e denúncia. As cores seguem a faculdade de quem entrou.
+descobrir colegas (cartas com os motivos da afinidade), feed da faculdade (publicações por
+categoria, comentários, curtidas e eventos com "eu vou"), grupos de estudo com chat, conexões, chat
+em tempo real, perfil (curso, turno, horários, disciplinas, contatos) e denúncia. As cores seguem a faculdade de quem entrou.
 
 **Rodar no celular (Expo Go):**
 
@@ -146,13 +147,21 @@ Respostas de erro sempre no formato `{ "erro": "codigo", "mensagem": "texto", "c
 | `POST /coordenacao/avisos`                | coordenação | Publica aviso                                                          |
 | `DELETE /coordenacao/avisos/:id`          | coordenação | Remove aviso                                                           |
 | `GET /coordenacao/auditoria`              | coordenação | Registro das decisões                                                  |
+| `GET /feed`                               | logado      | Publicações (`?categoria=&antes=`)                                     |
+| `POST /posts` · `DELETE /posts/:id`       | logado      | Publica / remove (autor ou coordenação)                                |
+| `PUT/DELETE /posts/:id/curtida`           | logado      | Curte / descurte                                                       |
+| `PUT/DELETE /posts/:id/presenca`          | logado      | Confirma / desmarca presença em evento                                 |
+| `GET/POST /posts/:id/comentarios`         | logado      | Comentários                                                            |
+| `GET/POST /grupos` · `GET /grupos/:id`    | aluno       | Grupos de estudo (`?disciplinaId=&meus=true`)                          |
+| `POST /grupos/:id/entrar` · `/sair`       | aluno       | Entra (respeita as vagas) / sai                                        |
+| `GET/POST /grupos/:id/mensagens`          | aluno       | Chat do grupo (só membros)                                             |
 | `POST /plataforma/login`                  | público     | Entrar como equipe da plataforma (token de 8 horas)                    |
 | `GET /plataforma/metricas`                | plataforma  | Totais gerais (sem dados de alunos)                                    |
 | `GET/POST /plataforma/faculdades`         | plataforma  | Lista / cadastra faculdade com domínios e coordenação                  |
 | `PATCH /plataforma/faculdades/:id`        | plataforma  | Ativa ou desativa (`{ "ativa": false }`)                               |
 
 **Tempo real:** o app conecta no Socket.IO na mesma porta da API com
-`io(URL, { auth: { token: acessoToken } })` e recebe `curtida:nova`, `match:novo`, `mensagem:nova` e `match:desfeito`.
+`io(URL, { auth: { token: acessoToken } })` e recebe `curtida:nova`, `match:novo`, `mensagem:nova`, `match:desfeito` e `grupo:mensagem`.
 
 Rotas com login usam o cabeçalho `Authorization: Bearer <acessoToken>`. Em desenvolvimento, o código
 de verificação aparece no terminal da API em vez de ir por e-mail.

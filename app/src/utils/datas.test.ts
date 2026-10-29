@@ -1,4 +1,11 @@
-import { dataBrParaIso, mascaraData, quando } from './datas';
+import {
+  dataBrParaIso,
+  dataDoEvento,
+  dataHoraBrParaIso,
+  mascaraData,
+  mascaraHora,
+  quando,
+} from './datas';
 
 describe('datas', () => {
   test('converte data brasileira válida e recusa inválida', () => {
@@ -24,5 +31,21 @@ describe('datas', () => {
     expect(quando(new Date(2026, 9, 29, 9, 7).toISOString(), agora)).toBe('09:07');
     expect(quando(new Date(2026, 9, 28, 22, 0).toISOString(), agora)).toBe('ontem');
     expect(quando(new Date(2026, 9, 12, 8, 0).toISOString(), agora)).toBe('12/10');
+  });
+
+  test('data e hora de evento', () => {
+    const iso = dataHoraBrParaIso('10/11/2026', '19:30');
+    expect(iso).not.toBeNull();
+    const d = new Date(iso!);
+    expect([d.getDate(), d.getMonth(), d.getHours(), d.getMinutes()]).toEqual([
+      10, 10, 19, 30,
+    ]);
+    expect(dataHoraBrParaIso('10/11/2026', '25:00')).toBeNull();
+    expect(dataHoraBrParaIso('31/02/2026', '10:00')).toBeNull();
+    expect(mascaraHora('1930')).toBe('19:30');
+    expect(mascaraHora('9')).toBe('9');
+    expect(dataDoEvento(new Date(2026, 10, 10, 19, 5).toISOString())).toBe(
+      'ter, 10/11 às 19:05',
+    );
   });
 });
