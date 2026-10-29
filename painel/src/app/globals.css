@@ -1,0 +1,14 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Cor da faculdade, definida pelo layout do painel (padrão: azul do Pátio). */
+:root {
+  --cor: #1f6feb;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+}

@@ -36,3 +36,5 @@ jobs:
       - run: npm run tipos
       - run: npm run test --workspace api -- --coverage
       - run: npm run test --workspace app
+      - run: npm run test --workspace painel
+      - run: npm run build --workspace painel

@@ -6,3 +6,5 @@ package-lock.json
 api/src/generated/
 app/.expo
 app/expo-env.d.ts
+painel/.next
+painel/next-env.d.ts

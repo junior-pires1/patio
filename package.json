@@ -8,7 +8,8 @@
   },
   "workspaces": [
     "api",
-    "app"
+    "app",
+    "painel"
   ],
   "scripts": {
     "prepare": "husky",
@@ -19,7 +20,8 @@
     "test": "npm test --workspaces --if-present",
     "verificar": "npm run formatacao && npm run lint && npm run tipos && npm test",
     "api": "npm run dev -w api",
-    "app": "npm run start -w app"
+    "app": "npm run start -w app",
+    "painel": "npm run dev -w painel"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",
@@ -47,6 +49,7 @@
     "prisma": "7.10.1",
     "@prisma/client": "7.10.1",
     "@prisma/adapter-pg": "7.10.1",
-    "react": "19.3.0"
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   }
 }

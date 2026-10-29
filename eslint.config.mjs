@@ -13,6 +13,8 @@ export default tseslint.config(
       '**/src/generated/**',
       'app/.expo/**',
       'app/expo-env.d.ts',
+      'painel/.next/**',
+      'painel/next-env.d.ts',
     ],
   },
   js.configs.recommended,
@@ -26,9 +28,9 @@ export default tseslint.config(
       'no-console': ['warn', { allow: ['warn', 'error'] }],
     },
   },
-  // Aplicativo (React Native): regras dos hooks do React
+  // Aplicativo (React Native) e painel (Next.js): regras dos hooks do React
   {
-    files: ['app/**/*.{ts,tsx}'],
+    files: ['app/**/*.{ts,tsx}', 'painel/**/*.{ts,tsx}'],
     plugins: { 'react-hooks': reactHooks },
     languageOptions: { globals: { ...globals.browser } },
     rules: reactHooks.configs.recommended.rules,

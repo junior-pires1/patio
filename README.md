@@ -9,12 +9,12 @@ Todas as ferramentas usadas são gratuitas.
 
 ## Estrutura do repositório
 
-| Pasta     | Conteúdo                                                | Situação             |
-| --------- | ------------------------------------------------------- | -------------------- |
-| `api/`    | API em Node.js, Express, Socket.IO, Prisma e PostgreSQL | Em construção        |
-| `app/`    | Aplicativo do aluno (React Native + Expo)               | Em construção        |
-| `painel/` | Painel web da coordenação e da plataforma (Next.js)     | Planejado (Sprint 5) |
-| `docs/`   | Documentação do projeto                                 | —                    |
+| Pasta     | Conteúdo                                                | Situação      |
+| --------- | ------------------------------------------------------- | ------------- |
+| `api/`    | API em Node.js, Express, Socket.IO, Prisma e PostgreSQL | Em construção |
+| `app/`    | Aplicativo do aluno (React Native + Expo)               | Em construção |
+| `painel/` | Painel web da coordenação e da plataforma (Next.js)     | Em construção |
+| `docs/`   | Documentação do projeto                                 | —             |
 
 ## Pré-requisitos
 
@@ -54,6 +54,7 @@ Sem Docker: instale o PostgreSQL 16, crie um usuário e os bancos `patio` e `pat
 | `npm test`          | Testes automatizados (Vitest)              |
 | `npm run api`       | Liga a API em modo de desenvolvimento      |
 | `npm run app`       | Liga o Expo para abrir o app no celular    |
+| `npm run painel`    | Liga o painel da coordenação (porta 3000)  |
 
 ## Banco de dados (`api/prisma`)
 
@@ -93,38 +94,56 @@ descobrir colegas (cartas com os motivos da afinidade), conexões, chat em tempo
 Se o Windows perguntar sobre o firewall do Node.js, permita em **redes privadas**.
 Também dá para abrir no navegador apertando `w` no terminal do Expo.
 
-## Rotas da API (até a Sprint 4)
+## Painel da coordenação (`painel`)
+
+Next.js 16 + Tailwind CSS 4. Com a API ligada (`npm run api`), rode `npm run painel` e abra
+http://localhost:3000. Entre com `coordenacao@horizonte.edu.br` (senha `Patio2026`). Telas:
+**Resumo** (indicadores e disciplinas em que os alunos pedem ajuda), **Denúncias** (arquivar,
+advertir ou suspender), **Alunos** (buscar, suspender e reativar), **Avisos** (publicar e remover)
+e **Auditoria**. Contas de aluno não entram no painel.
+
+## Rotas da API (até a Sprint 5)
 
 Respostas de erro sempre no formato `{ "erro": "codigo", "mensagem": "texto", "campos": { ... } }`.
 
-| Método e rota         | Login? | O que faz                                                              |
-| --------------------- | ------ | ---------------------------------------------------------------------- |
-| `GET /saude`          | não    | Verifica se a API está no ar                                           |
-| `POST /auth/codigo`   | não    | Envia código de 6 números ao e-mail institucional (vale 10 min)        |
-| `POST /auth/cadastro` | não    | Cria a conta com o código (5 tentativas; 18 anos; senha forte)         |
-| `POST /auth/login`    | não    | Entra com e-mail e senha; devolve token de acesso (15 min) e renovação |
-| `POST /auth/renovar`  | não    | Troca o token de renovação por um novo par (rotação, 30 dias)          |
-| `POST /auth/sair`     | não    | Encerra a sessão deste aparelho                                        |
-| `GET /eu`             | sim    | Perfil próprio                                                         |
-| `PATCH /eu`           | sim    | Atualiza o perfil                                                      |
-| `PUT /eu/disciplinas` | sim    | Define cursando / posso ajudar / preciso de ajuda                      |
-| `GET /usuarios/:id`   | sim    | Perfil público de um colega da mesma faculdade                         |
-| `GET /cursos`         | sim    | Cursos da faculdade                                                    |
-| `GET /disciplinas`    | sim    | Disciplinas da faculdade (`?cursoId=` filtra pelo curso)               |
-
-| `GET /descobrir` | aluno | Cartas de colegas, da maior para a menor afinidade, com os motivos |
-| `POST /curtidas` | aluno | Curte (`paraId`); se for recíproca, cria o match |
-| `POST /pulos` | aluno | Pula um perfil (`paraId`) |
-| `GET /matches` | aluno | Conexões, com contatos, última mensagem e não lidas |
-| `DELETE /matches/:id` | aluno | Desfaz a conexão |
-| `GET /matches/:id/mensagens` | aluno | Mensagens (`?antes=` pagina); marca como lidas |
-| `POST /matches/:id/mensagens` | aluno | Envia mensagem |
-| `GET/POST /bloqueios` | aluno | Lista / bloqueia (`usuarioId`); bloquear desfaz a conexão |
-| `DELETE /bloqueios/:usuarioId` | aluno | Desbloqueia |
-| `POST /denuncias` | aluno | Denuncia à coordenação (`denunciadoId`, `motivo`, `bloquear?`) |
+| Método e rota                             | Quem        | O que faz                                                              |
+| ----------------------------------------- | ----------- | ---------------------------------------------------------------------- |
+| `GET /saude`                              | público     | Verifica se a API está no ar                                           |
+| `POST /auth/codigo`                       | público     | Envia código de 6 números ao e-mail institucional (vale 10 min)        |
+| `POST /auth/cadastro`                     | público     | Cria a conta com o código (5 tentativas; 18 anos; senha forte)         |
+| `POST /auth/login`                        | público     | Entra com e-mail e senha; devolve token de acesso (15 min) e renovação |
+| `POST /auth/renovar`                      | público     | Troca o token de renovação por um novo par (rotação, 30 dias)          |
+| `POST /auth/sair`                         | público     | Encerra a sessão deste aparelho                                        |
+| `GET /eu`                                 | logado      | Perfil próprio                                                         |
+| `PATCH /eu`                               | logado      | Atualiza o perfil                                                      |
+| `PUT /eu/disciplinas`                     | logado      | Define cursando / posso ajudar / preciso de ajuda                      |
+| `GET /usuarios/:id`                       | logado      | Perfil público de um colega da mesma faculdade                         |
+| `GET /cursos`                             | logado      | Cursos da faculdade                                                    |
+| `GET /disciplinas`                        | logado      | Disciplinas da faculdade (`?cursoId=` filtra pelo curso)               |
+| `GET /descobrir`                          | aluno       | Cartas de colegas, da maior para a menor afinidade, com os motivos     |
+| `POST /curtidas`                          | aluno       | Curte (`paraId`); se for recíproca, cria o match                       |
+| `POST /pulos`                             | aluno       | Pula um perfil (`paraId`)                                              |
+| `GET /matches`                            | aluno       | Conexões, com contatos, última mensagem e não lidas                    |
+| `DELETE /matches/:id`                     | aluno       | Desfaz a conexão                                                       |
+| `GET /matches/:id/mensagens`              | aluno       | Mensagens (`?antes=` pagina); marca como lidas                         |
+| `POST /matches/:id/mensagens`             | aluno       | Envia mensagem                                                         |
+| `GET/POST /bloqueios`                     | aluno       | Lista / bloqueia (`usuarioId`); bloquear desfaz a conexão              |
+| `DELETE /bloqueios/:usuarioId`            | aluno       | Desbloqueia                                                            |
+| `POST /denuncias`                         | aluno       | Denuncia à coordenação (`denunciadoId`, `motivo`, `bloquear?`)         |
+| `GET /curtidas/recebidas`                 | aluno       | Quantas curtidas esperam resposta                                      |
+| `GET /avisos`                             | logado      | Avisos oficiais da faculdade                                           |
+| `GET /coordenacao/resumo`                 | coordenação | Indicadores da faculdade                                               |
+| `GET /coordenacao/denuncias`              | coordenação | Fila de denúncias (`?status=ABERTA\|RESOLVIDA`)                        |
+| `POST /coordenacao/denuncias/:id/decisao` | coordenação | `ARQUIVADA`, `ADVERTENCIA` ou `SUSPENSAO`                              |
+| `GET /coordenacao/alunos`                 | coordenação | Busca (`?busca=&status=&pagina=`)                                      |
+| `POST /coordenacao/alunos/:id/suspender`  | coordenação | Suspende e encerra as sessões                                          |
+| `POST /coordenacao/alunos/:id/reativar`   | coordenação | Reativa a conta                                                        |
+| `POST /coordenacao/avisos`                | coordenação | Publica aviso                                                          |
+| `DELETE /coordenacao/avisos/:id`          | coordenação | Remove aviso                                                           |
+| `GET /coordenacao/auditoria`              | coordenação | Registro das decisões                                                  |
 
 **Tempo real:** o app conecta no Socket.IO na mesma porta da API com
-`io(URL, { auth: { token: acessoToken } })` e recebe `match:novo`, `mensagem:nova` e `match:desfeito`.
+`io(URL, { auth: { token: acessoToken } })` e recebe `curtida:nova`, `match:novo`, `mensagem:nova` e `match:desfeito`.
 
 Rotas com login usam o cabeçalho `Authorization: Bearer <acessoToken>`. Em desenvolvimento, o código
 de verificação aparece no terminal da API em vez de ir por e-mail.
