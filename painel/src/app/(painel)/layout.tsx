@@ -9,8 +9,10 @@ const MENU = [
   { href: '/', rotulo: 'Resumo' },
   { href: '/denuncias', rotulo: 'Denúncias' },
   { href: '/alunos', rotulo: 'Alunos' },
+  { href: '/publicacoes', rotulo: 'Publicações' },
   { href: '/avisos', rotulo: 'Avisos' },
   { href: '/auditoria', rotulo: 'Auditoria' },
+  { href: '/conta', rotulo: 'Minha conta' },
 ] as const;
 
 /** Moldura do painel: menu lateral com a cor da faculdade. Sem sessão, vai ao login. */

@@ -22,6 +22,7 @@ export const ACOES_AUDITORIA: Record<string, string> = {
   aluno_reativacao: 'Reativou aluno',
   aviso_publicado: 'Publicou aviso',
   aviso_removido: 'Removeu aviso',
+  post_removido: 'Removeu publicação do feed',
 };
 
 /** 29/10/2026 14:05 */

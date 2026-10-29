@@ -150,4 +150,26 @@ describe('cliente da API', () => {
     );
     expect(armazenamento.valor).toBeNull();
   });
+
+  test('envia arquivo com o tipo certo e troca de senha guarda a sessão nova', async () => {
+    const armazenamento = memoria();
+    const fetch = vi.fn(async (entrada: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(entrada);
+      if (url.endsWith('/auth/login')) return json(200, sessao(1));
+      if (url.endsWith('/auth/senha')) return json(200, sessao(5));
+      return json(200, {
+        tipo: (init?.headers as Record<string, string>)['Content-Type'],
+        corpo: init?.body instanceof Blob,
+      });
+    });
+    const api = criarCliente({ baseUrl: 'http://api', armazenamento, fetch });
+    await api.entrar('a@b.edu.br', 'senha123');
+    expect(await api.enviarArquivo('/eu/foto', new Blob(['x']), 'image/jpeg')).toEqual({
+      tipo: 'image/jpeg',
+      corpo: true,
+    });
+    await api.trocarSenha('senha123', 'novaSenha456');
+    expect(armazenamento.valor).toBe('renovacao-5');
+    expect(api.tokenDeAcesso()).toBe('acesso-5');
+  });
 });

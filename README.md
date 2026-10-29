@@ -93,6 +93,10 @@ em tempo real, perfil (curso, turno, horários, disciplinas, contatos) e denúnc
 6. Leia o QR code com o Expo Go (Android) ou com a câmera (iPhone).
 
 Se o Windows perguntar sobre o firewall do Node.js, permita em **redes privadas**.
+
+**Notificações com o app fechado:** uma vez só, dentro da pasta `app`, rode `npx eas-cli init` (entre com a
+conta da Expo). Ele grava o id do projeto no `app.json`; faça o commit. Depois disso o celular pede
+permissão para notificações ao entrar no app.
 Também dá para abrir no navegador apertando `w` no terminal do Expo.
 
 ## Painel da coordenação (`painel`)
@@ -120,6 +124,8 @@ Respostas de erro sempre no formato `{ "erro": "codigo", "mensagem": "texto", "c
 | `POST /auth/login`                        | público     | Entra com e-mail e senha; devolve token de acesso (15 min) e renovação |
 | `POST /auth/renovar`                      | público     | Troca o token de renovação por um novo par (rotação, 30 dias)          |
 | `POST /auth/sair`                         | público     | Encerra a sessão deste aparelho                                        |
+| `POST /auth/senha/codigo` · `/redefinir`  | público     | Esqueci minha senha: código por e-mail e senha nova                    |
+| `PUT /auth/senha`                         | logado      | Troca a senha (confere a atual)                                        |
 | `GET /eu`                                 | logado      | Perfil próprio                                                         |
 | `PATCH /eu`                               | logado      | Atualiza o perfil                                                      |
 | `PUT /eu/disciplinas`                     | logado      | Define cursando / posso ajudar / preciso de ajuda                      |
@@ -136,6 +142,8 @@ Respostas de erro sempre no formato `{ "erro": "codigo", "mensagem": "texto", "c
 | `GET/POST /bloqueios`                     | aluno       | Lista / bloqueia (`usuarioId`); bloquear desfaz a conexão              |
 | `DELETE /bloqueios/:usuarioId`            | aluno       | Desbloqueia                                                            |
 | `POST /denuncias`                         | aluno       | Denuncia à coordenação (`denunciadoId`, `motivo`, `bloquear?`)         |
+| `PUT/DELETE /eu/foto` · `GET /fotos/:id`  | logado      | Foto de perfil (até 1 MB; JPG, PNG ou WebP)                            |
+| `PUT/DELETE /eu/push`                     | logado      | Registra o aparelho para notificações                                  |
 | `GET /curtidas/recebidas`                 | aluno       | Quantas curtidas esperam resposta                                      |
 | `GET /avisos`                             | logado      | Avisos oficiais da faculdade                                           |
 | `GET /coordenacao/resumo`                 | coordenação | Indicadores da faculdade                                               |
