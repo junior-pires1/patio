@@ -89,6 +89,10 @@ export function converterErro(e: unknown): ErroApp {
     return new ErroApp(400, 'dados_invalidos', 'Confira os dados enviados.', campos);
   }
 
+  if (e && typeof e === 'object' && (e as { type?: unknown }).type === 'entity.too.large') {
+    return new ErroApp(413, 'conteudo_grande', 'O conteúdo enviado é grande demais.');
+  }
+
   if (e instanceof SyntaxError && 'body' in e) {
     return new ErroApp(400, 'json_invalido', 'O corpo da requisição não é um JSON válido.');
   }

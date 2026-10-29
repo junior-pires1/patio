@@ -11,6 +11,7 @@ import { rotasChat } from './modulos/chat/rotas';
 import { rotasConexoes } from './modulos/conexoes/rotas';
 import { rotasCoordenacao } from './modulos/coordenacao/rotas';
 import { rotasFeed } from './modulos/feed/rotas';
+import { rotasFotos } from './modulos/fotos/rotas';
 import { rotasGrupos } from './modulos/grupos/rotas';
 import { rotasPerfil } from './modulos/perfil/rotas';
 import { rotasPlataforma } from './modulos/plataforma/rotas';
@@ -76,6 +77,7 @@ export function criarApp(opcoes: OpcoesApp) {
   app.use(rotasAvisos(ctx));
   app.use(rotasCoordenacao(ctx));
   app.use(rotasFeed(ctx));
+  app.use(rotasFotos(ctx));
   app.use(rotasGrupos(ctx));
 
   app.use((_req, res) => {

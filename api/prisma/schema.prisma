@@ -136,6 +136,7 @@ model Instituicao {
   grupoMensagens     GrupoMensagem[]
   avisos             Aviso[]
   denuncias          Denuncia[]
+  fotos              Foto[]
 
   @@map("instituicoes")
 }
@@ -266,6 +267,7 @@ model Usuario {
   denunciasFeitas     Denuncia[]          @relation("Denunciante")
   denunciasRecebidas  Denuncia[]          @relation("Denunciado")
   denunciasResolvidas Denuncia[]          @relation("ResolvidaPor")
+  foto                Foto?
 
   @@unique([instituicaoId, id], map: "usuarios_instituicao_id_key")
   @@index([instituicaoId, status], map: "usuarios_instituicao_idx")
@@ -570,4 +572,21 @@ model Denuncia {
 
   @@index([instituicaoId, status, criadoEm], map: "denuncias_fila_idx")
   @@map("denuncias")
+}
+
+// ───────────────────────── Fotos de perfil (migração 4) ─────────────────────────
+
+model Foto {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  usuarioId     String   @unique(map: "fotos_usuario_key") @map("usuario_id") @db.Uuid
+  tipo          String   @db.VarChar(20)
+  dados         Bytes
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  usuario     Usuario     @relation(fields: [instituicaoId, usuarioId], references: [instituicaoId, id], onDelete: Cascade, map: "fotos_usuario_fk")
+
+  @@unique([instituicaoId, usuarioId], map: "fotos_instituicao_usuario_key")
+  @@map("fotos")
 }
