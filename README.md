@@ -102,7 +102,12 @@ http://localhost:3000. Entre com `coordenacao@horizonte.edu.br` (senha `Patio202
 advertir ou suspender), **Alunos** (buscar, suspender e reativar), **Avisos** (publicar e remover)
 e **Auditoria**. Contas de aluno não entram no painel.
 
-## Rotas da API (até a Sprint 5)
+**Área da plataforma** (equipe do Pátio): http://localhost:3000/plataforma, com `admin@patio.app`
+(senha `Patio2026`). Mostra as métricas gerais (só totais), lista as faculdades parceiras, cadastra
+uma faculdade nova (domínios de e-mail + conta da coordenação com senha provisória) e ativa ou
+desativa faculdades.
+
+## Rotas da API
 
 Respostas de erro sempre no formato `{ "erro": "codigo", "mensagem": "texto", "campos": { ... } }`.
 
@@ -141,6 +146,10 @@ Respostas de erro sempre no formato `{ "erro": "codigo", "mensagem": "texto", "c
 | `POST /coordenacao/avisos`                | coordenação | Publica aviso                                                          |
 | `DELETE /coordenacao/avisos/:id`          | coordenação | Remove aviso                                                           |
 | `GET /coordenacao/auditoria`              | coordenação | Registro das decisões                                                  |
+| `POST /plataforma/login`                  | público     | Entrar como equipe da plataforma (token de 8 horas)                    |
+| `GET /plataforma/metricas`                | plataforma  | Totais gerais (sem dados de alunos)                                    |
+| `GET/POST /plataforma/faculdades`         | plataforma  | Lista / cadastra faculdade com domínios e coordenação                  |
+| `PATCH /plataforma/faculdades/:id`        | plataforma  | Ativa ou desativa (`{ "ativa": false }`)                               |
 
 **Tempo real:** o app conecta no Socket.IO na mesma porta da API com
 `io(URL, { auth: { token: acessoToken } })` e recebe `curtida:nova`, `match:novo`, `mensagem:nova` e `match:desfeito`.
