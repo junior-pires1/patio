@@ -9,6 +9,7 @@ import { rotasCatalogo } from './modulos/catalogo/rotas';
 import { rotasChat } from './modulos/chat/rotas';
 import { rotasConexoes } from './modulos/conexoes/rotas';
 import { rotasPerfil } from './modulos/perfil/rotas';
+import { rotasProtecao } from './modulos/protecao/rotas';
 
 export type OpcoesApp = Contexto & {
   origensPermitidas: string[];
@@ -64,6 +65,7 @@ export function criarApp(opcoes: OpcoesApp) {
   app.use(rotasCatalogo(ctx));
   app.use(rotasConexoes(ctx));
   app.use(rotasChat(ctx));
+  app.use(rotasProtecao(ctx));
 
   app.use((_req, res) => {
     res.status(404).json({ erro: 'rota_inexistente', mensagem: 'Rota não encontrada.' });

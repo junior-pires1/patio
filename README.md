@@ -73,7 +73,7 @@ para gerar o cliente tipado; ao mudar o banco, altere os dois.
 token. Mesmo uma consulta sem filtro só enxerga dados daquela faculdade; os testes em
 `api/tests/banco` comprovam isso.
 
-## Rotas da API (até a Sprint 3)
+## Rotas da API (até a Sprint 4)
 
 Respostas de erro sempre no formato `{ "erro": "codigo", "mensagem": "texto", "campos": { ... } }`.
 
@@ -91,6 +91,20 @@ Respostas de erro sempre no formato `{ "erro": "codigo", "mensagem": "texto", "c
 | `GET /usuarios/:id`   | sim    | Perfil público de um colega da mesma faculdade                         |
 | `GET /cursos`         | sim    | Cursos da faculdade                                                    |
 | `GET /disciplinas`    | sim    | Disciplinas da faculdade (`?cursoId=` filtra pelo curso)               |
+
+| `GET /descobrir` | aluno | Cartas de colegas, da maior para a menor afinidade, com os motivos |
+| `POST /curtidas` | aluno | Curte (`paraId`); se for recíproca, cria o match |
+| `POST /pulos` | aluno | Pula um perfil (`paraId`) |
+| `GET /matches` | aluno | Conexões, com contatos, última mensagem e não lidas |
+| `DELETE /matches/:id` | aluno | Desfaz a conexão |
+| `GET /matches/:id/mensagens` | aluno | Mensagens (`?antes=` pagina); marca como lidas |
+| `POST /matches/:id/mensagens` | aluno | Envia mensagem |
+| `GET/POST /bloqueios` | aluno | Lista / bloqueia (`usuarioId`); bloquear desfaz a conexão |
+| `DELETE /bloqueios/:usuarioId` | aluno | Desbloqueia |
+| `POST /denuncias` | aluno | Denuncia à coordenação (`denunciadoId`, `motivo`, `bloquear?`) |
+
+**Tempo real:** o app conecta no Socket.IO na mesma porta da API com
+`io(URL, { auth: { token: acessoToken } })` e recebe `match:novo`, `mensagem:nova` e `match:desfeito`.
 
 Rotas com login usam o cabeçalho `Authorization: Bearer <acessoToken>`. Em desenvolvimento, o código
 de verificação aparece no terminal da API em vez de ir por e-mail.
