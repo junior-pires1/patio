@@ -11,6 +11,7 @@ import { rotasChat } from './modulos/chat/rotas';
 import { rotasConexoes } from './modulos/conexoes/rotas';
 import { rotasCoordenacao } from './modulos/coordenacao/rotas';
 import { rotasPerfil } from './modulos/perfil/rotas';
+import { rotasPlataforma } from './modulos/plataforma/rotas';
 import { rotasProtecao } from './modulos/protecao/rotas';
 
 export type OpcoesApp = Contexto & {
@@ -60,7 +61,9 @@ export function criarApp(opcoes: OpcoesApp) {
   });
 
   app.use(limitar(limites.geral, false));
-  app.use('/auth', rotasAuth(ctx, limitar(limites.credenciais, true)));
+  const limiteCredenciais = limitar(limites.credenciais, true);
+  app.use('/auth', rotasAuth(ctx, limiteCredenciais));
+  app.use(rotasPlataforma(ctx, limiteCredenciais));
 
   // Rotas que exigem login (cada rota declara o middleware `logado`)
   app.use(rotasPerfil(ctx));

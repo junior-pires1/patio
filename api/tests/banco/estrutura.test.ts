@@ -85,10 +85,13 @@ describe('estrutura do banco', () => {
   });
 
   test('o seed criou as faculdades de demonstração', async () => {
+    // Outros testes cadastram faculdades em paralelo: confere só as do seed.
     const { rows } = await pool.query<{ sigla: string; alunos: string }>(
       `SELECT i.sigla, count(u.id) FILTER (WHERE u.papel = 'ALUNO')::text AS alunos
          FROM instituicoes i LEFT JOIN usuarios u ON u.instituicao_id = i.id
+        WHERE i.sigla = ANY($1)
         GROUP BY i.sigla ORDER BY i.sigla`,
+      [FACULDADES.map((f) => f.sigla)],
     );
     expect(rows).toHaveLength(FACULDADES.length);
     for (const r of rows) expect(Number(r.alunos)).toBeGreaterThan(0);
