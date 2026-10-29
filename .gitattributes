@@ -1,0 +1,8 @@
+# Todos os arquivos de texto ficam com final de linha LF, inclusive no Windows.
+# Sem isto, o Git do Windows converte para CRLF e o Prettier acusa erro.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.bundle binary
