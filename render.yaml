@@ -1,0 +1,35 @@
+# Render Blueprint: cria a API do Pátio no plano gratuito.
+# No Render: New > Blueprint > escolha este repositório. Veja docs/DEPLOY.md.
+services:
+  - type: web
+    name: patio-api
+    runtime: node
+    plan: free
+    region: ohio
+    rootDir: .
+    # Instala tudo (inclusive ferramentas de build), compila, aplica as
+    # migrações e grava os dados de demonstração (só se o banco estiver vazio).
+    buildCommand: >-
+      npm ci --include=dev &&
+      npm run build -w api &&
+      npm run db:migrar -w api &&
+      npm run db:semear -w api
+    startCommand: npm run start -w api
+    healthCheckPath: /saude
+    envVars:
+      - key: NODE_VERSION
+        value: '22'
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # cole a URL do Neon
+      - key: JWT_SEGREDO
+        generateValue: true
+      - key: SENHA_ADMIN_PLATAFORMA
+        generateValue: true # senha de admin@patio.app no ar (veja em Environment)
+      - key: CORS_ORIGENS
+        sync: false # endereços do painel e do app web na Vercel, separados por vírgula
+      - key: BREVO_API_KEY
+        sync: false # opcional: e-mail de verdade
+      - key: EMAIL_REMETENTE
+        sync: false # opcional: remetente verificado no Brevo

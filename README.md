@@ -166,6 +166,11 @@ Respostas de erro sempre no formato `{ "erro": "codigo", "mensagem": "texto", "c
 Rotas com login usam o cabeçalho `Authorization: Bearer <acessoToken>`. Em desenvolvimento, o código
 de verificação aparece no terminal da API em vez de ir por e-mail.
 
+## Publicar na internet
+
+Passo a passo em [docs/DEPLOY.md](docs/DEPLOY.md): banco no **Neon**, API no **Render** (`render.yaml`),
+painel e versão web do app na **Vercel**, e-mail pelo **Brevo**. Tudo no plano gratuito.
+
 ## Como trabalhamos
 
 Veja [CONTRIBUTING.md](CONTRIBUTING.md): ramos, commits, revisão e Definição de Pronto.
