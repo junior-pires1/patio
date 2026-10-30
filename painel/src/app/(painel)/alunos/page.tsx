@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { NovoAluno } from '@/componentes/NovoAluno';
 import { Botao, Cartao, Estado, Paginacao, Selo, Titulo } from '@/componentes/ui';
 import { useSessao } from '@/lib/sessao';
 import { dataHora } from '@/lib/textos';
@@ -34,11 +35,37 @@ export default function PaginaAlunos() {
     onError: (e) => alert(e.message),
   });
 
+  const [senhaNova, setSenhaNova] = useState<{ email: string; senha: string } | null>(null);
+  const novaSenha = useMutation({
+    mutationFn: (id: string) =>
+      api.post<{ email: string; senhaProvisoria: string }>(
+        `/coordenacao/alunos/${id}/senha`,
+      ),
+    onSuccess: (r) => setSenhaNova({ email: r.email, senha: r.senhaProvisoria }),
+    onError: (e) => alert(e.message),
+  });
+
   return (
     <>
-      <Titulo descricao="Busque alunos da sua faculdade, suspenda ou reative contas.">
+      <Titulo descricao="Cadastre, busque, suspenda ou reative contas de alunos.">
         Alunos
       </Titulo>
+      <NovoAluno />
+      {senhaNova ? (
+        <p
+          role="status"
+          className="mb-4 max-w-2xl rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800"
+        >
+          Nova senha provisória de <strong>{senhaNova.email}</strong>:{' '}
+          <code className="rounded bg-white px-1 font-mono text-base">
+            {senhaNova.senha}
+          </code>
+          . As sessões abertas dele foram encerradas.{' '}
+          <button className="underline" onClick={() => setSenhaNova(null)}>
+            Ok
+          </button>
+        </p>
+      ) : null}
       <form
         className="mb-4 flex flex-wrap gap-2"
         onSubmit={(e) => {
@@ -112,7 +139,19 @@ export default function PaginaAlunos() {
                       <Selo tom="perigo">Suspensa</Selo>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="flex justify-end gap-2 px-4 py-3">
+                    <Botao
+                      variante="neutro"
+                      className="whitespace-nowrap"
+                      disabled={novaSenha.isPending}
+                      onClick={() =>
+                        confirm(
+                          `Gerar uma nova senha provisória para ${a.nome}? A senha atual deixa de valer.`,
+                        ) && novaSenha.mutate(a.id)
+                      }
+                    >
+                      Nova senha
+                    </Botao>
                     {a.status === 'ATIVA' ? (
                       <Botao
                         variante="perigo"

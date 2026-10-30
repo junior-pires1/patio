@@ -1,7 +1,6 @@
-import { randomInt } from 'node:crypto';
 import type { Contexto } from '../../contexto';
 import { ErroApp, naoEncontrado } from '../../erros';
-import { conferir, gerarHash } from '../../seguranca/senha';
+import { conferir, gerarHash, senhaProvisoria } from '../../seguranca/senha';
 import { assinarPlataforma, DURACAO_PLATAFORMA_SEGUNDOS } from './acesso';
 
 // As consultas daqui rodam como dono do banco (fora do RLS): são da
@@ -37,15 +36,6 @@ export async function listarFaculdades(ctx: Contexto) {
     coordenacao: usuarios.map((u) => u.email),
     alunosAtivos: _count.usuarios,
   }));
-}
-
-/** Senha provisória legível: 4 letras + 4 números (ex.: kqmz4821). */
-function senhaProvisoria(): string {
-  const letras = 'abcdefghjkmnpqrstuvwxyz';
-  let s = '';
-  for (let i = 0; i < 4; i++) s += letras[randomInt(letras.length)];
-  for (let i = 0; i < 4; i++) s += String(randomInt(10));
-  return s;
 }
 
 type NovaFaculdade = {

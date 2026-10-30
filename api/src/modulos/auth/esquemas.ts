@@ -25,7 +25,7 @@ export function idade(nascimento: Date, hoje = new Date()): number {
   return anos;
 }
 
-const dataNascimento = z.iso
+export const dataNascimento = z.iso
   .date('Use o formato AAAA-MM-DD')
   .transform((texto) => new Date(`${texto}T00:00:00Z`))
   .refine((d) => idade(d) >= 18, 'É preciso ter pelo menos 18 anos')

@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 
 // Custo 12 em produção (cerca de 250 ms por hash). Nos testes o custo mínimo
@@ -15,4 +16,13 @@ export async function conferir(
 ): Promise<boolean> {
   const ok = await bcrypt.compare(texto, hash ?? HASH_FALSO);
   return ok && hash !== null && hash !== undefined;
+}
+
+/** Senha provisória legível: 4 letras + 4 números (ex.: kqmz4821). */
+export function senhaProvisoria(): string {
+  const letras = 'abcdefghjkmnpqrstuvwxyz';
+  let s = '';
+  for (let i = 0; i < 4; i++) s += letras[randomInt(letras.length)];
+  for (let i = 0; i < 4; i++) s += String(randomInt(10));
+  return s;
 }

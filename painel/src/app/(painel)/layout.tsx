@@ -9,6 +9,7 @@ const MENU = [
   { href: '/', rotulo: 'Resumo' },
   { href: '/denuncias', rotulo: 'Denúncias' },
   { href: '/alunos', rotulo: 'Alunos' },
+  { href: '/cursos', rotulo: 'Cursos e disciplinas' },
   { href: '/publicacoes', rotulo: 'Publicações' },
   { href: '/avisos', rotulo: 'Avisos' },
   { href: '/auditoria', rotulo: 'Auditoria' },
