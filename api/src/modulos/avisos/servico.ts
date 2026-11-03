@@ -26,13 +26,13 @@ export function listarAvisos(ctx: Contexto, eu: Autenticado) {
 }
 
 /** RF32 / RN14: só a coordenação publica avisos, e só na própria faculdade. */
-export function publicarAviso(
+export async function publicarAviso(
   ctx: Contexto,
   eu: Autenticado,
   dados: { titulo: string; texto: string; fixado: boolean },
 ) {
-  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
-    const aviso = await tx.aviso.create({
+  const aviso = await naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
+    const criado = await tx.aviso.create({
       data: { ...dados, instituicaoId: eu.instituicaoId, autorId: eu.id },
       select: AVISO,
     });
@@ -40,11 +40,13 @@ export function publicarAviso(
       tx,
       eu,
       'aviso_publicado',
-      { tipo: 'aviso', id: aviso.id },
-      { titulo: aviso.titulo },
+      { tipo: 'aviso', id: criado.id },
+      { titulo: criado.titulo },
     );
-    return aviso;
+    return criado;
   });
+  ctx.notificar.enviarFaculdade(eu.instituicaoId, 'aviso:novo', { avisoId: aviso.id });
+  return aviso;
 }
 
 /** RF32: remover aviso (remoção lógica, fica no histórico). */

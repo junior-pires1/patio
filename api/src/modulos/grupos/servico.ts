@@ -110,7 +110,7 @@ export function verGrupo(ctx: Contexto, eu: Autenticado, grupoId: string) {
 }
 
 /** RF22: criar grupo; quem cria entra como CRIADOR. */
-export function criarGrupo(
+export async function criarGrupo(
   ctx: Contexto,
   eu: Autenticado,
   dados: {
@@ -122,7 +122,7 @@ export function criarGrupo(
     vagas: number;
   },
 ) {
-  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
+  const novo = await naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
     if (
       dados.disciplinaId &&
       !(await tx.disciplina.findUnique({ where: { id: dados.disciplinaId } }))
@@ -144,6 +144,8 @@ export function criarGrupo(
     });
     return formatar(await exigirGrupo(tx, grupo.id), { lidoAte: null });
   });
+  ctx.notificar.enviarFaculdade(eu.instituicaoId, 'grupo:novo', { grupoId: novo.id });
+  return novo;
 }
 
 /** RF23: entrar no grupo, respeitando as vagas (o gatilho do banco garante o limite). */

@@ -179,6 +179,7 @@ Respostas de erro sempre no formato `{ "erro": "codigo", "mensagem": "texto", "c
 
 **Tempo real:** o app conecta no Socket.IO na mesma porta da API com
 `io(URL, { auth: { token: acessoToken } })` e recebe `curtida:nova`, `match:novo`, `mensagem:nova`, `match:desfeito` e `grupo:mensagem`.
+Toda a faculdade recebe também `post:novo`, `post:removido`, `perfil:atualizado`, `aviso:novo` e `grupo:novo`, que levam só identificadores: o app busca o conteúdo pela API, que aplica bloqueios e permissões.
 
 Rotas com login usam o cabeçalho `Authorization: Bearer <acessoToken>`. Em desenvolvimento, o código
 de verificação aparece no terminal da API em vez de ir por e-mail.

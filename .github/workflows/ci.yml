@@ -24,6 +24,9 @@ jobs:
       DATABASE_URL_TESTE: postgresql://patio_ci:patio_ci@localhost:5432/patio_teste
     steps:
       - uses: actions/checkout@v7
+        with:
+          # O commitlint compara base e head do pull request: precisa do histórico.
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
