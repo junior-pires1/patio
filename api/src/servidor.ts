@@ -29,7 +29,10 @@ const app = criarApp({
   email,
   segredoJwt: ambiente.JWT_SEGREDO,
   notificar: combinar(
-    { enviar: (...args) => ponte.tempoReal?.enviar(...args) },
+    {
+      enviar: (...args) => ponte.tempoReal?.enviar(...args),
+      enviarFaculdade: (...args) => ponte.tempoReal?.enviarFaculdade(...args),
+    },
     notificadorPush(prisma),
   ),
 });

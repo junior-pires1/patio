@@ -24,6 +24,8 @@ afterAll(async () => {
 const ID_A = '11111111-1111-4111-8111-111111111111';
 const ID_B = '22222222-2222-4222-8222-222222222222';
 const FACULDADE = '33333333-3333-4333-8333-333333333333';
+const ID_OUTRA = '44444444-4444-4444-8444-444444444444';
+const OUTRA_FACULDADE = '55555555-5555-4555-8555-555555555555';
 
 function abrir(token?: string) {
   const s = conectar(url, {
@@ -57,6 +59,29 @@ describe('tempo real (Socket.IO)', () => {
     await new Promise((ok) => setTimeout(ok, 100));
     expect(bRecebeu).toBe(false);
     tempoReal.enviar([], 'mensagem:nova', {}); // lista vazia não envia nada
+  });
+
+  test('evento da faculdade chega a todos dela e a ninguém de outra', async () => {
+    const a = abrir(tokenDe(ID_A));
+    const b = abrir(tokenDe(ID_B));
+    const deOutra = abrir(
+      assinarAcesso(
+        { id: ID_OUTRA, instituicaoId: OUTRA_FACULDADE, papel: 'ALUNO' },
+        SEGREDO_TESTE,
+      ),
+    );
+    await Promise.all([conectado(a), conectado(b), conectado(deOutra)]);
+
+    const recebidos = Promise.all(
+      [a, b].map((s) => new Promise((ok) => s.once('post:novo', ok))),
+    );
+    let outraRecebeu = false;
+    deOutra.on('post:novo', () => (outraRecebeu = true));
+
+    tempoReal.enviarFaculdade(FACULDADE, 'post:novo', { postId: 'x' });
+    expect(await recebidos).toEqual([{ postId: 'x' }, { postId: 'x' }]);
+    await new Promise((ok) => setTimeout(ok, 100));
+    expect(outraRecebeu).toBe(false);
   });
 
   test('sem token ou com token inválido a conexão é recusada', async () => {

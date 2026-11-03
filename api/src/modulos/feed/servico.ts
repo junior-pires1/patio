@@ -94,7 +94,7 @@ export function verPost(ctx: Contexto, eu: Autenticado, postId: string) {
 }
 
 /** RF18: publicar no feed. Evento exige data de início (RN18). */
-export function publicar(
+export async function publicar(
   ctx: Contexto,
   eu: Autenticado,
   dados: {
@@ -105,18 +105,20 @@ export function publicar(
     eventoLocal?: string;
   },
 ) {
-  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
-    const post = await tx.post.create({
+  const post = await naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
+    const criado = await tx.post.create({
       data: { ...dados, instituicaoId: eu.instituicaoId, autorId: eu.id },
       select: selecaoDoPost(eu),
     });
-    return formatar(post, eu);
+    return formatar(criado, eu);
   });
+  ctx.notificar.enviarFaculdade(eu.instituicaoId, 'post:novo', { postId: post.id });
+  return post;
 }
 
 /** Remove a publicação: o autor remove a sua; a coordenação, qualquer uma (com auditoria). */
-export function removerPost(ctx: Contexto, eu: Autenticado, postId: string) {
-  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
+export async function removerPost(ctx: Contexto, eu: Autenticado, postId: string) {
+  await naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
     const post = await exigirPost(tx, eu, postId);
     const ehAutor = post.autor.id === eu.id;
     if (!ehAutor && eu.papel !== 'COORDENACAO') {
@@ -133,6 +135,7 @@ export function removerPost(ctx: Contexto, eu: Autenticado, postId: string) {
       );
     }
   });
+  ctx.notificar.enviarFaculdade(eu.instituicaoId, 'post:removido', { postId });
 }
 
 /** RF19: curtir ou descurtir a publicação. Devolve o total atualizado. */

@@ -59,19 +59,39 @@ export function meuPerfil(ctx: Contexto, eu: Autenticado) {
   );
 }
 
-export function atualizarPerfil(
+export async function atualizarPerfil(
   ctx: Contexto,
   eu: Autenticado,
   dados: z.infer<typeof esquemas.atualizarPerfil>,
 ) {
-  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
-    if (dados.cursoId && !(await tx.curso.findUnique({ where: { id: dados.cursoId } }))) {
-      throw new ErroApp(422, 'curso_inexistente', 'Curso não encontrado.', {
-        cursoId: 'Curso não encontrado',
+  const { perfil, apelidoMudou } = await naFaculdade(
+    ctx.prisma,
+    eu.instituicaoId,
+    async (tx) => {
+      if (dados.cursoId && !(await tx.curso.findUnique({ where: { id: dados.cursoId } }))) {
+        throw new ErroApp(422, 'curso_inexistente', 'Curso não encontrado.', {
+          cursoId: 'Curso não encontrado',
+        });
+      }
+      const antes = await tx.usuario.findUniqueOrThrow({
+        where: { id: eu.id },
+        select: { apelido: true },
       });
-    }
-    return tx.usuario.update({ where: { id: eu.id }, data: dados, select: PERFIL_PROPRIO });
-  });
+      const atualizado = await tx.usuario.update({
+        where: { id: eu.id },
+        data: dados,
+        select: PERFIL_PROPRIO,
+      });
+      return { perfil: atualizado, apelidoMudou: atualizado.apelido !== antes.apelido };
+    },
+  );
+  // Salvar o perfil sem trocar o apelido não faz os colegas buscarem nada.
+  if (apelidoMudou) {
+    ctx.notificar.enviarFaculdade(eu.instituicaoId, 'perfil:atualizado', {
+      usuarioId: eu.id,
+    });
+  }
+  return perfil;
 }
 
 /** Substitui a lista de disciplinas da pessoa (cursando, posso ajudar, preciso de ajuda). */

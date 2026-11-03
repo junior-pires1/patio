@@ -2,10 +2,24 @@ import { useQueryClient } from '@tanstack/react-query';
 import { router, usePathname } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
-import type { Mensagem, MensagemGrupo } from './api/tipos';
+import { ErroApi } from './api/cliente';
+import type { Carta, Mensagem, MensagemGrupo } from './api/tipos';
 import { useNotificar } from './componentes/Notificacoes';
 import { API_URL } from './config';
 import { useSessao } from './sessao';
+
+// Listas que mostram dados da faculdade (publicações, avisos, grupos e apelidos).
+const LISTAS_DA_FACULDADE = [
+  ['feed'],
+  ['post'],
+  ['comentarios'],
+  ['avisos'],
+  ['grupos'],
+  ['grupo'],
+  ['grupo-mensagens'],
+  ['matches'],
+];
+const ESPERA_PARA_RECONECTAR_MS = 3000;
 
 /**
  * Conecta no Socket.IO da API enquanto há alguém logado: atualiza as telas
@@ -35,6 +49,63 @@ export function useTempoReal() {
     const atualizar = (...chaves: string[][]) => {
       for (const queryKey of chaves) void queryClient.invalidateQueries({ queryKey });
     };
+
+    // Reconectou: o que aconteceu durante a queda não vai chegar por evento.
+    let jaConectou = false;
+    socket.on('connect', () => {
+      if (jaConectou) atualizar(...LISTAS_DA_FACULDADE);
+      jaConectou = true;
+    });
+
+    // Token recusado (venceu durante a queda): o Socket.IO não tenta de novo sozinho.
+    // Qualquer chamada à API renova o token; depois disso a conexão pode ser refeita.
+    let tentativa: ReturnType<typeof setTimeout> | undefined;
+    const tentarReconectar = () => {
+      tentativa = setTimeout(() => {
+        api
+          .get('/eu')
+          .then(() => socket.connect())
+          .catch((erro: unknown) => {
+            // Sem internet: tenta de novo. Sessão perdida ou conta suspensa: desiste.
+            if (erro instanceof ErroApi && erro.status === 0) tentarReconectar();
+          });
+      }, ESPERA_PARA_RECONECTAR_MS);
+    };
+    socket.on('connect_error', () => {
+      if (!socket.active) tentarReconectar();
+    });
+
+    // Mudanças da faculdade: os eventos só trazem ids; o conteúdo vem da API,
+    // que aplica bloqueios e permissões.
+    socket.on('post:novo', () => atualizar(['feed']));
+    socket.on('post:removido', (evento: { postId: string }) =>
+      atualizar(['feed'], ['post', evento.postId], ['comentarios', evento.postId]),
+    );
+    socket.on('aviso:novo', () => atualizar(['avisos']));
+    socket.on('grupo:novo', () => atualizar(['grupos']));
+    socket.on('perfil:atualizado', (evento: { usuarioId: string }) => {
+      atualizar(
+        ['feed'],
+        ['post'],
+        ['comentarios'],
+        ['matches'],
+        ['grupo'],
+        ['grupo-mensagens'],
+      );
+      // Só troca o apelido na carta: buscar as cartas de novo mudaria a carta atual.
+      const temCarta = queryClient
+        .getQueriesData<Carta[]>({ queryKey: ['descobrir'] })
+        .some(([, cartas]) => cartas?.some((c) => c.id === evento.usuarioId));
+      if (!temCarta) return;
+      api
+        .get<{ apelido: string }>(`/usuarios/${evento.usuarioId}`)
+        .then(({ apelido }) =>
+          queryClient.setQueriesData<Carta[]>({ queryKey: ['descobrir'] }, (cartas) =>
+            cartas?.map((c) => (c.id === evento.usuarioId ? { ...c, apelido } : c)),
+          ),
+        )
+        .catch(() => undefined);
+    });
 
     socket.on('curtida:nova', () => {
       atualizar(['curtidas-recebidas'], ['descobrir']);
@@ -79,6 +150,7 @@ export function useTempoReal() {
       }
     });
     return () => {
+      clearTimeout(tentativa);
       socket.disconnect();
     };
   }, [logado, euId, api, queryClient, notificar]);

@@ -86,6 +86,8 @@ export function notificadorPush(
   buscar: typeof fetch = fetch,
 ): Notificador {
   return {
+    // Mudanças da faculdade só atualizam quem está com o app aberto: não viram push.
+    enviarFaculdade() {},
     enviar(usuarioIds, evento, dados) {
       const mensagem = mensagemDoEvento(usuarioIds, evento, dados);
       if (!mensagem || mensagem.destino.length === 0) return;

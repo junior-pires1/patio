@@ -2,7 +2,7 @@ import request from 'supertest';
 import { criarApp } from '../../src/app';
 import { criarPrisma } from '../../src/banco/prisma';
 import type { EnviadorEmail } from '../../src/servicos/email';
-import type { Evento, Notificador } from '../../src/servicos/notificador';
+import type { Evento, EventoFaculdade, Notificador } from '../../src/servicos/notificador';
 import { SENHA_DEMONSTRACAO } from '../../prisma/seed';
 import { urlTeste } from './banco';
 
@@ -48,8 +48,15 @@ export function appDeTeste(limites = { geral: 10_000, credenciais: 10_000 }) {
   const prisma = criarPrisma(urlTeste());
   const caixa = caixaDeEntrada();
   const eventos: { usuarioIds: string[]; evento: Evento; dados: unknown }[] = [];
+  const eventosDaFaculdade: {
+    instituicaoId: string;
+    evento: EventoFaculdade;
+    dados: unknown;
+  }[] = [];
   const notificar: Notificador = {
     enviar: (usuarioIds, evento, dados) => void eventos.push({ usuarioIds, evento, dados }),
+    enviarFaculdade: (instituicaoId, evento, dados) =>
+      void eventosDaFaculdade.push({ instituicaoId, evento, dados }),
   };
   const app = criarApp({
     origensPermitidas: ['http://localhost:3000'],
@@ -88,6 +95,7 @@ export function appDeTeste(limites = { geral: 10_000, credenciais: 10_000 }) {
     prisma,
     caixa,
     eventos,
+    eventosDaFaculdade,
     entrar,
     cadastrarNovo,
     fechar: () => prisma.$disconnect(),

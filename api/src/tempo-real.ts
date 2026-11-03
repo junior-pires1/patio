@@ -5,8 +5,9 @@ import type { Notificador } from './servicos/notificador';
 
 /**
  * Tempo real com Socket.IO. O aplicativo conecta com o token de acesso
- * (`io(url, { auth: { token } })`) e entra numa sala só dele. A API envia os
- * eventos por essa sala; as mensagens em si são gravadas pelas rotas REST.
+ * (`io(url, { auth: { token } })`) e entra numa sala só dele e na sala da sua
+ * faculdade, que vem sempre do token. A API envia os eventos por essas salas;
+ * as mensagens em si são gravadas pelas rotas REST.
  */
 export function criarTempoReal(
   http: ServidorHttp,
@@ -19,7 +20,7 @@ export function criarTempoReal(
       const token: unknown = socket.handshake.auth.token;
       if (typeof token !== 'string') throw new Error('sem token');
       const usuario = verificarAcesso(token, opcoes.segredoJwt);
-      void socket.join(`usuario:${usuario.id}`);
+      void socket.join([`usuario:${usuario.id}`, `faculdade:${usuario.instituicaoId}`]);
       socket.data.usuario = usuario;
       next();
     } catch {
@@ -31,6 +32,9 @@ export function criarTempoReal(
     enviar(usuarioIds, evento, dados) {
       if (usuarioIds.length === 0) return;
       io.to(usuarioIds.map((id) => `usuario:${id}`)).emit(evento, dados);
+    },
+    enviarFaculdade(instituicaoId, evento, dados) {
+      io.to(`faculdade:${instituicaoId}`).emit(evento, dados);
     },
     fechar: () => new Promise((ok) => void io.close(() => ok())),
   };
