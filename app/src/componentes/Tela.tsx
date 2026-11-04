@@ -1,12 +1,14 @@
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { cores, espaco } from '@/tema';
+import { espaco } from '@/tema';
+import { criarEstilos } from '@/tema-provedor';
 
 type Props = { children: ReactNode; rolagem?: boolean; semTopo?: boolean };
 
-/** Área segura + teclado + rolagem opcional, com o fundo padrão. */
+/** Área segura + teclado + rolagem opcional, com o fundo do tema. Largura máxima na web. */
 export function Tela({ children, rolagem = false, semTopo = false }: Props) {
+  const estilos = useEstilos();
   return (
     <SafeAreaView style={estilos.fundo} edges={semTopo ? ['left', 'right'] : undefined}>
       <KeyboardAvoidingView
@@ -28,7 +30,14 @@ export function Tela({ children, rolagem = false, semTopo = false }: Props) {
   );
 }
 
-const estilos = StyleSheet.create({
-  fundo: { flex: 1, backgroundColor: cores.fundo },
-  conteudo: { padding: espaco.g, gap: espaco.m, flexGrow: 1 },
-});
+const useEstilos = criarEstilos((c) => ({
+  fundo: { flex: 1, backgroundColor: c.fundo },
+  conteudo: {
+    padding: espaco.g,
+    gap: espaco.m,
+    flexGrow: 1,
+    width: '100%',
+    maxWidth: 640,
+    alignSelf: 'center',
+  },
+}));

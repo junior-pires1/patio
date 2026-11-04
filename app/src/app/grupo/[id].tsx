@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import type { GrupoDetalhe } from '@/api/tipos';
 import { Avatar } from '@/componentes/Avatar';
 import { Botao } from '@/componentes/Botao';
@@ -8,11 +8,15 @@ import { Aviso, Carregando } from '@/componentes/Estados';
 import { Info } from '@/componentes/Info';
 import { Tela } from '@/componentes/Tela';
 import { useCorDaFaculdade, useSessao } from '@/sessao';
-import { cores, espaco, estilosBase, raio, suave } from '@/tema';
+import { espaco, fonte, raio, suave } from '@/tema';
+import { criarEstilos, useBase } from '@/tema-provedor';
 import { alerta } from '@/utils/alerta';
+import { voltar } from '@/utils/navegacao';
 
 /** Detalhe do grupo: informações, membros, entrar/sair e acesso ao chat. */
 export default function TelaGrupo() {
+  const estilos = useEstilos();
+  const b = useBase();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { api } = useSessao();
   const cor = useCorDaFaculdade();
@@ -35,7 +39,7 @@ export default function TelaGrupo() {
     mutationFn: () => api.post<{ grupoApagado: boolean }>(`/grupos/${id}/sair`),
     onSuccess: (r) => {
       atualizar();
-      if (r.grupoApagado) router.back();
+      if (r.grupoApagado) voltar('/grupos');
     },
   });
 
@@ -99,7 +103,7 @@ export default function TelaGrupo() {
         />
       )}
 
-      <Text style={estilosBase.secao}>Membros</Text>
+      <Text style={b.secao}>Membros</Text>
       {g.listaDeMembros.map((m) => (
         <View key={m.usuario.id} style={estilos.membro}>
           <Avatar nome={m.usuario.apelido} fotoUrl={m.usuario.fotoUrl} tamanho={36} />
@@ -113,27 +117,27 @@ export default function TelaGrupo() {
   );
 }
 
-const estilos = StyleSheet.create({
+const useEstilos = criarEstilos((c) => ({
   disciplina: {
     alignSelf: 'flex-start',
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: fonte.semi,
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 999,
     overflow: 'hidden',
   },
-  texto: { fontSize: 16, color: cores.texto, lineHeight: 22 },
+  texto: { fontFamily: fonte.regular, fontSize: 16, color: c.texto, lineHeight: 22 },
   info: {
-    backgroundColor: cores.superficie,
+    backgroundColor: c.superficie,
     borderRadius: raio.m,
     padding: espaco.m,
     gap: 4,
     borderWidth: 1,
-    borderColor: cores.borda,
+    borderColor: c.borda,
   },
-  meta: { fontSize: 15, color: cores.texto },
+  meta: { fontFamily: fonte.regular, fontSize: 15, color: c.texto },
   membro: { flexDirection: 'row', alignItems: 'center', gap: espaco.m },
-  nome: { fontSize: 15, color: cores.texto, flex: 1 },
-  criador: { fontSize: 13, fontWeight: '700' },
-});
+  nome: { fontFamily: fonte.regular, fontSize: 15, color: c.texto, flex: 1 },
+  criador: { fontSize: 13, fontFamily: fonte.negrito },
+}));

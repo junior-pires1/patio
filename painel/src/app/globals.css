@@ -1,14 +1,135 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/plus-jakarta-sans';
 
+/*
+ * Identidade do Pátio: azul do capelo, amarelo das faíscas e tinta azul-marinho.
+ * As cores são variáveis: o tema claro fica em :root e o escuro em [data-tema='escuro']
+ * (definido antes da página aparecer, pelo script em layout.tsx).
+ */
 @theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, sans-serif;
+
+  --color-fundo: var(--fundo);
+  --color-superficie: var(--superficie);
+  --color-elevado: var(--elevado);
+  --color-texto: var(--texto);
+  --color-suave: var(--suave);
+  --color-fraco: var(--fraco);
+  --color-borda: var(--borda);
+  --color-borda-forte: var(--borda-forte);
+  --color-marca: var(--marca);
+  --color-marca-forte: var(--marca-forte);
+  --color-marca-suave: var(--marca-suave);
+  --color-sobre-marca: var(--sobre-marca);
+  --color-destaque: var(--destaque);
+  --color-destaque-suave: var(--destaque-suave);
+  --color-sobre-destaque: var(--sobre-destaque);
+  --color-erro: var(--erro);
+  --color-erro-suave: var(--erro-suave);
+  --color-sucesso: var(--sucesso);
+  --color-sucesso-suave: var(--sucesso-suave);
+  --color-alerta: var(--alerta);
+  --color-alerta-suave: var(--alerta-suave);
+  --color-invertido: var(--invertido);
+  --color-sobre-invertido: var(--sobre-invertido);
+
+  --shadow-cartao: 0 1px 2px rgb(14 19 48 / 0.04), 0 4px 16px rgb(14 19 48 / 0.05);
+  --shadow-flutuante: 0 12px 40px rgb(14 19 48 / 0.14);
 }
 
-/* Cor da faculdade, definida pelo layout do painel (padrão: azul do Pátio). */
 :root {
-  --cor: #1f6feb;
+  color-scheme: light;
+  --fundo: #f4f5fa;
+  --superficie: #ffffff;
+  --elevado: #eceef6;
+  --texto: #0e1330;
+  --suave: #585f80;
+  --fraco: #646a8b;
+  --borda: #e2e5f0;
+  --borda-forte: #cfd3e2;
+  --marca: #2a44c4;
+  --marca-forte: #1e34a3;
+  --marca-suave: #e7ebfc;
+  --sobre-marca: #ffffff;
+  --destaque: #f4c82e;
+  --destaque-suave: #fff5d1;
+  --sobre-destaque: #2b2100;
+  --erro: #c42f2f;
+  --erro-suave: #fdecec;
+  --sucesso: #0f7a50;
+  --sucesso-suave: #e2f5ec;
+  --alerta: #8a5b00;
+  --alerta-suave: #fff3d6;
+  --invertido: #0e1330;
+  --sobre-invertido: #ffffff;
+  /* Cor de destaque das telas (antes era a da faculdade). */
+  --cor: var(--marca);
+}
+
+[data-tema='escuro'] {
+  color-scheme: dark;
+  --fundo: #090c18;
+  --superficie: #121628;
+  --elevado: #1b2036;
+  --texto: #eceef8;
+  --suave: #a3a9c4;
+  --fraco: #868dad;
+  --borda: #242a43;
+  --borda-forte: #333a58;
+  --marca: #8199ff;
+  --marca-forte: #6a84f7;
+  --marca-suave: #1c244d;
+  --sobre-marca: #090c18;
+  --destaque: #ffd54a;
+  --destaque-suave: #352d10;
+  --sobre-destaque: #2b2100;
+  --erro: #ff7070;
+  --erro-suave: #3a1b21;
+  --sucesso: #43d592;
+  --sucesso-suave: #11301f;
+  --alerta: #ffcf5c;
+  --alerta-suave: #352a10;
+  --invertido: #eceef8;
+  --sobre-invertido: #090c18;
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply bg-fundo text-texto antialiased;
+  font-feature-settings: 'ss01';
+}
+
+/* Campos de formulário: preenchidos, com foco azul. */
+@layer components {
+  .campo {
+    @apply w-full rounded-xl border border-transparent bg-elevado px-3.5 py-2.5 text-[15px] text-texto outline-none transition placeholder:text-fraco focus:border-marca focus:bg-superficie focus:ring-4 focus:ring-marca/15;
+  }
+  .rotulo {
+    @apply mb-1.5 block text-[13px] font-semibold text-suave;
+  }
+  .tabela {
+    @apply w-full text-left text-sm;
+  }
+  .tabela thead {
+    @apply text-xs font-semibold tracking-wide text-suave uppercase;
+  }
+  .tabela th {
+    @apply px-4 py-3 font-semibold;
+  }
+  .tabela td {
+    @apply px-4 py-3 align-middle;
+  }
+  .tabela tbody tr {
+    @apply border-t border-borda transition hover:bg-elevado/50;
+  }
+}
+
+/* Logo certo para o tema (o letreiro muda de cor). */
+.logo-escuro {
+  display: none;
+}
+[data-tema='escuro'] .logo-claro {
+  display: none;
+}
+[data-tema='escuro'] .logo-escuro {
+  display: block;
 }

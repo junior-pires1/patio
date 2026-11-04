@@ -12,7 +12,11 @@ const horario = z
   );
 
 const link = z
-  .url({ protocol: /^https$/, message: 'Use um endereço completo, começando com https://' })
+  .url({
+    protocol: /^https$/,
+    hostname: /^[a-z0-9-]+(\.[a-z0-9-]+)+$/i,
+    message: 'Use um endereço completo, como https://github.com/seu-usuario',
+  })
   .max(200)
   .optional();
 
@@ -61,7 +65,18 @@ export const disciplinas = z.object({
         relacao: z.enum(['CURSANDO', 'POSSO_AJUDAR', 'PRECISO_AJUDA']),
       }),
     )
-    .max(60, 'No máximo 60 itens'),
+    .max(60, 'No máximo 60 itens')
+    .refine(
+      (itens) =>
+        !itens.some(
+          (i) =>
+            i.relacao === 'POSSO_AJUDAR' &&
+            itens.some(
+              (j) => j.disciplinaId === i.disciplinaId && j.relacao === 'PRECISO_AJUDA',
+            ),
+        ),
+      'Na mesma disciplina, escolha "posso ajudar" ou "preciso de ajuda", não os dois',
+    ),
 });
 
 export const idDoColega = z.object({ id: z.uuid('Identificador inválido') });

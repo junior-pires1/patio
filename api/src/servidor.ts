@@ -42,6 +42,11 @@ const servidor = createServer(app);
 const tempoReal = criarTempoReal(servidor, {
   segredoJwt: ambiente.JWT_SEGREDO,
   origensPermitidas: ambiente.origensPermitidas,
+  // Conta suspensa ou faculdade desativada não reconecta, mesmo com o token ainda válido.
+  contaAtiva: async (u) =>
+    (await prisma.usuario.count({
+      where: { id: u.id, status: 'ATIVA', instituicao: { ativa: true } },
+    })) > 0,
 });
 ponte.tempoReal = tempoReal;
 

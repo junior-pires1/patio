@@ -10,8 +10,7 @@ type Curso = { id: string; nome: string };
 type Criado = { aluno: { nome: string; email: string }; senhaProvisoria: string };
 
 const VAZIO = { nome: '', apelido: '', email: '', dataNascimento: '', cursoId: '' };
-const campo =
-  'w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-[var(--cor)]';
+const campo = 'campo';
 
 /** Cria a conta de um aluno com senha provisória (para quem não recebe o código por e-mail). */
 export function NovoAluno() {
@@ -78,7 +77,7 @@ export function NovoAluno() {
         onChange={(e) => mudar(chave)(e.target.value)}
         required
       />
-      {campos[chave] ? <span className="text-red-600">{campos[chave]}</span> : null}
+      {campos[chave] ? <span className="text-erro">{campos[chave]}</span> : null}
     </label>
   );
 
@@ -89,7 +88,7 @@ export function NovoAluno() {
           <h2 className="font-semibold">Cadastrar aluno</h2>
           <button
             type="button"
-            className="text-sm text-slate-500 hover:underline"
+            className="text-sm text-suave hover:underline"
             onClick={() => {
               setAberto(false);
               setCriado(null);
@@ -98,7 +97,7 @@ export function NovoAluno() {
             Fechar
           </button>
         </div>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-suave">
           A conta já nasce verificada. Entregue a senha provisória ao aluno; ele pode
           trocá-la em Perfil → Trocar senha.
         </p>
@@ -124,15 +123,12 @@ export function NovoAluno() {
           </label>
         </div>
         {campos._ ? (
-          <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{campos._}</p>
+          <p className="rounded-lg bg-erro-suave p-3 text-sm text-erro">{campos._}</p>
         ) : null}
         {criado ? (
-          <p
-            role="status"
-            className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800"
-          >
+          <p role="status" className="rounded-lg bg-sucesso-suave p-3 text-sm text-sucesso">
             Conta criada para <strong>{criado.aluno.email}</strong>. Senha provisória:{' '}
-            <code className="rounded bg-white px-1 font-mono text-base">
+            <code className="rounded bg-superficie px-1 font-mono text-base">
               {criado.senhaProvisoria}
             </code>
             <br />A senha aparece só agora. Anote antes de cadastrar o próximo.

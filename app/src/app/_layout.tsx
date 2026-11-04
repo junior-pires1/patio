@@ -1,26 +1,80 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import {
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
+  useFonts,
+} from '@expo-google-fonts/plus-jakarta-sans';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, type Theme } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Carregando } from '@/componentes/Estados';
 import { ProvedorDeNotificacoes } from '@/componentes/Notificacoes';
 import { ProvedorDeSessao, useSessao } from '@/sessao';
 import { usePush } from '@/push';
+import { fonte } from '@/tema';
+import { ProvedorDeTema, useTema } from '@/tema-provedor';
 import { useTempoReal } from '@/tempo-real';
 
 export default function Raiz() {
   const [queryClient] = useState(
     () => new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 20_000 } } }),
   );
+  const [fontesProntas] = useFonts({
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
+  });
   return (
     <QueryClientProvider client={queryClient}>
-      <ProvedorDeSessao>
-        <ProvedorDeNotificacoes>
-          <StatusBar style="dark" />
-          <Navegacao />
-        </ProvedorDeNotificacoes>
-      </ProvedorDeSessao>
+      <ProvedorDeTema>
+        <ProvedorDeSessao>
+          <ProvedorDeNotificacoes>
+            <TemaDaNavegacao>
+              {fontesProntas ? <Navegacao /> : <Carregando />}
+            </TemaDaNavegacao>
+          </ProvedorDeNotificacoes>
+        </ProvedorDeSessao>
+      </ProvedorDeTema>
     </QueryClientProvider>
+  );
+}
+
+/** Cores e fontes do tema nos cabeçalhos, nas abas e no fundo das telas. */
+function TemaDaNavegacao({ children }: { children: ReactNode }) {
+  const { esquema, c } = useTema();
+  const tema = useMemo<Theme>(() => {
+    const base = esquema === 'escuro' ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      dark: esquema === 'escuro',
+      colors: {
+        ...base.colors,
+        primary: c.marca,
+        background: c.fundo,
+        card: c.fundo,
+        text: c.texto,
+        border: c.borda,
+        notification: c.erro,
+      },
+      // Cada peso é uma família própria; fontWeight fica normal para o navegador não engrossar de novo.
+      fonts: {
+        regular: { fontFamily: fonte.regular, fontWeight: '400' },
+        medium: { fontFamily: fonte.medio, fontWeight: '400' },
+        bold: { fontFamily: fonte.negrito, fontWeight: '400' },
+        heavy: { fontFamily: fonte.extra, fontWeight: '400' },
+      },
+    };
+  }, [esquema, c]);
+  return (
+    <ThemeProvider value={tema}>
+      <StatusBar style={esquema === 'escuro' ? 'light' : 'dark'} />
+      {children}
+    </ThemeProvider>
   );
 }
 
@@ -33,7 +87,14 @@ function Navegacao() {
   const logado = estado.tipo === 'logado';
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        headerShadowVisible: false,
+        headerTitleStyle: { fontFamily: fonte.negrito, fontSize: 17 },
+        headerBackButtonDisplayMode: 'minimal',
+      }}
+    >
       {/* Sem sessão, qualquer tela protegida leva ao login (e vice-versa). */}
       <Stack.Protected guard={logado} redirectTo="/entrar">
         <Stack.Screen name="(abas)" />

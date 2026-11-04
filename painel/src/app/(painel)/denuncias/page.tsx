@@ -84,29 +84,29 @@ export default function PaginaDenuncias() {
                       {ACOES[d.acao]}
                     </Selo>
                   ) : null}
-                  <span className="text-xs text-slate-500">{dataHora(d.criadoEm)}</span>
+                  <span className="text-xs text-suave">{dataHora(d.criadoEm)}</span>
                 </div>
                 <p className="mt-3 text-sm">
-                  <span className="text-slate-500">Denunciado: </span>
+                  <span className="text-suave">Denunciado: </span>
                   <strong>{d.denunciado.nome}</strong> ({d.denunciado.apelido}) ·{' '}
                   {d.denunciado.email}
                 </p>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-suave">
                   {d.denunciado.totalDeDenuncias} denúncia(s) recebida(s) ·{' '}
                   {d.denunciado.advertencias} advertência(s)
                   {d.denunciado.status === 'SUSPENSA' ? ' · conta suspensa' : ''}
                 </p>
                 <p className="mt-2 text-sm">
-                  <span className="text-slate-500">Denunciante: </span>
+                  <span className="text-suave">Denunciante: </span>
                   {d.denunciante.nome} · {d.denunciante.email}
                 </p>
                 {d.detalhe ? (
-                  <blockquote className="mt-3 border-l-4 border-slate-200 pl-3 text-sm text-slate-700">
+                  <blockquote className="mt-3 border-l-4 border-borda pl-3 text-sm text-texto">
                     {d.detalhe}
                   </blockquote>
                 ) : null}
                 {d.resolvidaEm ? (
-                  <p className="mt-3 text-xs text-slate-500">
+                  <p className="mt-3 text-xs text-suave">
                     Decidida em {dataHora(d.resolvidaEm)}
                     {d.resolvidaPor ? ` por ${d.resolvidaPor.nome}` : ''}
                   </p>

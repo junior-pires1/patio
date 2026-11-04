@@ -1,8 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { router } from 'expo-router';
 import { useState } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, Text, View } from 'react-native';
 import { ErroApi } from '@/api/cliente';
 import type { CategoriaPost } from '@/api/tipos';
 import { Botao } from '@/componentes/Botao';
@@ -11,13 +10,18 @@ import { Chip } from '@/componentes/Chip';
 import { MensagemDeErro } from '@/componentes/Estados';
 import { Tela } from '@/componentes/Tela';
 import { useSessao } from '@/sessao';
-import { cores, espaco, estilosBase, raio } from '@/tema';
+import { espaco, fonte, raio } from '@/tema';
+import { criarEstilos, useBase, useTema } from '@/tema-provedor';
 import { dataHoraBrParaIso, mascaraData, mascaraHora } from '@/utils/datas';
 import { escolherImagem } from '@/utils/foto';
 import { CATEGORIAS } from '@/utils/opcoes';
+import { voltar } from '@/utils/navegacao';
 
 /** RF18: nova publicação. Evento pede data, hora e local. */
 export default function Publicar() {
+  const estilos = useEstilos();
+  const { c } = useTema();
+  const b = useBase();
   const { api } = useSessao();
   const queryClient = useQueryClient();
   const [cat, setCat] = useState<CategoriaPost>('GERAL');
@@ -58,7 +62,7 @@ export default function Publicar() {
         ...(evento ? { eventoInicio: inicio, eventoLocal: local.trim() || undefined } : {}),
       });
       void queryClient.invalidateQueries({ queryKey: ['feed'] });
-      router.back();
+      voltar('/feed');
     } catch (e) {
       if (e instanceof ErroApi) {
         setErro(e.message);
@@ -71,7 +75,7 @@ export default function Publicar() {
 
   return (
     <Tela rolagem semTopo>
-      <Text style={estilosBase.rotulo}>Categoria</Text>
+      <Text style={b.rotulo}>Categoria</Text>
       <View style={estilos.chips}>
         {CATEGORIAS.map((c) => (
           <Chip
@@ -114,7 +118,7 @@ export default function Publicar() {
           style={estilos.adicionar}
           accessibilityRole="button"
         >
-          <Ionicons name="image-outline" size={22} color={cores.textoSuave} />
+          <Ionicons name="image-outline" size={22} color={c.textoSuave} />
           <Text style={estilos.adicionarTexto}>Adicionar imagem</Text>
         </Pressable>
       )}
@@ -161,7 +165,7 @@ export default function Publicar() {
   );
 }
 
-const estilos = StyleSheet.create({
+const useEstilos = criarEstilos((c) => ({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   multilinha: { minHeight: 120, paddingTop: 12, textAlignVertical: 'top' },
   linha: { flexDirection: 'row', gap: 12 },
@@ -181,9 +185,9 @@ const estilos = StyleSheet.create({
     gap: espaco.p,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: cores.borda,
+    borderColor: c.borda,
     borderRadius: raio.m,
     padding: espaco.m,
   },
-  adicionarTexto: { color: cores.textoSuave, fontSize: 15 },
-});
+  adicionarTexto: { color: c.textoSuave, fontFamily: fonte.regular, fontSize: 15 },
+}));

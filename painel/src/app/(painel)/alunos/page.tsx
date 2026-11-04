@@ -54,10 +54,10 @@ export default function PaginaAlunos() {
       {senhaNova ? (
         <p
           role="status"
-          className="mb-4 max-w-2xl rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800"
+          className="mb-4 max-w-2xl rounded-lg bg-sucesso-suave p-3 text-sm text-sucesso"
         >
           Nova senha provisória de <strong>{senhaNova.email}</strong>:{' '}
-          <code className="rounded bg-white px-1 font-mono text-base">
+          <code className="rounded bg-superficie px-1 font-mono text-base">
             {senhaNova.senha}
           </code>
           . As sessões abertas dele foram encerradas.{' '}
@@ -79,7 +79,7 @@ export default function PaginaAlunos() {
           placeholder="Nome, apelido ou e-mail"
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
-          className="min-w-60 flex-1 rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-[var(--cor)]"
+          className="campo w-auto min-w-60 flex-1"
         />
         <select
           aria-label="Situação"
@@ -88,7 +88,7 @@ export default function PaginaAlunos() {
             setStatus(e.target.value as typeof status);
             setPagina(1);
           }}
-          className="rounded-lg border border-slate-300 px-3 py-2"
+          className="campo w-auto"
         >
           <option value="">Todas as situações</option>
           <option value="ATIVA">Ativas</option>
@@ -106,31 +106,56 @@ export default function PaginaAlunos() {
         />
         {lista.data && lista.data.itens.length > 0 ? (
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
+            <thead className="border-b border-borda bg-elevado/60 text-xs tracking-wide text-suave uppercase">
               <tr>
-                <th className="px-4 py-3 font-medium">Aluno</th>
-                <th className="px-4 py-3 font-medium">Curso</th>
-                <th className="px-4 py-3 font-medium">Desde</th>
-                <th className="px-4 py-3 font-medium">Ocorrências</th>
-                <th className="px-4 py-3 font-medium">Situação</th>
+                <th className="px-4 py-3 font-semibold">Aluno</th>
+                <th className="px-4 py-3 font-semibold">Curso</th>
+                <th className="px-4 py-3 font-semibold">Desde</th>
+                <th className="px-4 py-3 font-semibold">Ocorrências</th>
+                <th className="px-4 py-3 font-semibold">Situação</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
               {lista.data.itens.map((a) => (
-                <tr key={a.id} className="border-b border-slate-100 last:border-0">
+                <tr key={a.id} className="border-b border-borda last:border-0">
                   <td className="px-4 py-3">
-                    <p className="font-medium">{a.nome}</p>
-                    <p className="text-xs text-slate-500">{a.email}</p>
+                    <div className="flex items-center gap-3">
+                      <span className="grid size-9 shrink-0 place-items-center rounded-full bg-marca-suave text-sm font-extrabold text-marca">
+                        {a.nome.trim().charAt(0).toUpperCase()}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="font-semibold">{a.nome}</p>
+                        <p className="text-xs text-suave">{a.email}</p>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     {a.curso
                       ? `${a.curso.nome}${a.semestre ? ` · ${a.semestre}º` : ''}`
                       : '—'}
                   </td>
-                  <td className="px-4 py-3">{dataHora(a.criadoEm).slice(0, 10)}</td>
-                  <td className="px-4 py-3">
-                    {a.totalDeDenuncias} denúncia(s) · {a.advertencias} advertência(s)
+                  <td className="px-4 py-3 whitespace-nowrap text-suave">
+                    {dataHora(a.criadoEm).slice(0, 10)}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span
+                      className={
+                        a.totalDeDenuncias > 0 ? 'font-bold text-erro' : 'text-suave'
+                      }
+                      title="Denúncias recebidas"
+                    >
+                      {a.totalDeDenuncias} den.
+                    </span>
+                    <span className="mx-1.5 text-fraco">·</span>
+                    <span
+                      className={
+                        a.advertencias > 0 ? 'font-bold text-alerta' : 'text-suave'
+                      }
+                      title="Advertências"
+                    >
+                      {a.advertencias} adv.
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     {a.status === 'ATIVA' ? (
@@ -139,39 +164,41 @@ export default function PaginaAlunos() {
                       <Selo tom="perigo">Suspensa</Selo>
                     )}
                   </td>
-                  <td className="flex justify-end gap-2 px-4 py-3">
-                    <Botao
-                      variante="neutro"
-                      className="whitespace-nowrap"
-                      disabled={novaSenha.isPending}
-                      onClick={() =>
-                        confirm(
-                          `Gerar uma nova senha provisória para ${a.nome}? A senha atual deixa de valer.`,
-                        ) && novaSenha.mutate(a.id)
-                      }
-                    >
-                      Nova senha
-                    </Botao>
-                    {a.status === 'ATIVA' ? (
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
                       <Botao
-                        variante="perigo"
-                        disabled={mudar.isPending}
+                        variante="neutro"
+                        className="whitespace-nowrap"
+                        disabled={novaSenha.isPending}
                         onClick={() =>
-                          confirm(`Suspender a conta de ${a.nome}?`) &&
-                          mudar.mutate({ id: a.id, acao: 'suspender' })
+                          confirm(
+                            `Gerar uma nova senha provisória para ${a.nome}? A senha atual deixa de valer.`,
+                          ) && novaSenha.mutate(a.id)
                         }
                       >
-                        Suspender
+                        Nova senha
                       </Botao>
-                    ) : (
-                      <Botao
-                        variante="contorno"
-                        disabled={mudar.isPending}
-                        onClick={() => mudar.mutate({ id: a.id, acao: 'reativar' })}
-                      >
-                        Reativar
-                      </Botao>
-                    )}
+                      {a.status === 'ATIVA' ? (
+                        <Botao
+                          variante="perigo"
+                          disabled={mudar.isPending}
+                          onClick={() =>
+                            confirm(`Suspender a conta de ${a.nome}?`) &&
+                            mudar.mutate({ id: a.id, acao: 'suspender' })
+                          }
+                        >
+                          Suspender
+                        </Botao>
+                      ) : (
+                        <Botao
+                          variante="contorno"
+                          disabled={mudar.isPending}
+                          onClick={() => mudar.mutate({ id: a.id, acao: 'reativar' })}
+                        >
+                          Reativar
+                        </Botao>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

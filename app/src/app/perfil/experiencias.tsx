@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { ErroApi } from '@/api/cliente';
 import type { Experiencia, PerfilCompleto, TipoExperiencia } from '@/api/tipos';
 import { Botao } from '@/componentes/Botao';
@@ -10,7 +10,8 @@ import { Chip } from '@/componentes/Chip';
 import { Carregando, MensagemDeErro } from '@/componentes/Estados';
 import { Tela } from '@/componentes/Tela';
 import { useSessao, useUsuario } from '@/sessao';
-import { cores, espaco, estilosBase, raio } from '@/tema';
+import { espaco, fonte, raio } from '@/tema';
+import { criarEstilos, useBase, useTema } from '@/tema-provedor';
 import { alerta } from '@/utils/alerta';
 import { isoParaMesAno, mascaraMesAno, mesAno, mesAnoParaIso } from '@/utils/datas';
 import { rotuloExperiencia, TIPOS_EXPERIENCIA } from '@/utils/opcoes';
@@ -26,6 +27,9 @@ const VAZIO = {
 
 /** Experiências do perfil (estilo LinkedIn): estágios, projetos, monitorias... */
 export default function Experiencias() {
+  const estilos = useEstilos();
+  const { c } = useTema();
+  const b = useBase();
   const { api } = useSessao();
   const eu = useUsuario();
   const queryClient = useQueryClient();
@@ -110,7 +114,7 @@ export default function Experiencias() {
             </Text>
           </View>
           <Pressable onPress={() => editar(e)} hitSlop={8} accessibilityLabel="Editar">
-            <Ionicons name="create-outline" size={20} color={cores.textoSuave} />
+            <Ionicons name="create-outline" size={20} color={c.textoSuave} />
           </Pressable>
           <Pressable
             onPress={() =>
@@ -126,14 +130,12 @@ export default function Experiencias() {
             hitSlop={8}
             accessibilityLabel="Apagar"
           >
-            <Ionicons name="trash-outline" size={20} color={cores.textoSuave} />
+            <Ionicons name="trash-outline" size={20} color={c.textoSuave} />
           </Pressable>
         </View>
       ))}
 
-      <Text style={estilosBase.secao}>
-        {editando ? 'Editar experiência' : 'Nova experiência'}
-      </Text>
+      <Text style={b.secao}>{editando ? 'Editar experiência' : 'Nova experiência'}</Text>
       <View style={estilos.chips}>
         {TIPOS_EXPERIENCIA.map((t) => (
           <Chip
@@ -207,21 +209,21 @@ export default function Experiencias() {
   );
 }
 
-const estilos = StyleSheet.create({
+const useEstilos = criarEstilos((c) => ({
   flex: { flex: 1 },
   item: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: espaco.m,
-    backgroundColor: cores.superficie,
+    backgroundColor: c.superficie,
     borderRadius: raio.m,
     borderWidth: 1,
-    borderColor: cores.borda,
+    borderColor: c.borda,
     padding: espaco.m,
   },
-  titulo: { fontSize: 15, fontWeight: '700', color: cores.texto },
-  meta: { fontSize: 13, color: cores.textoSuave },
+  titulo: { fontSize: 15, fontFamily: fonte.negrito, color: c.texto },
+  meta: { fontFamily: fonte.regular, fontSize: 13, color: c.textoSuave },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   linha: { flexDirection: 'row', gap: espaco.m },
   multilinha: { minHeight: 90, paddingTop: 12, textAlignVertical: 'top' },
-});
+}));

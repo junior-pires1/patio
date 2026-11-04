@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import type { PessoaResumo } from '@/api/tipos';
-import { cores, espaco } from '@/tema';
+import { espaco, tipo } from '@/tema';
+import { criarEstilos } from '@/tema-provedor';
 import { Avatar } from './Avatar';
 
 /** Uma pessoa numa lista (busca, curtidas): toque abre o perfil. */
@@ -20,17 +21,18 @@ export function LinhaPessoa({
     [pessoa.curso?.nome, pessoa.semestre ? `${pessoa.semestre}º semestre` : null]
       .filter(Boolean)
       .join(' · ');
+  const estilos = useEstilos();
   return (
     <View style={estilos.linha}>
       <Pressable
-        style={estilos.toque}
+        style={({ pressed }) => [estilos.toque, pressed && { opacity: 0.7 }]}
         onPress={() =>
           router.push({ pathname: '/usuario/[id]', params: { id: pessoa.id } })
         }
         accessibilityRole="button"
         accessibilityLabel={`Perfil de ${pessoa.apelido}`}
       >
-        <Avatar nome={pessoa.apelido} fotoUrl={pessoa.fotoUrl} tamanho={46} />
+        <Avatar nome={pessoa.apelido} fotoUrl={pessoa.fotoUrl} tamanho={48} />
         <View style={estilos.textos}>
           <Text style={estilos.nome}>{pessoa.apelido}</Text>
           {sub ? (
@@ -45,15 +47,15 @@ export function LinhaPessoa({
   );
 }
 
-const estilos = StyleSheet.create({
+const useEstilos = criarEstilos((c) => ({
   linha: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: espaco.m,
-    paddingVertical: espaco.p,
+    paddingVertical: 10,
   },
   toque: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: espaco.m },
-  textos: { flex: 1 },
-  nome: { fontSize: 15, fontWeight: '700', color: cores.texto },
-  sub: { fontSize: 13, color: cores.textoSuave },
-});
+  textos: { flex: 1, gap: 1 },
+  nome: { ...tipo.nome, color: c.texto },
+  sub: { ...tipo.apoio, color: c.textoSuave },
+}));

@@ -1,10 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import type { Post } from '@/api/tipos';
-import { useCorDaFaculdade, useSessao } from '@/sessao';
-import { cores, espaco, raio, suave } from '@/tema';
+import { useSessao } from '@/sessao';
+import { espaco, fonte, raio, tipo } from '@/tema';
+import { criarEstilos, useTema } from '@/tema-provedor';
 import { dataDoEvento, quando } from '@/utils/datas';
 import { categoria } from '@/utils/opcoes';
 import { Avatar } from './Avatar';
@@ -17,7 +18,8 @@ type Props = { post: Post; detalhe?: boolean };
 /** Publicação do feed: autor, texto, evento (com presença), curtidas e comentários. */
 export function CartaoPost({ post, detalhe = false }: Props) {
   const { api } = useSessao();
-  const cor = useCorDaFaculdade();
+  const { c } = useTema();
+  const estilos = useEstilos();
   const queryClient = useQueryClient();
   const cat = categoria(post.categoria);
 
@@ -84,6 +86,8 @@ export function CartaoPost({ post, detalhe = false }: Props) {
   const abrir = () =>
     !detalhe && router.push({ pathname: '/post/[id]', params: { id: post.id } });
 
+  const coordenacao = post.autor.papel === 'COORDENACAO';
+
   return (
     <View style={estilos.cartao}>
       <View style={estilos.topo}>
@@ -93,31 +97,52 @@ export function CartaoPost({ post, detalhe = false }: Props) {
           accessibilityRole="button"
           accessibilityLabel={`Perfil de ${post.autor.apelido}`}
         >
-          <Avatar nome={post.autor.apelido} fotoUrl={post.autor.fotoUrl} tamanho={40} />
+          <Avatar nome={post.autor.apelido} fotoUrl={post.autor.fotoUrl} tamanho={42} />
           <View style={estilos.flex}>
-            <Text style={estilos.autor}>
-              {post.autor.apelido}
-              {post.autor.papel === 'COORDENACAO' ? ' · Coordenação' : ''}
-            </Text>
+            <View style={estilos.linhaAutor}>
+              <Text style={estilos.autor} numberOfLines={1}>
+                {post.autor.apelido}
+              </Text>
+              {coordenacao ? (
+                <Ionicons name="shield-checkmark" size={14} color={c.marca} />
+              ) : null}
+            </View>
             <Text style={estilos.meta}>
-              {cat.rotulo} · {quando(post.criadoEm)}
+              {coordenacao ? 'Coordenação · ' : ''}
+              {quando(post.criadoEm)}
             </Text>
           </View>
         </Pressable>
+        <View
+          style={[
+            estilos.categoria,
+            post.categoria === 'EVENTO' && estilos.categoriaEvento,
+          ]}
+        >
+          <Text
+            style={[
+              estilos.categoriaTexto,
+              post.categoria === 'EVENTO' && estilos.categoriaTextoEvento,
+            ]}
+          >
+            {cat.rotulo}
+          </Text>
+        </View>
         {post.meu ? (
           <Pressable
             onPress={confirmarRemocao}
             hitSlop={10}
+            style={estilos.lixeira}
             accessibilityLabel="Remover publicação"
           >
-            <Ionicons name="trash-outline" size={20} color={cores.textoSuave} />
+            <Ionicons name="trash-outline" size={18} color={c.textoFraco} />
           </Pressable>
         ) : null}
       </View>
 
       {post.texto ? (
         <Pressable onPress={abrir} disabled={detalhe}>
-          <Text style={estilos.texto}>{post.texto}</Text>
+          <Text style={[estilos.texto, detalhe && estilos.textoGrande]}>{post.texto}</Text>
         </Pressable>
       ) : null}
       {post.imagemUrl ? (
@@ -128,26 +153,31 @@ export function CartaoPost({ post, detalhe = false }: Props) {
       ) : null}
 
       {post.categoria === 'EVENTO' && post.eventoInicio ? (
-        <View style={[estilos.evento, { backgroundColor: suave(cor) }]}>
-          <View style={estilos.flex}>
-            <Info icone="calendar-outline" cor={cores.texto} estilo={estilos.eventoData}>
-              {dataDoEvento(post.eventoInicio)}
-            </Info>
+        <View style={estilos.evento}>
+          <View style={estilos.eventoIcone}>
+            <Ionicons name="calendar" size={20} color={c.sobreDestaque} />
+          </View>
+          <View style={[estilos.flex, estilos.eventoTextos]}>
+            <Text style={estilos.eventoData}>{dataDoEvento(post.eventoInicio)}</Text>
             {post.eventoLocal ? (
               <Info icone="location-outline">{post.eventoLocal}</Info>
             ) : null}
-            <Text style={estilos.meta}>{post.presencas} confirmado(s)</Text>
+            <Text style={estilos.meta}>
+              {post.presencas === 1 ? '1 confirmado' : `${post.presencas} confirmados`}
+            </Text>
           </View>
           <Pressable
             onPress={() => (post.vou ? desmarcar.mutate() : presenca.mutate())}
-            style={[
+            style={({ pressed }) => [
               estilos.vou,
-              post.vou ? { backgroundColor: cor } : { borderColor: cor, borderWidth: 1.5 },
+              post.vou ? estilos.vouAtivo : null,
+              pressed && { opacity: 0.8 },
             ]}
             accessibilityRole="button"
             accessibilityState={{ checked: post.vou }}
           >
-            <Text style={[estilos.vouTexto, { color: post.vou ? '#fff' : cor }]}>
+            {post.vou ? <Ionicons name="checkmark" size={16} color={c.sobreMarca} /> : null}
+            <Text style={[estilos.vouTexto, post.vou && { color: c.sobreMarca }]}>
               {post.vou ? 'Vou' : 'Eu vou'}
             </Text>
           </Pressable>
@@ -157,18 +187,28 @@ export function CartaoPost({ post, detalhe = false }: Props) {
       <View style={estilos.acoes}>
         <Pressable
           onPress={() => curtir.mutate()}
-          style={estilos.acao}
+          style={({ pressed }) => [
+            estilos.acao,
+            post.curti && estilos.acaoAtiva,
+            pressed && { opacity: 0.7 },
+          ]}
           accessibilityLabel={post.curti ? 'Descurtir' : 'Curtir'}
         >
           <Ionicons
-            name={post.curti ? 'thumbs-up' : 'thumbs-up-outline'}
-            size={20}
-            color={post.curti ? cor : cores.textoSuave}
+            name={post.curti ? 'heart' : 'heart-outline'}
+            size={19}
+            color={post.curti ? c.erro : c.textoSuave}
           />
-          <Text style={estilos.contagem}>{post.curtidas}</Text>
+          <Text style={[estilos.contagem, post.curti && { color: c.erro }]}>
+            {post.curtidas}
+          </Text>
         </Pressable>
-        <Pressable onPress={abrir} style={estilos.acao} accessibilityLabel="Comentários">
-          <Ionicons name="chatbubble-outline" size={19} color={cores.textoSuave} />
+        <Pressable
+          onPress={abrir}
+          style={({ pressed }) => [estilos.acao, pressed && { opacity: 0.7 }]}
+          accessibilityLabel="Comentários"
+        >
+          <Ionicons name="chatbubble-outline" size={18} color={c.textoSuave} />
           <Text style={estilos.contagem}>{post.comentarios}</Text>
         </Pressable>
       </View>
@@ -176,34 +216,73 @@ export function CartaoPost({ post, detalhe = false }: Props) {
   );
 }
 
-const estilos = StyleSheet.create({
+const useEstilos = criarEstilos((c) => ({
   cartao: {
-    backgroundColor: cores.superficie,
-    borderRadius: raio.g,
+    backgroundColor: c.superficie,
+    borderRadius: raio.gg - 4,
     borderWidth: 1,
-    borderColor: cores.borda,
+    borderColor: c.borda,
     padding: espaco.g,
     gap: espaco.m,
   },
-  topo: { flexDirection: 'row', alignItems: 'center', gap: espaco.m },
+  topo: { flexDirection: 'row', alignItems: 'center', gap: espaco.p },
   autorToque: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: espaco.m },
   flex: { flex: 1 },
-  autor: { fontSize: 15, fontWeight: '700', color: cores.texto },
-  meta: { fontSize: 13, color: cores.textoSuave },
-  texto: { fontSize: 16, color: cores.texto, lineHeight: 22 },
-  imagem: { width: '100%', aspectRatio: 4 / 3, borderRadius: raio.m },
+  linhaAutor: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  autor: { ...tipo.nome, color: c.texto, flexShrink: 1 },
+  meta: { ...tipo.apoio, color: c.textoSuave },
+  categoria: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: raio.total,
+    backgroundColor: c.superficieAlta,
+  },
+  categoriaEvento: { backgroundColor: c.destaqueSuave },
+  categoriaTexto: { fontFamily: fonte.semi, fontSize: 12, color: c.textoSuave },
+  categoriaTextoEvento: { color: c.texto },
+  lixeira: { padding: 4 },
+  texto: { ...tipo.corpo, fontSize: 15.5, lineHeight: 23, color: c.texto },
+  textoGrande: { fontSize: 17, lineHeight: 26 },
+  imagem: { width: '100%', aspectRatio: 4 / 3, borderRadius: raio.g },
   imagemGrande: { aspectRatio: 1 },
   evento: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: espaco.m,
-    borderRadius: raio.m,
+    borderRadius: raio.g,
     padding: espaco.m,
+    backgroundColor: c.superficieAlta,
   },
-  eventoData: { fontSize: 15, fontWeight: '700', color: cores.texto },
-  vou: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
-  vouTexto: { fontWeight: '700', fontSize: 14 },
-  acoes: { flexDirection: 'row', gap: espaco.gg },
-  acao: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  contagem: { fontSize: 14, color: cores.textoSuave },
-});
+  eventoIcone: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: c.destaque,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eventoTextos: { gap: 2 },
+  eventoData: { ...tipo.nome, color: c.texto },
+  vou: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: raio.total,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    backgroundColor: c.marcaSuave,
+  },
+  vouAtivo: { backgroundColor: c.marca },
+  vouTexto: { fontFamily: fonte.negrito, fontSize: 14, color: c.marca },
+  acoes: { flexDirection: 'row', gap: espaco.p, marginLeft: -6 },
+  acao: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: raio.total,
+  },
+  acaoAtiva: { backgroundColor: c.erroSuave },
+  contagem: { fontFamily: fonte.semi, fontSize: 14, color: c.textoSuave },
+}));

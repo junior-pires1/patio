@@ -8,8 +8,7 @@ import { useSessao } from '@/lib/sessao';
 type Curso = { id: string; nome: string };
 type Disciplina = { id: string; nome: string; cursoId: string | null };
 
-const campo =
-  'rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-[var(--cor)]';
+const campo = 'campo w-auto';
 
 /** Cursos e disciplinas da faculdade: aparecem no cadastro, no perfil e nos filtros. */
 export default function PaginaCursos() {
@@ -81,7 +80,7 @@ export default function PaginaCursos() {
     item: { id: string; nome: string },
   ) => (
     <button
-      className="text-sm font-semibold text-red-600 hover:underline disabled:opacity-50"
+      className="text-sm font-semibold text-erro hover:underline disabled:opacity-50"
       disabled={remover.isPending}
       onClick={() =>
         confirm(`Remover "${item.nome}"?`) && remover.mutate({ tipo, id: item.id })
@@ -97,16 +96,16 @@ export default function PaginaCursos() {
         Cursos e disciplinas
       </Titulo>
       {erro ? (
-        <p className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{erro}</p>
+        <p className="mb-4 rounded-lg bg-erro-suave p-3 text-sm text-erro">{erro}</p>
       ) : null}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
         <Cartao>
           <h2 className="mb-3 font-semibold">Cursos</h2>
           <form onSubmit={enviarCurso} className="mb-4 flex gap-2">
             <input
               aria-label="Nome do curso"
               placeholder="Ex.: Ciência da Computação"
-              className={`${campo} flex-1`}
+              className={`${campo} min-w-0 flex-1`}
               value={nomeCurso}
               onChange={(e) => setNomeCurso(e.target.value)}
             />
@@ -120,9 +119,12 @@ export default function PaginaCursos() {
             vazio={cursos.data?.length === 0}
             textoVazio="Nenhum curso ainda."
           />
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-borda">
             {cursos.data?.map((c) => (
-              <li key={c.id} className="flex items-center justify-between py-2 text-sm">
+              <li
+                key={c.id}
+                className="flex items-center justify-between gap-2 py-2 text-sm break-words"
+              >
                 {c.nome}
                 {botaoRemover('cursos', c)}
               </li>
@@ -163,12 +165,15 @@ export default function PaginaCursos() {
             vazio={disciplinas.data?.length === 0}
             textoVazio="Nenhuma disciplina ainda."
           />
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-borda">
             {disciplinas.data?.map((d) => (
-              <li key={d.id} className="flex items-center justify-between py-2 text-sm">
+              <li
+                key={d.id}
+                className="flex items-center justify-between gap-2 py-2 text-sm break-words"
+              >
                 <span>
                   {d.nome}
-                  <span className="block text-xs text-slate-500">
+                  <span className="block text-xs text-suave">
                     {d.cursoId ? nomeDoCurso.get(d.cursoId) : 'Comum a todos os cursos'}
                   </span>
                 </span>

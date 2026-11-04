@@ -8,7 +8,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -19,14 +18,19 @@ import { Avatar } from '@/componentes/Avatar';
 import { Aviso, Carregando } from '@/componentes/Estados';
 import { Imagem } from '@/componentes/Imagem';
 import { useCorDaFaculdade, useSessao, useUsuario } from '@/sessao';
-import { cores, espaco, raio } from '@/tema';
+import { espaco, fonte, raio } from '@/tema';
+import { criarEstilos, useTema } from '@/tema-provedor';
 import { quando } from '@/utils/datas';
 import { alerta } from '@/utils/alerta';
 import { escolherImagem } from '@/utils/foto';
+import { voltar } from '@/utils/navegacao';
+import { useMensagensAntigas } from '@/utils/mensagensAntigas';
 
 type Pagina = { mensagens: Mensagem[]; temMais: boolean };
 
 export default function Chat() {
+  const estilos = useEstilos();
+  const { c } = useTema();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { api } = useSessao();
   const eu = useUsuario();
@@ -43,6 +47,7 @@ export default function Chat() {
     queryKey: ['mensagens', id],
     queryFn: () => api.get<Pagina>(`/matches/${id}/mensagens`),
   });
+  const antigas = useMensagensAntigas(`/matches/${id}/mensagens`, mensagens.data);
 
   const enviar = useMutation({
     mutationFn: async ({ t, imagem }: { t: string; imagem?: Blob }) => {
@@ -79,13 +84,13 @@ export default function Chat() {
   async function desfazer() {
     await api.delete(`/matches/${id}`);
     void queryClient.invalidateQueries({ queryKey: ['matches'] });
-    router.back();
+    voltar('/conexoes');
   }
   async function bloquear() {
     if (!pessoa) return;
     await api.post('/bloqueios', { usuarioId: pessoa.id });
     void queryClient.invalidateQueries({ queryKey: ['matches'] });
-    router.back();
+    voltar('/conexoes');
   }
 
   function abrirOpcoes() {
@@ -155,7 +160,7 @@ export default function Chat() {
             hitSlop={12}
             accessibilityLabel="Opções da conversa"
           >
-            <Ionicons name="ellipsis-vertical" size={22} color={cores.texto} />
+            <Ionicons name="ellipsis-vertical" size={22} color={c.texto} />
           </Pressable>
         ),
       }}
@@ -176,7 +181,7 @@ export default function Chat() {
         <Aviso
           titulo="Conversa indisponível"
           texto={mensagens.error.message}
-          acao={{ titulo: 'Voltar', aoTocar: () => router.back() }}
+          acao={{ titulo: 'Voltar', aoTocar: () => voltar('/conexoes') }}
         />
       </>
     );
@@ -201,7 +206,14 @@ export default function Chat() {
         ) : null}
         <FlatList
           inverted
-          data={[...mensagens.data.mensagens].reverse()}
+          data={[...antigas.todas].reverse()}
+          onEndReached={() => void antigas.carregar()}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={
+            antigas.carregando ? (
+              <Text style={estilos.carregando}>Carregando…</Text>
+            ) : undefined
+          }
           keyExtractor={(m) => m.id}
           contentContainerStyle={estilos.lista}
           ListEmptyComponent={<Text style={estilos.vazio}>Comece a conversa</Text>}
@@ -239,12 +251,12 @@ export default function Chat() {
             accessibilityRole="button"
             accessibilityLabel="Enviar imagem"
           >
-            <Ionicons name="image-outline" size={24} color={cores.textoSuave} />
+            <Ionicons name="image-outline" size={24} color={c.textoSuave} />
           </Pressable>
           <TextInput
             style={estilos.entrada}
             placeholder="Mensagem"
-            placeholderTextColor="#9AA3AE"
+            placeholderTextColor={c.textoFraco}
             multiline
             maxLength={1000}
             value={texto}
@@ -260,7 +272,7 @@ export default function Chat() {
             ]}
             accessibilityLabel="Enviar"
           >
-            <Ionicons name="send" size={18} color="#fff" />
+            <Ionicons name="arrow-up" size={20} color={c.sobreMarca} />
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -268,62 +280,73 @@ export default function Chat() {
   );
 }
 
-const estilos = StyleSheet.create({
-  fundo: { flex: 1, backgroundColor: cores.fundo },
+const useEstilos = criarEstilos((c) => ({
+  carregando: {
+    textAlign: 'center',
+    color: c.textoSuave,
+    padding: espaco.p,
+  },
+  fundo: { flex: 1, backgroundColor: c.fundo },
   tituloCabecalho: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  tituloTexto: { fontSize: 17, fontWeight: '700', color: cores.texto },
+  tituloTexto: { fontSize: 17, fontFamily: fonte.negrito, color: c.texto },
   contatos: {
     textAlign: 'center',
+    fontFamily: fonte.regular,
     fontSize: 13,
-    color: cores.textoSuave,
+    color: c.textoSuave,
     padding: espaco.p,
-    backgroundColor: cores.superficie,
+    backgroundColor: c.superficie,
   },
   lista: { padding: espaco.m, gap: 6, flexGrow: 1 },
   vazio: {
     textAlign: 'center',
-    color: cores.textoSuave,
+    color: c.textoSuave,
     marginTop: 24,
     transform: [{ scaleY: -1 }],
   },
   balao: {
     maxWidth: '80%',
-    borderRadius: raio.m,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
   },
-  minha: { alignSelf: 'flex-end', borderBottomRightRadius: 4 },
+  minha: { alignSelf: 'flex-end', borderBottomRightRadius: 6 },
   dele: {
     alignSelf: 'flex-start',
-    backgroundColor: cores.superficie,
+    backgroundColor: c.superficie,
     borderBottomLeftRadius: 4,
-    borderWidth: 1,
-    borderColor: cores.borda,
   },
-  texto: { fontSize: 16, color: cores.texto },
-  textoMinha: { color: '#fff' },
-  hora: { fontSize: 11, color: cores.textoSuave, marginTop: 2, alignSelf: 'flex-end' },
-  horaMinha: { color: 'rgba(255,255,255,0.8)' },
+  texto: { fontFamily: fonte.regular, fontSize: 15.5, lineHeight: 21, color: c.texto },
+  textoMinha: { color: c.sobreMarca },
+  hora: {
+    fontFamily: fonte.regular,
+    fontSize: 11,
+    color: c.textoSuave,
+    marginTop: 2,
+    alignSelf: 'flex-end',
+  },
+  horaMinha: { color: c.sobreMarca, opacity: 0.75 },
   barra: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: espaco.p,
     padding: espaco.p,
-    backgroundColor: cores.superficie,
+    backgroundColor: c.superficie,
     borderTopWidth: 1,
-    borderColor: cores.borda,
+    borderColor: c.borda,
   },
   entrada: {
     flex: 1,
     maxHeight: 120,
     minHeight: 42,
     borderRadius: 21,
-    backgroundColor: cores.fundo,
-    paddingHorizontal: 14,
+    backgroundColor: c.superficieAlta,
+    paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 10,
+    fontFamily: fonte.regular,
     fontSize: 16,
-    color: cores.texto,
+    color: c.texto,
   },
   foto: { width: 220, height: 220, borderRadius: raio.p, marginBottom: 4 },
   anexo: { height: 42, justifyContent: 'center' },
@@ -334,4 +357,4 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
+}));

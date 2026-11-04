@@ -1,13 +1,11 @@
-import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
 import { ErroApi } from '@/api/cliente';
 import { Botao } from '@/componentes/Botao';
 import { Campo } from '@/componentes/Campo';
 import { MensagemDeErro } from '@/componentes/Estados';
-import { Tela } from '@/componentes/Tela';
+import { TelaPublica } from '@/componentes/TelaPublica';
 import { useSessao } from '@/sessao';
-import { estilosBase } from '@/tema';
+import { voltar } from '@/utils/navegacao';
 
 /** RF39: esqueci minha senha (e-mail → código de 6 números → senha nova). */
 export default function Esqueci() {
@@ -50,16 +48,14 @@ export default function Esqueci() {
     });
 
   return (
-    <Tela rolagem>
-      <View style={estilos.topo}>
-        <Text style={estilosBase.titulo}>Esqueci minha senha</Text>
-        <Text style={estilosBase.subtitulo}>
-          {enviado
-            ? `Se ${email.trim()} tiver conta, chegou um código de 6 números. Ele vale por 10 minutos.`
-            : 'Informe o seu e-mail institucional. Vamos mandar um código para você criar uma senha nova.'}
-        </Text>
-      </View>
-
+    <TelaPublica
+      titulo={enviado ? 'Confira seu e-mail' : 'Esqueci minha senha'}
+      subtitulo={
+        enviado
+          ? `Se ${email.trim()} tiver conta, chegou um código de 6 números. Ele vale por 10 minutos.`
+          : 'Informe o seu e-mail institucional. Vamos mandar um código para você criar uma senha nova.'
+      }
+    >
       {!enviado ? (
         <>
           <Campo
@@ -114,10 +110,8 @@ export default function Esqueci() {
       <Botao
         titulo="Voltar para entrar"
         variante="contorno"
-        aoTocar={() => router.back()}
+        aoTocar={() => voltar('/entrar')}
       />
-    </Tela>
+    </TelaPublica>
   );
 }
-
-const estilos = StyleSheet.create({ topo: { marginTop: 24, gap: 8 } });

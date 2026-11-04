@@ -7,9 +7,11 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { Animated, Pressable, StyleSheet, Text } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { Animated, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { cores, raio } from '@/tema';
+import { elevacao, fonte, raio } from '@/tema';
+import { criarEstilos, useTema } from '@/tema-provedor';
 
 type Notificacao = { id: number; titulo: string; texto?: string; aoTocar?: () => void };
 type Mostrar = (n: Omit<Notificacao, 'id'>) => void;
@@ -45,6 +47,8 @@ function Banner({
   aoSumir: () => void;
 }) {
   const topo = useSafeAreaInsets().top;
+  const { c } = useTema();
+  const estilos = useEstilos();
   const [posicao] = useState(() => new Animated.Value(-120));
 
   useEffect(() => {
@@ -64,33 +68,57 @@ function Banner({
       accessibilityLiveRegion="polite"
     >
       <Pressable
+        style={estilos.linha}
         onPress={() => {
           notificacao.aoTocar?.();
           aoSumir();
         }}
       >
-        <Text style={estilos.titulo}>{notificacao.titulo}</Text>
-        {notificacao.texto ? <Text style={estilos.texto}>{notificacao.texto}</Text> : null}
+        <View style={estilos.icone}>
+          <Ionicons name="notifications" size={18} color={c.sobreDestaque} />
+        </View>
+        <View style={estilos.textos}>
+          <Text style={estilos.titulo}>{notificacao.titulo}</Text>
+          {notificacao.texto ? (
+            <Text style={estilos.texto} numberOfLines={2}>
+              {notificacao.texto}
+            </Text>
+          ) : null}
+        </View>
       </Pressable>
     </Animated.View>
   );
 }
 
-const estilos = StyleSheet.create({
+const useEstilos = criarEstilos((c) => ({
   caixa: {
     position: 'absolute',
     left: 12,
     right: 12,
-    backgroundColor: cores.texto,
-    borderRadius: raio.m,
+    maxWidth: 520,
+    alignSelf: 'center',
+    backgroundColor: c.invertido,
+    borderRadius: raio.g,
     paddingVertical: 12,
-    paddingHorizontal: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+    paddingHorizontal: 14,
+    ...elevacao(c, 2),
   },
-  titulo: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  texto: { color: 'rgba(255,255,255,0.85)', fontSize: 14, marginTop: 2 },
-});
+  linha: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  icone: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: c.destaque,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textos: { flex: 1 },
+  titulo: { color: c.sobreInvertido, fontSize: 15, fontFamily: fonte.negrito },
+  texto: {
+    color: c.sobreInvertido,
+    opacity: 0.78,
+    fontSize: 13.5,
+    fontFamily: fonte.medio,
+    marginTop: 1,
+  },
+}));

@@ -9,6 +9,7 @@ import {
   type StyleProp,
   type ImageStyle,
 } from 'react-native';
+import { useTema } from '@/tema-provedor';
 import { enderecoDaFoto } from '@/utils/endereco';
 
 /**
@@ -16,6 +17,7 @@ import { enderecoDaFoto } from '@/utils/endereco';
  * `url` é o endereço da API ("/imagens/<id>") ou um endereço local (prévia antes de enviar).
  */
 export function Imagem({ url, style }: { url: string; style?: StyleProp<ImageStyle> }) {
+  const { c } = useTema();
   const [aberta, setAberta] = useState(false);
   const endereco = enderecoDaFoto(url) ?? url;
   return (
@@ -27,7 +29,7 @@ export function Imagem({ url, style }: { url: string; style?: StyleProp<ImageSty
       >
         <Image
           source={{ uri: endereco }}
-          style={style}
+          style={[{ backgroundColor: c.superficieAlta }, style]}
           resizeMode="cover"
           accessibilityIgnoresInvertColors
         />
@@ -38,7 +40,7 @@ export function Imagem({ url, style }: { url: string; style?: StyleProp<ImageSty
         animationType="fade"
         onRequestClose={() => setAberta(false)}
       >
-        <View style={estilos.fundo}>
+        <View style={[estilos.fundo, { backgroundColor: c.veu }]}>
           <Image
             source={{ uri: endereco }}
             style={estilos.cheia}
@@ -52,7 +54,7 @@ export function Imagem({ url, style }: { url: string; style?: StyleProp<ImageSty
             accessibilityRole="button"
             accessibilityLabel="Fechar imagem"
           >
-            <Ionicons name="close" size={30} color="#fff" />
+            <Ionicons name="close" size={26} color="#fff" />
           </Pressable>
         </View>
       </Modal>
@@ -63,10 +65,19 @@ export function Imagem({ url, style }: { url: string; style?: StyleProp<ImageSty
 const estilos = StyleSheet.create({
   fundo: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.92)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   cheia: { width: '100%', height: '85%' },
-  fechar: { position: 'absolute', top: 40, right: 20 },
+  fechar: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

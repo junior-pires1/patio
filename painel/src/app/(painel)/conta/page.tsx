@@ -36,15 +36,14 @@ export default function PaginaConta() {
     }
   }
 
-  const campo =
-    'w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-[var(--cor)]';
+  const campo = 'campo';
   return (
     <>
       <Titulo descricao={`${usuario.nome} · ${usuario.email}`}>Minha conta</Titulo>
       <Cartao className="max-w-md">
         <form onSubmit={enviar} className="space-y-3">
           <h2 className="font-semibold">Trocar senha</h2>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-suave">
             Recebeu uma senha provisória da equipe do Pátio? Troque por uma só sua.
           </p>
           <label className="block text-sm">
@@ -57,7 +56,7 @@ export default function PaginaConta() {
               required
             />
             {campos.senhaAtual ? (
-              <span className="text-red-600">{campos.senhaAtual}</span>
+              <span className="text-erro">{campos.senhaAtual}</span>
             ) : null}
           </label>
           <label className="block text-sm">
@@ -69,20 +68,20 @@ export default function PaginaConta() {
               onChange={(e) => setNova(e.target.value)}
               required
             />
-            <span className="block text-xs text-slate-500">
+            <span className="block text-xs text-suave">
               Pelo menos 8 caracteres, com letras e números.
             </span>
             {campos.novaSenha ? (
-              <span className="text-red-600">{campos.novaSenha}</span>
+              <span className="text-erro">{campos.novaSenha}</span>
             ) : null}
           </label>
           {campos._ ? (
-            <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{campos._}</p>
+            <p className="rounded-lg bg-erro-suave p-3 text-sm text-erro">{campos._}</p>
           ) : null}
           {ok ? (
             <p
               role="status"
-              className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800"
+              className="rounded-lg bg-sucesso-suave p-3 text-sm text-sucesso"
             >
               Senha trocada!
             </p>

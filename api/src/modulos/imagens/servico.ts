@@ -72,8 +72,18 @@ export async function exigirImagemPropria(
   if (!imagemId) return;
   const imagem = await tx.imagem.findFirst({
     where: { id: imagemId, autorId: eu.id },
-    select: { id: true },
+    select: {
+      id: true,
+      _count: {
+        select: { posts: true, mensagens: true, grupoMensagens: true, stories: true },
+      },
+    },
   });
+  if (imagem && Object.values(imagem._count).some((n) => n > 0)) {
+    throw new ErroApp(409, 'imagem_em_uso', 'Esta imagem já foi usada. Envie de novo.', {
+      imagemId: 'Imagem já usada',
+    });
+  }
   if (!imagem) {
     throw new ErroApp(422, 'imagem_invalida', 'Imagem não encontrada. Envie de novo.', {
       imagemId: 'Imagem não encontrada',

@@ -1,13 +1,16 @@
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { useCorDaFaculdade } from '@/sessao';
-import { cores, espaco, estilosBase } from '@/tema';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { ActivityIndicator, Text, View } from 'react-native';
+import { espaco, raio, tipo } from '@/tema';
+import { criarEstilos, useTema } from '@/tema-provedor';
 import { Botao } from './Botao';
+import type { NomeIcone } from './Info';
 
 export function Carregando() {
-  const cor = useCorDaFaculdade();
+  const { c } = useTema();
+  const s = useEstilos();
   return (
-    <View style={estilos.centro}>
-      <ActivityIndicator size="large" color={cor} />
+    <View style={s.centro}>
+      <ActivityIndicator size="large" color={c.marca} />
     </View>
   );
 }
@@ -15,43 +18,69 @@ export function Carregando() {
 type AvisoProps = {
   titulo: string;
   texto?: string;
+  icone?: NomeIcone;
   acao?: { titulo: string; aoTocar: () => void };
 };
 
-/** Tela vazia ou de erro, com uma ação opcional ("Tentar de novo"). */
-export function Aviso({ titulo, texto, acao }: AvisoProps) {
+/** Tela vazia ou de erro, com ícone e uma ação opcional ("Tentar de novo"). */
+export function Aviso({ titulo, texto, icone = 'sparkles-outline', acao }: AvisoProps) {
+  const { c } = useTema();
+  const s = useEstilos();
   return (
-    <View style={estilos.centro}>
-      <Text style={[estilosBase.secao, estilos.textoCentro]}>{titulo}</Text>
-      {texto ? (
-        <Text style={[estilosBase.subtitulo, estilos.textoCentro]}>{texto}</Text>
-      ) : null}
+    <View style={s.centro}>
+      <View style={s.selo}>
+        <Ionicons name={icone} size={28} color={c.marca} />
+      </View>
+      <Text style={s.titulo}>{titulo}</Text>
+      {texto ? <Text style={s.texto}>{texto}</Text> : null}
       {acao ? (
-        <Botao titulo={acao.titulo} aoTocar={acao.aoTocar} variante="contorno" />
+        <View style={s.acao}>
+          <Botao titulo={acao.titulo} aoTocar={acao.aoTocar} variante="suave" compacto />
+        </View>
       ) : null}
     </View>
   );
 }
 
 export function MensagemDeErro({ texto }: { texto?: string | null }) {
+  const { c } = useTema();
+  const s = useEstilos();
   if (!texto) return null;
-  return <Text style={estilos.erro}>{texto}</Text>;
+  return (
+    <View style={s.erro} accessibilityRole="alert">
+      <Ionicons name="alert-circle" size={18} color={c.erro} />
+      <Text style={s.textoErro}>{texto}</Text>
+    </View>
+  );
 }
 
-const estilos = StyleSheet.create({
+const useEstilos = criarEstilos((c) => ({
   centro: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: espaco.m,
-    padding: espaco.gg,
+    gap: espaco.p,
+    padding: espaco.ggg,
   },
-  textoCentro: { textAlign: 'center' },
+  selo: {
+    width: 64,
+    height: 64,
+    borderRadius: 22,
+    backgroundColor: c.marcaSuave,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: espaco.p,
+  },
+  titulo: { ...tipo.secao, color: c.texto, textAlign: 'center' },
+  texto: { ...tipo.corpo, color: c.textoSuave, textAlign: 'center', maxWidth: 320 },
+  acao: { marginTop: espaco.m },
   erro: {
-    color: cores.erro,
-    backgroundColor: '#FDECEC',
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'flex-start',
+    backgroundColor: c.erroSuave,
     padding: espaco.m,
-    borderRadius: 10,
-    fontSize: 14,
+    borderRadius: raio.m,
   },
-});
+  textoErro: { ...tipo.apoio, color: c.erro, flex: 1, fontSize: 14, lineHeight: 20 },
+}));

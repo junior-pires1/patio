@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
-import { Botao } from '@/componentes/ui';
+import { Botao, MolduraEntrada } from '@/componentes/ui';
 import { ErroApi } from '@/lib/cliente';
 import { usePlataforma } from '@/lib/plataforma';
 
@@ -31,51 +31,46 @@ export default function EntrarPlataforma() {
     }
   }
 
-  const campo =
-    'w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900';
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-900 p-4">
-      <form
-        onSubmit={enviar}
-        className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-8 shadow-xl"
-        style={{ ['--cor' as string]: '#0f172a' }}
-      >
-        <div>
-          <p className="text-3xl font-extrabold">Pátio</p>
-          <h1 className="mt-1 text-lg font-semibold">Plataforma</h1>
-          <p className="text-sm text-slate-600">
-            Área da equipe do Pátio: faculdades parceiras e métricas gerais.
-          </p>
-        </div>
+    <MolduraEntrada
+      rotulo="Plataforma"
+      chamada="Faculdades parceiras e métricas gerais do Pátio."
+      titulo="Área da equipe"
+      descricao="Acesso restrito à equipe do Pátio."
+    >
+      <form onSubmit={enviar} className="space-y-5">
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-slate-700">E-mail</span>
+          <span className="rotulo">E-mail</span>
           <input
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={campo}
+            className="campo"
           />
         </label>
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-slate-700">Senha</span>
+          <span className="rotulo">Senha</span>
           <input
             type="password"
             required
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
-            className={campo}
+            className="campo"
           />
         </label>
         {erro ? (
-          <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          <p
+            role="alert"
+            className="rounded-xl bg-erro-suave p-3 text-sm font-medium text-erro"
+          >
             {erro}
           </p>
         ) : null}
-        <Botao type="submit" carregando={enviando} className="w-full">
+        <Botao type="submit" carregando={enviando} className="w-full py-3">
           Entrar
         </Botao>
       </form>
-    </main>
+    </MolduraEntrada>
   );
 }

@@ -1,18 +1,22 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQueryClient } from '@tanstack/react-query';
-import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text } from 'react-native';
+import { Image, Pressable, Text } from 'react-native';
 import { Botao } from '@/componentes/Botao';
 import { Campo } from '@/componentes/Campo';
 import { MensagemDeErro } from '@/componentes/Estados';
 import { Tela } from '@/componentes/Tela';
 import { useSessao } from '@/sessao';
-import { cores, espaco, estilosBase, raio } from '@/tema';
+import { espaco, raio } from '@/tema';
+import { criarEstilos, useBase, useTema } from '@/tema-provedor';
 import { escolherImagem } from '@/utils/foto';
+import { voltar } from '@/utils/navegacao';
 
 /** Novo story: uma imagem com legenda opcional, visível por 24 horas para as conexões. */
 export default function NovoStory() {
+  const estilos = useEstilos();
+  const { c } = useTema();
+  const b = useBase();
   const { api } = useSessao();
   const queryClient = useQueryClient();
   const [imagem, setImagem] = useState<{ blob: Blob; uri: string } | null>(null);
@@ -46,7 +50,7 @@ export default function NovoStory() {
         legenda: legenda.trim() || undefined,
       });
       void queryClient.invalidateQueries({ queryKey: ['stories'] });
-      router.back();
+      voltar('/feed');
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível publicar.');
     } finally {
@@ -56,7 +60,7 @@ export default function NovoStory() {
 
   return (
     <Tela rolagem semTopo>
-      <Text style={estilosBase.subtitulo}>
+      <Text style={b.subtitulo}>
         Seu story fica 24 horas no ar e só as suas conexões veem.
       </Text>
       {imagem ? (
@@ -69,8 +73,8 @@ export default function NovoStory() {
           style={estilos.escolher}
           accessibilityRole="button"
         >
-          <Ionicons name="image-outline" size={36} color={cores.textoSuave} />
-          <Text style={estilosBase.subtitulo}>Escolher imagem</Text>
+          <Ionicons name="image-outline" size={36} color={c.textoSuave} />
+          <Text style={b.subtitulo}>Escolher imagem</Text>
         </Pressable>
       )}
       <Campo
@@ -91,7 +95,7 @@ export default function NovoStory() {
   );
 }
 
-const estilos = StyleSheet.create({
+const useEstilos = criarEstilos((c) => ({
   previa: { width: '100%', aspectRatio: 9 / 16, borderRadius: raio.m, maxHeight: 480 },
   escolher: {
     alignItems: 'center',
@@ -101,7 +105,7 @@ const estilos = StyleSheet.create({
     maxHeight: 480,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: cores.borda,
+    borderColor: c.borda,
     borderRadius: raio.m,
   },
-});
+}));

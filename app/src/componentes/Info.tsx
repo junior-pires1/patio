@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-native';
-import { cores } from '@/tema';
+import { fonte } from '@/tema';
+import { useTema } from '@/tema-provedor';
 
 export type NomeIcone = keyof typeof Ionicons.glyphMap;
 
@@ -9,7 +10,7 @@ export type NomeIcone = keyof typeof Ionicons.glyphMap;
 export function Info({
   icone,
   children,
-  cor = cores.textoSuave,
+  cor,
   estilo,
 }: {
   icone: NomeIcone;
@@ -17,15 +18,17 @@ export function Info({
   cor?: string;
   estilo?: StyleProp<TextStyle>;
 }) {
+  const { c } = useTema();
+  const tom = cor ?? c.textoSuave;
   return (
     <View style={estilos.linha}>
-      <Ionicons name={icone} size={15} color={cor} />
-      <Text style={[estilos.texto, { color: cor }, estilo]}>{children}</Text>
+      <Ionicons name={icone} size={15} color={tom} />
+      <Text style={[estilos.texto, { color: tom }, estilo]}>{children}</Text>
     </View>
   );
 }
 
 const estilos = StyleSheet.create({
   linha: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  texto: { fontSize: 14, flexShrink: 1 },
+  texto: { fontSize: 13.5, fontFamily: fonte.medio, flexShrink: 1 },
 });
