@@ -10,7 +10,8 @@ export type Evento =
   | 'grupo:mensagem'
   | 'notificacao:nova'
   | 'notificacoes:lidas'
-  | 'mensagem:digitando';
+  | 'mensagem:digitando'
+  | 'mensagem:atualizada';
 
 /**
  * Mudanças que interessam a toda a faculdade. Levam só identificadores: o

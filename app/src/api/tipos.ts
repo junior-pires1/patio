@@ -66,9 +66,17 @@ export type Mensagem = {
   imagemUrl: string | null;
   criadoEm: string;
   lidaEm: string | null;
+  apagada: boolean;
+  audio: { url: string; duracaoMs: number } | null;
+  resposta: { id: string; autorId: string; apagada: boolean; resumo: string } | null;
+  reacoes: { usuarioId: string; reacao: Reacao }[];
+  /** Prévia na lista de conversas (só em ultimaMensagem). */
+  resumo?: string;
   /** Publicação compartilhada na conversa (ou indisponível, se foi apagada). */
   post: PostCompartilhado | { id: string; indisponivel: true } | null;
 };
+
+export type Reacao = 'AMEI' | 'JOINHA' | 'RISADA' | 'UAU' | 'TRISTE' | 'FOGO';
 
 export type PostCompartilhado = {
   id: string;

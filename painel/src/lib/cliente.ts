@@ -46,8 +46,14 @@ export function criarCliente(opcoes: Opcoes) {
   let acesso: string | null = null;
   let renovando: Promise<boolean> | null = null;
 
-  async function chamar(metodo: Metodo, caminho: string, corpo?: unknown, tipo?: string) {
-    const cabecalhos: Record<string, string> = { Accept: 'application/json' };
+  async function chamar(
+    metodo: Metodo,
+    caminho: string,
+    corpo?: unknown,
+    tipo?: string,
+    extras: Record<string, string> = {},
+  ) {
+    const cabecalhos: Record<string, string> = { Accept: 'application/json', ...extras };
     const binario = tipo !== undefined;
     if (corpo !== undefined) cabecalhos['Content-Type'] = tipo ?? 'application/json';
     if (acesso) cabecalhos.Authorization = `Bearer ${acesso}`;
@@ -122,11 +128,12 @@ export function criarCliente(opcoes: Opcoes) {
     caminho: string,
     corpo?: unknown,
     tipo?: string,
+    extras?: Record<string, string>,
   ): Promise<T> {
-    let resposta = await chamar(metodo, caminho, corpo, tipo);
+    let resposta = await chamar(metodo, caminho, corpo, tipo, extras);
     if (resposta.status === 401 && acesso !== null) {
       if (await renovarUmaVez()) {
-        resposta = await chamar(metodo, caminho, corpo, tipo);
+        resposta = await chamar(metodo, caminho, corpo, tipo, extras);
       } else {
         opcoes.aoPerderSessao?.();
       }
@@ -152,6 +159,16 @@ export function criarCliente(opcoes: Opcoes) {
         '/imagens',
         arquivo,
         arquivo.type || 'image/jpeg',
+      ),
+
+    /** Envia uma mensagem de voz com a duração; devolve o id para usar no envio. */
+    enviarAudio: (arquivo: Blob, duracaoMs: number) =>
+      requisitar<{ id: string; url: string; duracaoMs: number }>(
+        'POST',
+        '/audios',
+        arquivo,
+        arquivo.type || 'audio/mp4',
+        { 'X-Duracao-Ms': String(Math.round(duracaoMs)) },
       ),
 
     /** Token atual, para o Socket.IO. */

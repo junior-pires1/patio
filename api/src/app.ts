@@ -20,6 +20,7 @@ import { rotasPerfil } from './modulos/perfil/rotas';
 import { rotasPlataforma } from './modulos/plataforma/rotas';
 import { rotasPush } from './modulos/push/rotas';
 import { rotasProtecao } from './modulos/protecao/rotas';
+import { rotasAudios } from './modulos/audios/rotas';
 import { rotasNotificacoes } from './modulos/notificacoes/rotas';
 import { rotasSocial } from './modulos/social/rotas';
 import { rotasStories } from './modulos/stories/rotas';
@@ -109,6 +110,7 @@ export function criarApp(opcoes: OpcoesApp) {
   app.use(rotasGrupos(ctx));
   app.use(rotasSocial(ctx));
   app.use(rotasNotificacoes(ctx));
+  app.use(rotasAudios(ctx));
   app.use(rotasStories(ctx));
 
   app.use((_req, res) => {

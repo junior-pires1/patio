@@ -219,12 +219,32 @@ export function listarMatches(ctx: Contexto, eu: Autenticado) {
   });
 }
 
-const formatarMensagem = <M extends { imagemId: string | null }>({
+const formatarMensagem = <
+  M extends {
+    imagemId: string | null;
+    texto: string;
+    audioId: string | null;
+    postId: string | null;
+    apagadaEm: Date | null;
+  },
+>({
   imagemId,
   ...m
 }: M) => ({
   ...m,
-  imagemUrl: urlDaImagem(imagemId),
+  texto: m.apagadaEm ? '' : m.texto,
+  imagemUrl: m.apagadaEm ? null : urlDaImagem(imagemId),
+  // Prévia na lista de conversas.
+  resumo: m.apagadaEm
+    ? 'Mensagem apagada'
+    : m.texto ||
+      (m.audioId
+        ? 'Mensagem de voz'
+        : imagemId
+          ? 'Foto'
+          : m.postId
+            ? 'Enviou uma publicação'
+            : ''),
 });
 
 const atividade = (m: { criadoEm: Date; ultimaMensagem: { criadoEm: Date } | null }) =>
