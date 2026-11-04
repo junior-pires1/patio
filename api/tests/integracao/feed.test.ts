@@ -27,9 +27,11 @@ describe('feed', () => {
       curti: false,
     });
 
+    // Outros arquivos de teste publicam ao mesmo tempo: procura o post, sem contar a posição.
     const visto = await feed(b);
-    expect(ids(visto)[0]).toBe(r.body.id);
-    expect(visto.body.posts[0].meu).toBe(false);
+    const doFeed = visto.body.posts.find((p: { id: string }) => p.id === r.body.id);
+    expect(doFeed).toBeDefined();
+    expect(doFeed.meu).toBe(false);
 
     const outra = await t.cadastrarNovo('aluno.atlantica.edu.br');
     expect(ids(await feed(outra))).not.toContain(r.body.id);
