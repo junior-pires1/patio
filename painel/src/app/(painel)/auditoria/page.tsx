@@ -39,7 +39,7 @@ export default function PaginaAuditoria() {
         />
         {registros.data && registros.data.itens.length > 0 ? (
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
+            <thead className="border-b border-borda bg-elevado/60 text-xs tracking-wide text-suave uppercase">
               <tr>
                 <th className="px-4 py-3 font-medium">Quando</th>
                 <th className="px-4 py-3 font-medium">Quem</th>
@@ -49,13 +49,13 @@ export default function PaginaAuditoria() {
             </thead>
             <tbody>
               {registros.data.itens.map((r) => (
-                <tr key={r.id} className="border-b border-slate-100 last:border-0">
+                <tr key={r.id} className="border-b border-borda last:border-0">
                   <td className="px-4 py-3 whitespace-nowrap">{dataHora(r.criadoEm)}</td>
                   <td className="px-4 py-3">{r.atorNome ?? '—'}</td>
                   <td className="px-4 py-3 font-medium">
                     {ACOES_AUDITORIA[r.acao] ?? r.acao}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{detalhe(r)}</td>
+                  <td className="px-4 py-3 text-suave">{detalhe(r)}</td>
                 </tr>
               ))}
             </tbody>

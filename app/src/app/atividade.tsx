@@ -5,7 +5,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, Text, View } from 'react-native';
 import type { CurtidaFeita, CurtidaRecebida, Post } from '@/api/tipos';
 import { CartaoPost } from '@/componentes/CartaoPost';
 import { Chip } from '@/componentes/Chip';
@@ -13,7 +13,8 @@ import { Carregando } from '@/componentes/Estados';
 import { LinhaPessoa } from '@/componentes/LinhaPessoa';
 import { useNotificar } from '@/componentes/Notificacoes';
 import { useCorDaFaculdade, useSessao } from '@/sessao';
-import { cores, espaco, estilosBase, raio } from '@/tema';
+import { espaco, fonte, raio } from '@/tema';
+import { criarEstilos, useBase, useTema } from '@/tema-provedor';
 import { alerta } from '@/utils/alerta';
 import { quando } from '@/utils/datas';
 
@@ -24,6 +25,9 @@ type Aba = 'feitas' | 'recebidas' | 'posts';
  * novo), quem curtiu você (curtir de volta vira conexão) e publicações curtidas.
  */
 export default function Atividade() {
+  const estilos = useEstilos();
+  const { c } = useTema();
+  const b = useBase();
   const { api } = useSessao();
   const cor = useCorDaFaculdade();
   const queryClient = useQueryClient();
@@ -90,11 +94,11 @@ export default function Atividade() {
       disabled={curtir.isPending || descurtir.isPending}
       style={[
         estilos.botao,
-        cheio ? { backgroundColor: cor, borderColor: cor } : { borderColor: cores.borda },
+        cheio ? { backgroundColor: cor, borderColor: cor } : { borderColor: c.borda },
       ]}
       accessibilityRole="button"
     >
-      <Text style={[estilos.botaoTexto, { color: cheio ? '#fff' : cores.texto }]}>
+      <Text style={[estilos.botaoTexto, { color: cheio ? c.sobreMarca : c.texto }]}>
         {titulo}
       </Text>
     </Pressable>
@@ -133,7 +137,7 @@ export default function Atividade() {
           posts.isPending ? (
             <Carregando />
           ) : (
-            <Text style={estilosBase.subtitulo}>Você ainda não curtiu publicações.</Text>
+            <Text style={b.subtitulo}>Você ainda não curtiu publicações.</Text>
           )
         }
         onEndReached={() =>
@@ -155,7 +159,7 @@ export default function Atividade() {
           recebidas.isPending ? (
             <Carregando />
           ) : (
-            <Text style={estilosBase.subtitulo}>
+            <Text style={b.subtitulo}>
               Ninguém esperando resposta agora. Quando alguém curtir você, aparece aqui.
             </Text>
           )
@@ -184,7 +188,7 @@ export default function Atividade() {
         feitas.isPending ? (
           <Carregando />
         ) : (
-          <Text style={estilosBase.subtitulo}>Você ainda não curtiu ninguém.</Text>
+          <Text style={b.subtitulo}>Você ainda não curtiu ninguém.</Text>
         )
       }
       renderItem={({ item }) => {
@@ -215,17 +219,17 @@ export default function Atividade() {
   );
 }
 
-const estilos = StyleSheet.create({
-  fundo: { flex: 1, backgroundColor: cores.fundo },
+const useEstilos = criarEstilos((c) => ({
+  fundo: { flex: 1, backgroundColor: c.fundo },
   lista: { padding: espaco.g, gap: espaco.p },
   abas: { flexDirection: 'row', gap: 6, marginBottom: espaco.p },
   cartao: {
-    backgroundColor: cores.superficie,
+    backgroundColor: c.superficie,
     borderRadius: raio.m,
     borderWidth: 1,
-    borderColor: cores.borda,
+    borderColor: c.borda,
     paddingHorizontal: espaco.m,
   },
   botao: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7 },
-  botaoTexto: { fontSize: 13, fontWeight: '700' },
-});
+  botaoTexto: { fontSize: 13, fontFamily: fonte.negrito },
+}));

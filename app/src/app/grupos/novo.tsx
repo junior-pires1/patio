@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { ErroApi } from '@/api/cliente';
 import type { Disciplina, Grupo } from '@/api/tipos';
 import { Botao } from '@/componentes/Botao';
@@ -10,10 +10,13 @@ import { Chip } from '@/componentes/Chip';
 import { MensagemDeErro } from '@/componentes/Estados';
 import { Tela } from '@/componentes/Tela';
 import { useCorDaFaculdade, useSessao } from '@/sessao';
-import { cores, estilosBase } from '@/tema';
+import { fonte } from '@/tema';
+import { criarEstilos, useBase } from '@/tema-provedor';
 
 /** RF22: criar grupo de estudo. */
 export default function NovoGrupo() {
+  const estilos = useEstilos();
+  const b = useBase();
   const { api } = useSessao();
   const cor = useCorDaFaculdade();
   const queryClient = useQueryClient();
@@ -61,7 +64,7 @@ export default function NovoGrupo() {
         onChangeText={muda('nome')}
         erro={campos.nome}
       />
-      <Text style={estilosBase.rotulo}>Disciplina (opcional)</Text>
+      <Text style={b.rotulo}>Disciplina (opcional)</Text>
       <View style={estilos.chips}>
         {disciplinas.data?.map((d) => (
           <Chip
@@ -94,7 +97,7 @@ export default function NovoGrupo() {
         value={form.local}
         onChangeText={muda('local')}
       />
-      <Text style={estilosBase.rotulo}>Vagas (de 3 a 20)</Text>
+      <Text style={b.rotulo}>Vagas (de 3 a 20)</Text>
       <View style={estilos.vagas}>
         <Pressable
           onPress={() => setVagas((v) => Math.max(3, v - 1))}
@@ -123,7 +126,7 @@ export default function NovoGrupo() {
   );
 }
 
-const estilos = StyleSheet.create({
+const useEstilos = criarEstilos((c) => ({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   multilinha: { minHeight: 80, paddingTop: 12, textAlignVertical: 'top' },
   vagas: { flexDirection: 'row', alignItems: 'center', gap: 16 },
@@ -135,12 +138,12 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  passoTexto: { fontSize: 22, fontWeight: '700' },
+  passoTexto: { fontSize: 22, fontFamily: fonte.negrito },
   numero: {
     fontSize: 22,
-    fontWeight: '700',
-    color: cores.texto,
+    fontFamily: fonte.negrito,
+    color: c.texto,
     minWidth: 30,
     textAlign: 'center',
   },
-});
+}));

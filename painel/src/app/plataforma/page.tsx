@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
-import { Botao, Cartao, Estado, Selo, Titulo } from '@/componentes/ui';
+import { Botao, Cartao, Estado, Logo, SeletorDeTema, Selo, Titulo } from '@/componentes/ui';
 import { ErroApi } from '@/lib/cliente';
 import { usePlataforma } from '@/lib/plataforma';
 import { dataHora } from '@/lib/textos';
@@ -129,15 +129,14 @@ export default function PainelPlataforma() {
   });
 
   if (estado.tipo !== 'logado')
-    return <p className="p-10 text-center text-slate-500">Carregando…</p>;
+    return <p className="p-10 text-center text-suave">Carregando…</p>;
 
   const muda = (k: keyof typeof VAZIO) => (e: { target: { value: string } }) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
-  const campo =
-    'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900';
+  const campo = 'campo';
   const erroDe = (...chaves: string[]) => {
     const msg = chaves.map((c) => campos[c]).find(Boolean);
-    return msg ? <span className="text-xs text-red-600">{msg}</span> : null;
+    return msg ? <span className="text-xs text-erro">{msg}</span> : null;
   };
   function enviar(e: FormEvent) {
     e.preventDefault();
@@ -146,20 +145,26 @@ export default function PainelPlataforma() {
   }
 
   return (
-    <div className="min-h-screen" style={{ ['--cor' as string]: '#0f172a' }}>
-      <header className="flex items-center justify-between bg-slate-900 px-6 py-4 text-white">
-        <p className="text-xl font-extrabold">
-          Pátio <span className="font-normal text-slate-300">· Plataforma</span>
-        </p>
-        <div className="flex items-center gap-4 text-sm">
-          <span className="text-slate-300">{estado.admin.email}</span>
-          <button onClick={sair} className="font-semibold hover:underline">
-            Sair
-          </button>
+    <div className="min-h-screen">
+      <header className="sticky top-0 z-10 border-b border-borda bg-superficie/85 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-8">
+          <div className="flex items-center gap-3">
+            <Logo altura={32} />
+            <span className="rounded-full bg-invertido px-2.5 py-1 text-[11px] font-bold tracking-wider text-sobre-invertido uppercase">
+              Plataforma
+            </span>
+          </div>
+          <div className="flex items-center gap-3 text-sm">
+            <span className="hidden text-suave sm:inline">{estado.admin.email}</span>
+            <SeletorDeTema compacto />
+            <Botao variante="neutro" onClick={sair} className="py-1.5">
+              Sair
+            </Botao>
+          </div>
         </div>
       </header>
 
-      <main className="space-y-8 p-4 md:p-8">
+      <main className="mx-auto max-w-6xl space-y-10 px-4 py-8 md:px-8">
         <section>
           <Titulo descricao="Somente totais: a equipe da plataforma não vê conversas nem perfis de alunos.">
             Métricas gerais
@@ -178,7 +183,7 @@ export default function PainelPlataforma() {
                 ['Denúncias abertas', metricas.data.denunciasAbertas],
               ].map(([rotulo, valor]) => (
                 <Cartao key={rotulo}>
-                  <p className="text-sm text-slate-600">{rotulo}</p>
+                  <p className="text-sm text-suave">{rotulo}</p>
                   <p className="mt-1 text-2xl font-bold">{valor}</p>
                 </Cartao>
               ))}
@@ -192,11 +197,13 @@ export default function PainelPlataforma() {
             {senhaNova ? (
               <p
                 role="status"
-                className="mb-3 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900"
+                className="mb-3 rounded-lg bg-sucesso-suave p-3 text-sm text-sucesso"
               >
                 Nova senha provisória de <strong>{senhaNova.email}</strong>:{' '}
-                <code className="rounded bg-white px-1 font-mono">{senhaNova.senha}</code>.
-                Ela aparece só agora.{' '}
+                <code className="rounded bg-superficie px-1 font-mono">
+                  {senhaNova.senha}
+                </code>
+                . Ela aparece só agora.{' '}
                 <button className="underline" onClick={() => setSenhaNova(null)}>
                   Ok
                 </button>
@@ -223,14 +230,14 @@ export default function PainelPlataforma() {
                             <Selo tom="perigo">Desativada</Selo>
                           )}
                         </div>
-                        <p className="text-sm text-slate-600">
+                        <p className="text-sm text-suave">
                           {f.cidade}/{f.uf} · {f.alunosAtivos} aluno(s) ativo(s) · desde{' '}
                           {dataHora(f.criadoEm).slice(0, 10)}
                         </p>
-                        <p className="mt-1 text-xs text-slate-500">
+                        <p className="mt-1 text-xs text-suave">
                           Domínios: {f.dominios.join(', ')}
                         </p>
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-suave">
                           Coordenação: {f.coordenacao.length === 0 ? '—' : null}
                           {f.coordenacao.map((email) => (
                             <span
@@ -239,7 +246,7 @@ export default function PainelPlataforma() {
                             >
                               {email}
                               <button
-                                className="font-semibold text-slate-700 underline disabled:opacity-50"
+                                className="font-semibold text-texto underline disabled:opacity-50"
                                 disabled={novaSenha.isPending}
                                 onClick={() =>
                                   confirm(
@@ -326,7 +333,7 @@ export default function PainelPlataforma() {
                     type="color"
                     value={form.corPrimaria}
                     onChange={muda('corPrimaria')}
-                    className="h-9 w-12 rounded border border-slate-300"
+                    className="h-10 w-12 cursor-pointer rounded-lg border border-borda bg-superficie"
                   />
                   <input
                     className={campo}
@@ -345,7 +352,7 @@ export default function PainelPlataforma() {
                   onChange={muda('dominios')}
                   required
                 />
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-suave">
                   Subdomínios também são aceitos. Separe por vírgula.
                 </span>
                 {erroDe('dominios', 'dominios.0')}
@@ -372,7 +379,7 @@ export default function PainelPlataforma() {
                 {erroDe('coordenacao.email')}
               </label>
               {campos._ ? (
-                <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{campos._}</p>
+                <p className="rounded-lg bg-erro-suave p-3 text-sm text-erro">{campos._}</p>
               ) : null}
               <Botao type="submit" carregando={cadastrar.isPending} className="w-full">
                 Cadastrar
@@ -380,13 +387,13 @@ export default function PainelPlataforma() {
               {criada ? (
                 <div
                   role="status"
-                  className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900"
+                  className="rounded-lg bg-sucesso-suave p-3 text-sm text-sucesso"
                 >
                   <p className="font-semibold">{criada.faculdade.nome} cadastrada!</p>
                   <p>
                     Entregue à coordenação: <strong>{criada.coordenacao.email}</strong> /
                     senha provisória{' '}
-                    <code className="rounded bg-white px-1 font-mono">
+                    <code className="rounded bg-superficie px-1 font-mono">
                       {criada.coordenacao.senhaProvisoria}
                     </code>
                   </p>
@@ -410,7 +417,7 @@ export default function PainelPlataforma() {
               }}
             >
               <h2 className="text-lg font-semibold">Minha senha</h2>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-suave">
                 Depois de trocar, a senha do Render (SENHA_ADMIN_PLATAFORMA) deixa de valer.
               </p>
               <label className="block text-sm">
@@ -432,14 +439,14 @@ export default function PainelPlataforma() {
                   onChange={(e) => setMinhaSenha((m) => ({ ...m, nova: e.target.value }))}
                   required
                 />
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-suave">
                   Pelo menos 8 caracteres, com letras e números.
                 </span>
               </label>
               {avisoSenha ? (
                 <p
                   role="status"
-                  className={`rounded-lg p-3 text-sm ${avisoSenha.ok ? 'bg-emerald-50 text-emerald-900' : 'bg-red-50 text-red-700'}`}
+                  className={`rounded-lg p-3 text-sm ${avisoSenha.ok ? 'bg-sucesso-suave text-sucesso' : 'bg-erro-suave text-erro'}`}
                 >
                   {avisoSenha.texto}
                 </p>

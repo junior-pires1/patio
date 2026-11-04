@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
-import { Botao } from '@/componentes/ui';
+import { Botao, MolduraEntrada } from '@/componentes/ui';
 import { ErroApi } from '@/lib/cliente';
 import { useSessao } from '@/lib/sessao';
 
@@ -32,49 +32,48 @@ export default function Entrar() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-4">
-      <form
-        onSubmit={enviar}
-        className="w-full max-w-sm space-y-4 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm"
-      >
-        <div>
-          <p className="text-3xl font-extrabold text-[var(--cor)]">Pátio</p>
-          <h1 className="mt-1 text-lg font-semibold">Painel da coordenação</h1>
-          <p className="text-sm text-slate-600">
-            Entre com a conta da coordenação da sua faculdade.
-          </p>
-        </div>
+    <MolduraEntrada
+      rotulo="Painel da coordenação"
+      chamada="Acompanhe a sua faculdade no Pátio, em um só lugar."
+      titulo="Entrar"
+      descricao="Use a conta da coordenação da sua faculdade."
+    >
+      <form onSubmit={enviar} className="space-y-5">
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-slate-700">E-mail</span>
+          <span className="rotulo">E-mail</span>
           <input
             type="email"
             required
             autoComplete="email"
+            placeholder="coordenacao@faculdade.edu.br"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-[var(--cor)] focus:ring-2 focus:ring-[var(--cor)]/20"
+            className="campo"
           />
         </label>
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-slate-700">Senha</span>
+          <span className="rotulo">Senha</span>
           <input
             type="password"
             required
             autoComplete="current-password"
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-[var(--cor)] focus:ring-2 focus:ring-[var(--cor)]/20"
+            className="campo"
           />
         </label>
         {erro ? (
-          <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          <p
+            role="alert"
+            className="rounded-xl bg-erro-suave p-3 text-sm font-medium text-erro"
+          >
             {erro}
           </p>
         ) : null}
-        <Botao type="submit" carregando={enviando} className="w-full">
+        <Botao type="submit" carregando={enviando} className="w-full py-3">
           Entrar
         </Botao>
       </form>
-    </main>
+    </MolduraEntrada>
   );
 }

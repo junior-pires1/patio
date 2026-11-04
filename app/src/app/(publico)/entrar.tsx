@@ -1,15 +1,17 @@
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { ErroApi } from '@/api/cliente';
 import { Botao } from '@/componentes/Botao';
 import { Campo } from '@/componentes/Campo';
 import { MensagemDeErro } from '@/componentes/Estados';
-import { Tela } from '@/componentes/Tela';
+import { TelaPublica } from '@/componentes/TelaPublica';
 import { useSessao } from '@/sessao';
-import { cores, estilosBase } from '@/tema';
+import { fonte } from '@/tema';
+import { criarEstilos } from '@/tema-provedor';
 
 export default function Entrar() {
+  const estilos = useEstilos();
   const { entrar } = useSessao();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
@@ -28,15 +30,15 @@ export default function Entrar() {
   }
 
   return (
-    <Tela rolagem>
-      <View style={estilos.topo}>
-        <Text style={estilos.marca}>Pátio</Text>
-        <Text style={estilosBase.subtitulo}>
-          A rede da sua faculdade para achar grupo de estudo, monitoria e gente com os
-          mesmos interesses.
-        </Text>
-      </View>
-
+    <TelaPublica
+      titulo="Sua turma, mais perto."
+      subtitulo="Ache grupo de estudo, monitoria e gente com os mesmos interesses na sua faculdade."
+      rodape={
+        <Link href="/cadastro" style={estilos.link}>
+          Primeira vez? <Text style={estilos.linkForte}>Criar conta</Text>
+        </Link>
+      }
+    >
       <Campo
         rotulo="E-mail institucional"
         placeholder="seu.nome@aluno.faculdade.edu.br"
@@ -46,14 +48,19 @@ export default function Entrar() {
         value={email}
         onChangeText={setEmail}
       />
-      <Campo
-        rotulo="Senha"
-        secureTextEntry
-        autoComplete="current-password"
-        value={senha}
-        onChangeText={setSenha}
-        onSubmitEditing={enviar}
-      />
+      <View>
+        <Campo
+          rotulo="Senha"
+          secureTextEntry
+          autoComplete="current-password"
+          value={senha}
+          onChangeText={setSenha}
+          onSubmitEditing={enviar}
+        />
+        <Link href="/esqueci" style={estilos.esqueci}>
+          Esqueci minha senha
+        </Link>
+      </View>
       <MensagemDeErro texto={erro} />
       <Botao
         titulo="Entrar"
@@ -61,21 +68,18 @@ export default function Entrar() {
         carregando={enviando}
         desabilitado={!email || !senha}
       />
-
-      <Link href="/esqueci" style={estilos.linkSimples}>
-        Esqueci minha senha
-      </Link>
-      <Link href="/cadastro" style={estilos.link}>
-        Primeira vez? <Text style={estilos.linkForte}>Criar conta</Text>
-      </Link>
-    </Tela>
+    </TelaPublica>
   );
 }
 
-const estilos = StyleSheet.create({
-  topo: { marginTop: 48, marginBottom: 16, gap: 8 },
-  marca: { fontSize: 40, fontWeight: '800', color: cores.padrao },
-  linkSimples: { textAlign: 'center', color: cores.textoSuave, fontSize: 14 },
-  link: { textAlign: 'center', marginTop: 8, color: cores.textoSuave, fontSize: 15 },
-  linkForte: { color: cores.padrao, fontWeight: '700' },
-});
+const useEstilos = criarEstilos((c) => ({
+  esqueci: {
+    alignSelf: 'flex-end',
+    marginTop: 10,
+    color: c.marca,
+    fontFamily: fonte.semi,
+    fontSize: 14,
+  },
+  link: { textAlign: 'center', color: c.textoSuave, fontFamily: fonte.medio, fontSize: 15 },
+  linkForte: { color: c.marca, fontFamily: fonte.negrito },
+}));

@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -18,12 +17,15 @@ import { Avatar } from '@/componentes/Avatar';
 import { CartaoPost } from '@/componentes/CartaoPost';
 import { Aviso, Carregando } from '@/componentes/Estados';
 import { useCorDaFaculdade, useSessao } from '@/sessao';
-import { cores, espaco } from '@/tema';
+import { espaco, fonte } from '@/tema';
+import { criarEstilos, useTema } from '@/tema-provedor';
 import { quando } from '@/utils/datas';
 import { alerta } from '@/utils/alerta';
 
 /** RF19: publicação com os comentários. */
 export default function TelaPost() {
+  const estilos = useEstilos();
+  const { c } = useTema();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { api } = useSessao();
   const cor = useCorDaFaculdade();
@@ -95,7 +97,7 @@ export default function TelaPost() {
                   hitSlop={10}
                   accessibilityLabel="Apagar comentário"
                 >
-                  <Ionicons name="close" size={18} color={cores.textoSuave} />
+                  <Ionicons name="close" size={18} color={c.textoSuave} />
                 </Pressable>
               ) : null}
             </View>
@@ -105,7 +107,7 @@ export default function TelaPost() {
           <TextInput
             style={estilos.entrada}
             placeholder="Escreva um comentário"
-            placeholderTextColor="#9AA3AE"
+            placeholderTextColor={c.textoFraco}
             maxLength={300}
             value={texto}
             onChangeText={setTexto}
@@ -120,7 +122,7 @@ export default function TelaPost() {
             ]}
             accessibilityLabel="Enviar comentário"
           >
-            <Ionicons name="send" size={18} color="#fff" />
+            <Ionicons name="arrow-up" size={20} color={c.sobreMarca} />
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -128,39 +130,40 @@ export default function TelaPost() {
   );
 }
 
-const estilos = StyleSheet.create({
-  fundo: { flex: 1, backgroundColor: cores.fundo },
+const useEstilos = criarEstilos((c) => ({
+  fundo: { flex: 1, backgroundColor: c.fundo },
   lista: { padding: espaco.g, gap: espaco.m },
-  vazio: { textAlign: 'center', color: cores.textoSuave, marginTop: espaco.g },
+  vazio: { textAlign: 'center', color: c.textoSuave, marginTop: espaco.g },
   comentario: { flexDirection: 'row', gap: espaco.p, alignItems: 'flex-start' },
   balao: {
     flex: 1,
-    backgroundColor: cores.superficie,
+    backgroundColor: c.superficie,
     borderRadius: 14,
     padding: 10,
     borderWidth: 1,
-    borderColor: cores.borda,
+    borderColor: c.borda,
   },
-  autor: { fontSize: 14, fontWeight: '700', color: cores.texto },
-  hora: { fontWeight: '400', color: cores.textoSuave, fontSize: 12 },
-  texto: { fontSize: 15, color: cores.texto, marginTop: 2 },
+  autor: { fontSize: 14, fontFamily: fonte.negrito, color: c.texto },
+  hora: { fontFamily: fonte.regular, color: c.textoSuave, fontSize: 12 },
+  texto: { fontFamily: fonte.regular, fontSize: 15, color: c.texto, marginTop: 2 },
   barra: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: espaco.p,
     padding: espaco.p,
-    backgroundColor: cores.superficie,
+    backgroundColor: c.superficie,
     borderTopWidth: 1,
-    borderColor: cores.borda,
+    borderColor: c.borda,
   },
   entrada: {
     flex: 1,
     minHeight: 42,
     borderRadius: 21,
-    backgroundColor: cores.fundo,
+    backgroundColor: c.fundo,
     paddingHorizontal: 14,
+    fontFamily: fonte.regular,
     fontSize: 16,
-    color: cores.texto,
+    color: c.texto,
   },
   enviar: {
     width: 42,
@@ -169,4 +172,4 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
+}));

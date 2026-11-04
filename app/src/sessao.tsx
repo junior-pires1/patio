@@ -14,7 +14,7 @@ import { criarCliente, type Armazenamento, type Cliente } from './api/cliente';
 import type { MeuPerfil, Sessao } from './api/tipos';
 import { API_URL } from './config';
 import { tokenRegistrado } from './push';
-import { cores } from './tema';
+import { useTema } from './tema-provedor';
 
 const CHAVE = 'patio.renovacao';
 
@@ -114,8 +114,17 @@ export function useUsuario(): MeuPerfil {
   return estado.usuario;
 }
 
-/** Cor da faculdade de quem está logado (ou a cor padrão). */
+/**
+ * Cor principal das telas: o azul do Pátio no tema atual (claro ou escuro).
+ * A cor de cada faculdade aparece só na etiqueta da faculdade (`useCorDaInstituicao`).
+ */
 export function useCorDaFaculdade(): string {
+  return useTema().c.marca;
+}
+
+/** Cor cadastrada pela faculdade de quem está logado (etiquetas com a sigla). */
+export function useCorDaInstituicao(): string {
   const { estado } = useSessao();
-  return estado.tipo === 'logado' ? estado.usuario.instituicao.corPrimaria : cores.padrao;
+  const { c } = useTema();
+  return estado.tipo === 'logado' ? estado.usuario.instituicao.corPrimaria : c.marca;
 }

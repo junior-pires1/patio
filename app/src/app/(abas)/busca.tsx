@@ -2,15 +2,16 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import type { ResultadoBusca } from '@/api/tipos';
 import { CartaoPost } from '@/componentes/CartaoPost';
 import { Chip } from '@/componentes/Chip';
-import { Carregando } from '@/componentes/Estados';
+import { Aviso, Carregando } from '@/componentes/Estados';
 import { Info } from '@/componentes/Info';
 import { LinhaPessoa } from '@/componentes/LinhaPessoa';
 import { useSessao } from '@/sessao';
-import { cores, espaco, estilosBase, raio } from '@/tema';
+import { espaco, fonte, raio } from '@/tema';
+import { criarEstilos, useTema } from '@/tema-provedor';
 
 type Tipo = 'pessoas' | 'posts' | 'grupos';
 const TIPOS: { valor: Tipo; rotulo: string }[] = [
@@ -21,6 +22,8 @@ const TIPOS: { valor: Tipo; rotulo: string }[] = [
 
 /** Busca de pessoas (apelido, curso, habilidade, disciplina), publicações e grupos. */
 export default function Busca() {
+  const estilos = useEstilos();
+  const { c } = useTema();
   const { api } = useSessao();
   const [texto, setTexto] = useState('');
   const [termo, setTermo] = useState('');
@@ -41,23 +44,26 @@ export default function Busca() {
 
   const vazio = (
     <View style={estilos.vazio}>
-      <Ionicons name="search-outline" size={40} color={cores.textoSuave} />
-      <Text style={[estilosBase.subtitulo, estilos.centro]}>
-        {termo.length < 2
-          ? 'Procure por apelido, curso, habilidade (ex.: Python) ou disciplina.'
-          : 'Nada encontrado.'}
-      </Text>
+      <Aviso
+        icone={termo.length < 2 ? 'search-outline' : 'file-tray-outline'}
+        titulo={termo.length < 2 ? 'O que você procura?' : 'Nada encontrado'}
+        texto={
+          termo.length < 2
+            ? 'Busque por apelido, curso, habilidade (ex.: Python) ou disciplina.'
+            : 'Tente outra palavra ou outro filtro.'
+        }
+      />
     </View>
   );
 
   const cabecalho = (
     <View style={estilos.cabecalho}>
       <View style={estilos.campo}>
-        <Ionicons name="search" size={18} color={cores.textoSuave} />
+        <Ionicons name="search" size={18} color={c.textoSuave} />
         <TextInput
           style={estilos.entrada}
           placeholder="Buscar na faculdade"
-          placeholderTextColor="#9AA3AE"
+          placeholderTextColor={c.textoFraco}
           value={texto}
           onChangeText={setTexto}
           autoCapitalize="none"
@@ -66,7 +72,7 @@ export default function Busca() {
         />
         {texto ? (
           <Pressable onPress={() => setTexto('')} hitSlop={8} accessibilityLabel="Limpar">
-            <Ionicons name="close-circle" size={18} color={cores.textoSuave} />
+            <Ionicons name="close-circle" size={18} color={c.textoSuave} />
           </Pressable>
         ) : null}
       </View>
@@ -153,31 +159,36 @@ export default function Busca() {
   );
 }
 
-const estilos = StyleSheet.create({
-  fundo: { flex: 1, backgroundColor: cores.fundo },
-  lista: { padding: espaco.g, gap: espaco.p },
+const useEstilos = criarEstilos((c) => ({
+  fundo: { flex: 1, backgroundColor: c.fundo },
+  lista: {
+    padding: espaco.g,
+    paddingTop: espaco.p,
+    gap: espaco.p,
+    width: '100%',
+    maxWidth: 640,
+    alignSelf: 'center',
+  },
   cabecalho: { gap: espaco.m, marginBottom: espaco.p },
   campo: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: espaco.p,
-    backgroundColor: cores.superficie,
+    backgroundColor: c.superficieAlta,
     borderRadius: raio.m,
-    borderWidth: 1,
-    borderColor: cores.borda,
-    paddingHorizontal: espaco.m,
+    paddingHorizontal: espaco.m + 2,
   },
-  entrada: { flex: 1, height: 44, fontSize: 16, color: cores.texto },
+  entrada: { flex: 1, height: 50, fontFamily: fonte.medio, fontSize: 16, color: c.texto },
   chips: { flexDirection: 'row', gap: 6 },
-  vazio: { alignItems: 'center', gap: espaco.p, padding: espaco.gg },
+  vazio: { minHeight: 320 },
   centro: { textAlign: 'center' },
   grupo: {
-    backgroundColor: cores.superficie,
-    borderRadius: raio.m,
+    backgroundColor: c.superficie,
+    borderRadius: raio.g,
     borderWidth: 1,
-    borderColor: cores.borda,
-    padding: espaco.m,
+    borderColor: c.borda,
+    padding: espaco.g,
     gap: 4,
   },
-  nomeGrupo: { fontSize: 16, fontWeight: '700', color: cores.texto },
-});
+  nomeGrupo: { fontSize: 16, fontFamily: fonte.negrito, color: c.texto },
+}));

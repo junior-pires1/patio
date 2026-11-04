@@ -1,18 +1,20 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { ErroApi } from '@/api/cliente';
 import type { Faculdade } from '@/api/tipos';
 import { Botao } from '@/componentes/Botao';
 import { Campo } from '@/componentes/Campo';
 import { MensagemDeErro } from '@/componentes/Estados';
-import { Tela } from '@/componentes/Tela';
+import { TelaPublica } from '@/componentes/TelaPublica';
 import { useSessao } from '@/sessao';
-import { cores, estilosBase, suave } from '@/tema';
+import { fonte, suave } from '@/tema';
+import { criarEstilos } from '@/tema-provedor';
 import { dataBrParaIso, mascaraData } from '@/utils/datas';
 import { voltar } from '@/utils/navegacao';
 
 /** Cadastro em 2 passos: e-mail institucional → código + dados da conta. */
 export default function Cadastro() {
+  const estilos = useEstilos();
   const { api, cadastrar } = useSessao();
   const [faculdade, setFaculdade] = useState<Faculdade | null>(null);
   const [email, setEmail] = useState('');
@@ -79,14 +81,11 @@ export default function Cadastro() {
 
   if (!faculdade) {
     return (
-      <Tela rolagem>
-        <View style={estilos.topo}>
-          <Text style={estilosBase.titulo}>Criar conta</Text>
-          <Text style={estilosBase.subtitulo}>
-            Use o e-mail da sua faculdade. Vamos mandar um código de 6 números para
-            confirmar.
-          </Text>
-        </View>
+      <TelaPublica
+        etapa="Passo 1 de 2"
+        titulo="Criar conta"
+        subtitulo="Use o e-mail da sua faculdade. Vamos mandar um código de 6 números para confirmar."
+      >
         <Campo
           rotulo="E-mail institucional"
           placeholder="seu.nome@aluno.faculdade.edu.br"
@@ -108,20 +107,28 @@ export default function Cadastro() {
           variante="contorno"
           aoTocar={() => voltar('/entrar')}
         />
-      </Tela>
+      </TelaPublica>
     );
   }
 
   return (
-    <Tela rolagem>
-      <View style={[estilos.faculdade, { backgroundColor: suave(faculdade.corPrimaria) }]}>
-        <Text style={[estilos.sigla, { color: faculdade.corPrimaria }]}>
-          {faculdade.sigla}
-        </Text>
-        <Text style={estilos.nomeFaculdade}>{faculdade.nome}</Text>
-        <Text style={estilosBase.subtitulo}>
-          Código enviado para {email.trim()}. Vale por 10 minutos.
-        </Text>
+    <TelaPublica
+      etapa="Passo 2 de 2"
+      titulo="Quase lá"
+      subtitulo={`Mandamos um código para ${email.trim()}. Ele vale por 10 minutos.`}
+    >
+      <View style={estilos.faculdade}>
+        <View
+          style={[estilos.selo, { backgroundColor: suave(faculdade.corPrimaria, '26') }]}
+        >
+          <Text style={[estilos.sigla, { color: faculdade.corPrimaria }]}>
+            {faculdade.sigla}
+          </Text>
+        </View>
+        <View style={estilos.flex}>
+          <Text style={estilos.rotuloFaculdade}>Sua faculdade</Text>
+          <Text style={estilos.nomeFaculdade}>{faculdade.nome}</Text>
+        </View>
       </View>
 
       <Campo
@@ -166,7 +173,6 @@ export default function Cadastro() {
       <MensagemDeErro texto={erro} />
       <Botao
         titulo="Criar conta"
-        cor={faculdade.corPrimaria}
         aoTocar={criarConta}
         carregando={enviando}
         desabilitado={dados.codigo.length !== 6 || !dados.senha}
@@ -174,16 +180,31 @@ export default function Cadastro() {
       <Botao
         titulo="Trocar e-mail"
         variante="contorno"
-        cor={faculdade.corPrimaria}
         aoTocar={() => setFaculdade(null)}
       />
-    </Tela>
+    </TelaPublica>
   );
 }
 
-const estilos = StyleSheet.create({
-  topo: { marginTop: 24, gap: 8 },
-  faculdade: { borderRadius: 16, padding: 16, gap: 4, marginTop: 8 },
-  sigla: { fontSize: 22, fontWeight: '800' },
-  nomeFaculdade: { fontSize: 16, fontWeight: '600', color: cores.texto },
-});
+const useEstilos = criarEstilos((c) => ({
+  faculdade: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: c.superficieAlta,
+  },
+  selo: {
+    minWidth: 52,
+    height: 52,
+    paddingHorizontal: 8,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sigla: { fontSize: 16, fontFamily: fonte.extra },
+  flex: { flex: 1 },
+  rotuloFaculdade: { fontSize: 12, fontFamily: fonte.medio, color: c.textoSuave },
+  nomeFaculdade: { fontSize: 15, fontFamily: fonte.negrito, color: c.texto },
+}));

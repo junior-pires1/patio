@@ -1,9 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { Pressable, Text, View } from 'react-native';
 import type { Aviso } from '@/api/tipos';
-import { useCorDaFaculdade, useSessao } from '@/sessao';
-import { cores, espaco, raio } from '@/tema';
+import { useSessao } from '@/sessao';
+import { espaco, fonte, raio, tipo } from '@/tema';
+import { criarEstilos, useTema } from '@/tema-provedor';
 
 /**
  * RF21: avisos oficiais da coordenação. Os fixados ficam sempre à vista; os
@@ -11,7 +13,8 @@ import { cores, espaco, raio } from '@/tema';
  */
 export function BlocoAvisos() {
   const { api } = useSessao();
-  const cor = useCorDaFaculdade();
+  const { c } = useTema();
+  const estilos = useEstilos();
   const avisos = useQuery({
     queryKey: ['avisos'],
     queryFn: () => api.get<Aviso[]>('/avisos'),
@@ -32,11 +35,21 @@ export function BlocoAvisos() {
           onPress={() => setAberto((atual) => (atual === aviso.id ? null : aviso.id))}
           accessibilityRole="button"
           accessibilityLabel={`Aviso da coordenação: ${aviso.titulo}`}
-          style={[estilos.aviso, { borderColor: cor }]}
+          style={({ pressed }) => [estilos.aviso, pressed && { opacity: 0.85 }]}
         >
-          <Text style={[estilos.rotulo, { color: cor }]}>Aviso da coordenação</Text>
-          <Text style={estilos.titulo}>{aviso.titulo}</Text>
-          {aberto === aviso.id ? <Text style={estilos.texto}>{aviso.texto}</Text> : null}
+          <View style={estilos.icone}>
+            <Ionicons name="megaphone" size={18} color={c.sobreDestaque} />
+          </View>
+          <View style={estilos.corpo}>
+            <Text style={estilos.rotulo}>Aviso da coordenação</Text>
+            <Text style={estilos.titulo}>{aviso.titulo}</Text>
+            {aberto === aviso.id ? <Text style={estilos.texto}>{aviso.texto}</Text> : null}
+          </View>
+          <Ionicons
+            name={aberto === aviso.id ? 'chevron-up' : 'chevron-down'}
+            size={18}
+            color={c.textoSuave}
+          />
         </Pressable>
       ))}
       {outros.length > 0 ? (
@@ -45,7 +58,7 @@ export function BlocoAvisos() {
           accessibilityRole="button"
           hitSlop={6}
         >
-          <Text style={[estilos.mais, { color: cor }]}>
+          <Text style={estilos.mais}>
             {todos
               ? 'Mostrar só os fixados'
               : `Ver mais ${outros.length} aviso(s) da coordenação`}
@@ -56,17 +69,27 @@ export function BlocoAvisos() {
   );
 }
 
-const estilos = StyleSheet.create({
+const useEstilos = criarEstilos((c) => ({
   lista: { gap: espaco.p },
   aviso: {
-    backgroundColor: cores.superficie,
-    borderWidth: 1.5,
-    borderRadius: raio.m,
-    padding: espaco.m,
-    gap: 2,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: espaco.m,
+    backgroundColor: c.destaqueSuave,
+    borderRadius: raio.g,
+    padding: espaco.m + 2,
   },
-  rotulo: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
-  titulo: { fontSize: 15, fontWeight: '700', color: cores.texto },
-  texto: { fontSize: 14, color: cores.texto, marginTop: 4, lineHeight: 20 },
-  mais: { fontSize: 14, fontWeight: '600', paddingVertical: 2 },
-});
+  icone: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    backgroundColor: c.destaque,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  corpo: { flex: 1, gap: 2 },
+  rotulo: { ...tipo.sobrescrito, color: c.textoSuave },
+  titulo: { ...tipo.nome, color: c.texto },
+  texto: { ...tipo.corpo, fontSize: 14, color: c.texto, marginTop: 4 },
+  mais: { fontFamily: fonte.semi, fontSize: 14, color: c.marca, paddingVertical: 2 },
+}));

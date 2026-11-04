@@ -2,18 +2,22 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Image, Pressable, Text, View } from 'react-native';
 import type { Destaque, Story } from '@/api/tipos';
 import { Botao } from '@/componentes/Botao';
 import { Campo } from '@/componentes/Campo';
 import { Carregando, MensagemDeErro } from '@/componentes/Estados';
 import { useCorDaFaculdade, useSessao, useUsuario } from '@/sessao';
-import { cores, espaco, estilosBase } from '@/tema';
+import { espaco } from '@/tema';
+import { criarEstilos, useBase, useTema } from '@/tema-provedor';
 import { enderecoDaFoto } from '@/utils/endereco';
 import { voltar } from '@/utils/navegacao';
 
 /** Criar (ou editar, com ?id=) um destaque escolhendo stories do arquivo. */
 export default function NovoDestaque() {
+  const estilos = useEstilos();
+  const { c } = useTema();
+  const b = useBase();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { api } = useSessao();
   const eu = useUsuario();
@@ -81,14 +85,14 @@ export default function NovoDestaque() {
               value={titulo}
               onChangeText={setTitulo}
             />
-            <Text style={estilosBase.subtitulo}>
+            <Text style={b.subtitulo}>
               Escolha os stories ({escolhidos.length} selecionado(s)). Só as suas conexões
               veem os destaques.
             </Text>
           </View>
         }
         ListEmptyComponent={
-          <Text style={estilosBase.subtitulo}>
+          <Text style={b.subtitulo}>
             Você ainda não publicou stories. Publique um no topo do feed.
           </Text>
         }
@@ -111,7 +115,9 @@ export default function NovoDestaque() {
                   marcado ? { backgroundColor: cor, borderColor: cor } : null,
                 ]}
               >
-                {marcado ? <Ionicons name="checkmark" size={14} color="#fff" /> : null}
+                {marcado ? (
+                  <Ionicons name="checkmark" size={14} color={c.sobreMarca} />
+                ) : null}
               </View>
             </Pressable>
           );
@@ -132,13 +138,13 @@ export default function NovoDestaque() {
   );
 }
 
-const estilos = StyleSheet.create({
-  fundo: { flex: 1, backgroundColor: cores.fundo },
+const useEstilos = criarEstilos((c) => ({
+  fundo: { flex: 1, backgroundColor: c.fundo },
   lista: { padding: espaco.g, gap: 2 },
   cabecalho: { gap: espaco.m, marginBottom: espaco.m },
   colunas: { gap: 2 },
   celula: { flex: 1 / 3 },
-  miniatura: { width: '100%', aspectRatio: 9 / 16, backgroundColor: cores.borda },
+  miniatura: { width: '100%', aspectRatio: 9 / 16, backgroundColor: c.borda },
   marca: {
     position: 'absolute',
     top: 6,
@@ -152,4 +158,4 @@ const estilos = StyleSheet.create({
     justifyContent: 'center',
   },
   rodape: { gap: espaco.m, marginTop: espaco.g },
-});
+}));

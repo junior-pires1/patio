@@ -3,7 +3,8 @@ import { useEffect, useReducer, useRef, useState } from 'react';
 import { FlatList, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { PessoaResumo, Story } from '@/api/tipos';
-import { cores, espaco, raio } from '@/tema';
+import { espaco, fonte, raio } from '@/tema';
+import { criarEstilos, useTema } from '@/tema-provedor';
 import { quando } from '@/utils/datas';
 import { enderecoDaFoto } from '@/utils/endereco';
 import { Avatar } from './Avatar';
@@ -44,6 +45,8 @@ export function VisualizadorStories({
   acoesDoAutor,
   titulo,
 }: Props) {
+  const estilos = useEstilos();
+  const { c } = useTema();
   const total = stories.length;
   const [{ indice, progresso, terminou }, mover] = useReducer(
     (
@@ -194,7 +197,7 @@ export function VisualizadorStories({
                 hitSlop={10}
                 accessibilityLabel="Fechar"
               >
-                <Ionicons name="close" size={24} color={cores.texto} />
+                <Ionicons name="close" size={24} color={c.texto} />
               </Pressable>
             </View>
             <FlatList
@@ -220,7 +223,7 @@ export function VisualizadorStories({
   );
 }
 
-const estilos = StyleSheet.create({
+const useEstilos = criarEstilos((c) => ({
   fundo: { flex: 1, backgroundColor: '#000' },
   camada: { flex: 1 },
   flex: { flex: 1 },
@@ -245,11 +248,12 @@ const estilos = StyleSheet.create({
     gap: espaco.p,
     padding: espaco.m,
   },
-  nome: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  hora: { color: 'rgba(255,255,255,0.8)', fontSize: 12 },
+  nome: { color: '#fff', fontFamily: fonte.negrito, fontSize: 15 },
+  hora: { color: 'rgba(255,255,255,0.8)', fontFamily: fonte.regular, fontSize: 12 },
   toques: { flex: 1, flexDirection: 'row' },
   legenda: {
     color: '#fff',
+    fontFamily: fonte.regular,
     fontSize: 16,
     textAlign: 'center',
     padding: espaco.g,
@@ -262,10 +266,10 @@ const estilos = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.35)',
   },
   acao: { alignItems: 'center', gap: 2, minWidth: 70 },
-  acaoTexto: { color: '#fff', fontSize: 12 },
+  acaoTexto: { color: '#fff', fontFamily: fonte.regular, fontSize: 12 },
   folhaFundo: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
   folha: {
-    backgroundColor: cores.superficie,
+    backgroundColor: c.superficie,
     borderTopLeftRadius: raio.g,
     borderTopRightRadius: raio.g,
     maxHeight: '60%',
@@ -276,9 +280,9 @@ const estilos = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: espaco.m,
   },
-  folhaTitulo: { fontSize: 16, fontWeight: '700', color: cores.texto },
-  vazio: { color: cores.textoSuave, textAlign: 'center', padding: espaco.g },
+  folhaTitulo: { fontSize: 16, fontFamily: fonte.negrito, color: c.texto },
+  vazio: { color: c.textoSuave, textAlign: 'center', padding: espaco.g },
   pessoa: { flexDirection: 'row', alignItems: 'center', gap: espaco.m, paddingVertical: 6 },
-  nomePessoa: { flex: 1, fontSize: 15, color: cores.texto },
-  quando: { fontSize: 12, color: cores.textoSuave },
-});
+  nomePessoa: { flex: 1, fontFamily: fonte.regular, fontSize: 15, color: c.texto },
+  quando: { fontFamily: fonte.regular, fontSize: 12, color: c.textoSuave },
+}));

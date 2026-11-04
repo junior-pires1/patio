@@ -1,23 +1,28 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { FlatList, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { FlatList, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import type { CategoriaPost, Post } from '@/api/tipos';
 import { BarraStories } from '@/componentes/BarraStories';
 import { BlocoAvisos } from '@/componentes/BlocoAvisos';
-import { Botao } from '@/componentes/Botao';
+import { Avatar } from '@/componentes/Avatar';
 import { CartaoPost } from '@/componentes/CartaoPost';
 import { Chip } from '@/componentes/Chip';
 import { Aviso, Carregando } from '@/componentes/Estados';
-import { useSessao } from '@/sessao';
-import { cores, espaco } from '@/tema';
+import { useSessao, useUsuario } from '@/sessao';
+import { espaco, fonte, raio } from '@/tema';
+import { criarEstilos, useTema } from '@/tema-provedor';
 import { CATEGORIAS } from '@/utils/opcoes';
 
 type Pagina = { posts: Post[]; temMais: boolean };
 
 /** RF18/RF21: feed da faculdade com os avisos oficiais no topo. */
 export default function Feed() {
+  const estilos = useEstilos();
+  const { c } = useTema();
   const { api } = useSessao();
+  const eu = useUsuario();
   const [filtro, setFiltro] = useState<CategoriaPost | null>(null);
 
   const feed = useInfiniteQuery({
@@ -39,7 +44,23 @@ export default function Feed() {
     <View style={estilos.cabecalho}>
       <BarraStories />
       <BlocoAvisos />
-      <Botao titulo="Publicar" aoTocar={() => router.push('/publicar')} />
+      <Pressable
+        onPress={() => router.push('/publicar')}
+        accessibilityRole="button"
+        accessibilityLabel="Publicar"
+        style={({ pressed }) => [estilos.composer, pressed && { opacity: 0.85 }]}
+      >
+        <Avatar nome={eu.apelido} fotoUrl={eu.fotoUrl} tamanho={38} />
+        <Text style={estilos.composerTexto} numberOfLines={1}>
+          Compartilhe algo com a turma…
+        </Text>
+        <View style={estilos.composerIcone}>
+          <Ionicons name="image-outline" size={18} color={c.marca} />
+        </View>
+        <View style={[estilos.composerIcone, estilos.composerEnviar]}>
+          <Ionicons name="add" size={20} color={c.sobreMarca} />
+        </View>
+      </Pressable>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -76,7 +97,11 @@ export default function Feed() {
             acao={{ titulo: 'Tentar de novo', aoTocar: () => void feed.refetch() }}
           />
         ) : (
-          <Aviso titulo="Nada por aqui ainda" texto="Seja a primeira pessoa a publicar." />
+          <Aviso
+            icone="newspaper-outline"
+            titulo="Nada por aqui ainda"
+            texto="Seja a primeira pessoa a publicar."
+          />
         )
       }
       onEndReached={() =>
@@ -93,9 +118,37 @@ export default function Feed() {
   );
 }
 
-const estilos = StyleSheet.create({
-  fundo: { flex: 1, backgroundColor: cores.fundo },
-  lista: { padding: espaco.g, gap: espaco.m },
+const useEstilos = criarEstilos((c) => ({
+  fundo: { flex: 1, backgroundColor: c.fundo },
+  lista: {
+    padding: espaco.g,
+    paddingTop: espaco.p,
+    gap: espaco.m,
+    width: '100%',
+    maxWidth: 640,
+    alignSelf: 'center',
+  },
+  composer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaco.m,
+    padding: 10,
+    paddingLeft: 10,
+    borderRadius: raio.g,
+    backgroundColor: c.superficie,
+    borderWidth: 1,
+    borderColor: c.borda,
+  },
+  composerTexto: { flex: 1, fontFamily: fonte.medio, fontSize: 15, color: c.textoFraco },
+  composerIcone: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: c.marcaSuave,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  composerEnviar: { backgroundColor: c.marca },
   cabecalho: { gap: espaco.m },
   chips: { gap: 6 },
-});
+}));

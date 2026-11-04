@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { ErroApi } from '@/api/cliente';
 import type { Curso, Disciplina, MeuPerfil, Relacao, Turno } from '@/api/tipos';
 import { Avatar } from '@/componentes/Avatar';
@@ -9,9 +9,11 @@ import { Botao } from '@/componentes/Botao';
 import { Campo } from '@/componentes/Campo';
 import { Chip } from '@/componentes/Chip';
 import { MensagemDeErro } from '@/componentes/Estados';
+import { SeletorDeTema } from '@/componentes/SeletorDeTema';
 import { Tela } from '@/componentes/Tela';
 import { useCorDaFaculdade, useSessao, useUsuario } from '@/sessao';
-import { cores, espaco, estilosBase, raio, suave } from '@/tema';
+import { espaco, fonte, raio, suave } from '@/tema';
+import { criarEstilos, useBase } from '@/tema-provedor';
 import { DIAS, OBJETIVOS, PERIODOS, RELACOES, TURNOS } from '@/utils/opcoes';
 import { alerta } from '@/utils/alerta';
 import { escolherFoto } from '@/utils/foto';
@@ -33,6 +35,8 @@ const separar = (texto: string) =>
 
 /** Editar o perfil: dados, disciplinas, links, experiências, senha e sair. */
 export default function EditarPerfil() {
+  const estilos = useEstilos();
+  const b = useBase();
   const { api, sair, atualizarUsuario } = useSessao();
   const eu = useUsuario();
   const cor = useCorDaFaculdade();
@@ -201,8 +205,8 @@ export default function EditarPerfil() {
           </Text>
         </Pressable>
         <View style={estilos.flex}>
-          <Text style={estilosBase.secao}>{eu.nome}</Text>
-          <Text style={estilosBase.subtitulo}>{eu.email}</Text>
+          <Text style={b.secao}>{eu.nome}</Text>
+          <Text style={b.subtitulo}>{eu.email}</Text>
           <Text style={[estilos.faculdade, { color: cor }]}>
             {eu.instituicao.sigla} · {eu.instituicao.nome}
           </Text>
@@ -218,7 +222,7 @@ export default function EditarPerfil() {
         </View>
       </View>
 
-      <Text style={estilosBase.secao}>Sobre você</Text>
+      <Text style={b.secao}>Sobre você</Text>
       <Campo
         rotulo="Como quer ser chamado"
         value={form.apelido}
@@ -242,7 +246,7 @@ export default function EditarPerfil() {
         onChangeText={(v) => muda('sobre', v)}
       />
 
-      <Text style={estilosBase.rotulo}>Curso</Text>
+      <Text style={b.rotulo}>Curso</Text>
       <View style={estilos.chips}>
         {cursos.data?.map((c) => (
           <Chip
@@ -261,7 +265,7 @@ export default function EditarPerfil() {
         onChangeText={(v) => muda('semestre', v.replace(/\D/g, ''))}
         erro={campos.semestre}
       />
-      <Text style={estilosBase.rotulo}>Turno</Text>
+      <Text style={b.rotulo}>Turno</Text>
       <View style={estilos.chips}>
         {TURNOS.map((t) => (
           <Chip
@@ -275,7 +279,7 @@ export default function EditarPerfil() {
         ))}
       </View>
 
-      <Text style={estilosBase.secao}>O que você procura</Text>
+      <Text style={b.secao}>O que você procura</Text>
       <View style={estilos.chips}>
         {OBJETIVOS.map((o) => (
           <Chip
@@ -299,7 +303,7 @@ export default function EditarPerfil() {
         onChangeText={(v) => muda('habilidades', v)}
       />
 
-      <Text style={estilosBase.secao}>Horários livres</Text>
+      <Text style={b.secao}>Horários livres</Text>
       {PERIODOS.map((p) => (
         <View key={p.valor} style={estilos.linha}>
           <Text style={estilos.periodo}>{p.rotulo}</Text>
@@ -321,8 +325,8 @@ export default function EditarPerfil() {
         </View>
       ))}
 
-      <Text style={estilosBase.secao}>Disciplinas</Text>
-      <Text style={estilosBase.subtitulo}>
+      <Text style={b.secao}>Disciplinas</Text>
+      <Text style={b.subtitulo}>
         Marque o que você cursa, em que pode ajudar e em que precisa de ajuda.
       </Text>
       {disciplinas.data?.map((d) => (
@@ -341,8 +345,8 @@ export default function EditarPerfil() {
         </View>
       ))}
 
-      <Text style={estilosBase.secao}>Contatos</Text>
-      <Text style={estilosBase.subtitulo}>Só aparecem para quem virar sua conexão.</Text>
+      <Text style={b.secao}>Contatos</Text>
+      <Text style={b.subtitulo}>Só aparecem para quem virar sua conexão.</Text>
       <Campo
         rotulo="Instagram"
         autoCapitalize="none"
@@ -357,10 +361,8 @@ export default function EditarPerfil() {
         onChangeText={(v) => muda('whatsapp', v)}
       />
 
-      <Text style={estilosBase.secao}>Links</Text>
-      <Text style={estilosBase.subtitulo}>
-        Aparecem no seu perfil para toda a faculdade.
-      </Text>
+      <Text style={b.secao}>Links</Text>
+      <Text style={b.subtitulo}>Aparecem no seu perfil para toda a faculdade.</Text>
       {(
         [
           ['github', 'GitHub', 'github.com/seu-usuario'],
@@ -384,8 +386,8 @@ export default function EditarPerfil() {
       <MensagemDeErro texto={erro} />
       <Botao titulo="Salvar perfil" aoTocar={salvar} carregando={salvando} />
 
-      <Text style={estilosBase.secao}>Experiências</Text>
-      <Text style={estilosBase.subtitulo}>
+      <Text style={b.secao}>Experiências</Text>
+      <Text style={b.subtitulo}>
         Estágios, projetos, monitorias e cursos. Aparecem na aba Sobre do seu perfil.
       </Text>
       <Botao
@@ -394,7 +396,11 @@ export default function EditarPerfil() {
         aoTocar={() => router.push('/perfil/experiencias')}
       />
 
-      <Text style={estilosBase.secao}>Trocar senha</Text>
+      <Text style={b.secao}>Aparência</Text>
+      <Text style={b.subtitulo}>Automático segue o tema do seu celular ou computador.</Text>
+      <SeletorDeTema />
+
+      <Text style={b.secao}>Trocar senha</Text>
       <Campo
         rotulo="Senha atual"
         secureTextEntry
@@ -424,10 +430,15 @@ export default function EditarPerfil() {
   );
 }
 
-const estilos = StyleSheet.create({
+const useEstilos = criarEstilos((c) => ({
   flex: { flex: 1 },
-  trocarFoto: { fontSize: 12, fontWeight: '700', textAlign: 'center', marginTop: 4 },
-  removerFoto: { fontSize: 13, color: cores.erro, marginTop: 6 },
+  trocarFoto: {
+    fontSize: 12,
+    fontFamily: fonte.negrito,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  removerFoto: { fontFamily: fonte.regular, fontSize: 13, color: c.erro, marginTop: 6 },
   cartao: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -435,18 +446,18 @@ const estilos = StyleSheet.create({
     padding: espaco.g,
     borderRadius: raio.g,
   },
-  faculdade: { fontSize: 13, fontWeight: '700', marginTop: 4 },
+  faculdade: { fontSize: 13, fontFamily: fonte.negrito, marginTop: 4 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, flex: 1 },
   multilinha: { minHeight: 90, paddingTop: 12, textAlignVertical: 'top' },
   linha: { flexDirection: 'row', alignItems: 'center', gap: espaco.p },
-  periodo: { width: 56, fontSize: 13, color: cores.textoSuave, fontWeight: '600' },
+  periodo: { width: 56, fontSize: 13, color: c.textoSuave, fontFamily: fonte.semi },
   disciplina: {
-    backgroundColor: cores.superficie,
+    backgroundColor: c.superficie,
     borderRadius: raio.m,
     padding: espaco.m,
     gap: espaco.p,
     borderWidth: 1,
-    borderColor: cores.borda,
+    borderColor: c.borda,
   },
-  nomeDisciplina: { fontSize: 15, fontWeight: '600', color: cores.texto },
-});
+  nomeDisciplina: { fontSize: 15, fontFamily: fonte.semi, color: c.texto },
+}));

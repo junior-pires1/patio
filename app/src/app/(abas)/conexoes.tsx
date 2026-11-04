@@ -1,17 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import type { Conexao } from '@/api/tipos';
 import { Avatar } from '@/componentes/Avatar';
 import { Aviso, Carregando } from '@/componentes/Estados';
-import { useCorDaFaculdade, useSessao, useUsuario } from '@/sessao';
-import { cores, espaco } from '@/tema';
+import { useSessao, useUsuario } from '@/sessao';
+import { espaco, fonte, tipo } from '@/tema';
+import { criarEstilos, useTema } from '@/tema-provedor';
 import { quando } from '@/utils/datas';
 
 export default function Conexoes() {
+  const estilos = useEstilos();
+  const { c } = useTema();
   const { api } = useSessao();
   const eu = useUsuario();
-  const cor = useCorDaFaculdade();
   const conexoes = useQuery({
     queryKey: ['matches'],
     queryFn: () => api.get<Conexao[]>('/matches'),
@@ -28,12 +30,51 @@ export default function Conexoes() {
     );
   }
 
+  // Conexões sem mensagem ficam numa faixa no topo, como nos apps de match.
+  const novas = conexoes.data.filter((x) => !x.ultimaMensagem);
+  const conversas = conexoes.data.filter((x) => x.ultimaMensagem);
+  const abrir = (id: string) => router.push({ pathname: '/chat/[id]', params: { id } });
+
+  const faixa =
+    novas.length > 0 ? (
+      <View style={estilos.faixa}>
+        <Text style={estilos.tituloFaixa}>Novas conexões</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={estilos.novas}
+        >
+          {novas.map((n) => (
+            <Pressable
+              key={n.id}
+              onPress={() => abrir(n.id)}
+              style={({ pressed }) => [estilos.nova, pressed && { opacity: 0.7 }]}
+              accessibilityRole="button"
+              accessibilityLabel={`Conversa com ${n.pessoa.apelido}`}
+            >
+              <View style={estilos.anelNova}>
+                <Avatar nome={n.pessoa.apelido} fotoUrl={n.pessoa.fotoUrl} tamanho={62} />
+              </View>
+              <Text style={estilos.nomeNova} numberOfLines={1}>
+                {n.pessoa.apelido}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+        {conversas.length > 0 ? <Text style={estilos.tituloFaixa}>Mensagens</Text> : null}
+      </View>
+    ) : null;
+
   return (
     <FlatList
-      data={conexoes.data}
+      data={conversas}
       keyExtractor={(c) => c.id}
       style={estilos.lista}
-      contentContainerStyle={conexoes.data.length === 0 ? estilos.vazia : undefined}
+      ListHeaderComponent={faixa ?? undefined}
+      contentContainerStyle={[
+        estilos.conteudo,
+        conexoes.data.length === 0 ? estilos.vazia : null,
+      ]}
       refreshControl={
         <RefreshControl
           refreshing={conexoes.isRefetching}
@@ -41,11 +82,16 @@ export default function Conexoes() {
         />
       }
       ListEmptyComponent={
-        <Aviso
-          titulo="Nenhuma conexão ainda"
-          texto="Quando você e um colega se curtirem, a conversa aparece aqui."
-          acao={{ titulo: 'Descobrir colegas', aoTocar: () => router.navigate('/') }}
-        />
+        novas.length > 0 ? (
+          <Text style={estilos.dicaOi}>Toque numa conexão para mandar o primeiro oi.</Text>
+        ) : (
+          <Aviso
+            icone="chatbubbles-outline"
+            titulo="Nenhuma conexão ainda"
+            texto="Quando você e um colega se curtirem, a conversa aparece aqui."
+            acao={{ titulo: 'Descobrir colegas', aoTocar: () => router.navigate('/') }}
+          />
+        )
       }
       ItemSeparatorComponent={() => <View style={estilos.separador} />}
       renderItem={({ item }) => {
@@ -56,11 +102,11 @@ export default function Conexoes() {
         return (
           <Pressable
             style={({ pressed }) => [estilos.item, pressed && { opacity: 0.7 }]}
-            onPress={() => router.push({ pathname: '/chat/[id]', params: { id: item.id } })}
+            onPress={() => abrir(item.id)}
             accessibilityRole="button"
             accessibilityLabel={`Conversa com ${item.pessoa.apelido}`}
           >
-            <Avatar nome={item.pessoa.apelido} fotoUrl={item.pessoa.fotoUrl} />
+            <Avatar nome={item.pessoa.apelido} fotoUrl={item.pessoa.fotoUrl} tamanho={54} />
             <View style={estilos.textos}>
               <Text style={estilos.nome}>{item.pessoa.apelido}</Text>
               <Text
@@ -73,7 +119,7 @@ export default function Conexoes() {
             <View style={estilos.lado}>
               <Text style={estilos.hora}>{quando(ultima?.criadoEm ?? item.criadoEm)}</Text>
               {item.naoLidas > 0 ? (
-                <View style={[estilos.bolinha, { backgroundColor: cor }]}>
+                <View style={[estilos.bolinha, { backgroundColor: c.marca }]}>
                   <Text style={estilos.bolinhaTexto}>{item.naoLidas}</Text>
                 </View>
               ) : null}
@@ -85,16 +131,30 @@ export default function Conexoes() {
   );
 }
 
-const estilos = StyleSheet.create({
-  lista: { flex: 1, backgroundColor: cores.superficie },
+const useEstilos = criarEstilos((c) => ({
+  lista: { flex: 1, backgroundColor: c.fundo },
+  conteudo: { width: '100%', maxWidth: 640, alignSelf: 'center', paddingBottom: espaco.g },
   vazia: { flexGrow: 1 },
-  item: { flexDirection: 'row', alignItems: 'center', gap: espaco.m, padding: espaco.g },
+  faixa: { paddingTop: espaco.p, gap: espaco.m },
+  tituloFaixa: { ...tipo.sobrescrito, color: c.textoSuave, paddingHorizontal: espaco.g },
+  novas: { paddingHorizontal: espaco.g, gap: espaco.m },
+  nova: { alignItems: 'center', width: 74, gap: 6 },
+  anelNova: { borderWidth: 2.5, borderColor: c.destaque, borderRadius: 999, padding: 2.5 },
+  nomeNova: { fontFamily: fonte.semi, fontSize: 12.5, color: c.texto, maxWidth: 74 },
+  dicaOi: { ...tipo.apoio, color: c.textoSuave, textAlign: 'center', padding: espaco.gg },
+  item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaco.m,
+    paddingHorizontal: espaco.g,
+    paddingVertical: espaco.m,
+  },
   textos: { flex: 1, gap: 2 },
-  nome: { fontSize: 16, fontWeight: '700', color: cores.texto },
-  previa: { fontSize: 14, color: cores.textoSuave },
-  previaForte: { color: cores.texto, fontWeight: '600' },
+  nome: { ...tipo.nome, fontSize: 16, color: c.texto },
+  previa: { fontFamily: fonte.regular, fontSize: 14, color: c.textoSuave },
+  previaForte: { color: c.texto, fontFamily: fonte.semi },
   lado: { alignItems: 'flex-end', gap: 6 },
-  hora: { fontSize: 12, color: cores.textoSuave },
+  hora: { fontFamily: fonte.regular, fontSize: 12, color: c.textoSuave },
   bolinha: {
     minWidth: 22,
     height: 22,
@@ -103,6 +163,6 @@ const estilos = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 6,
   },
-  bolinhaTexto: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  separador: { height: 1, backgroundColor: cores.borda, marginLeft: 76 },
-});
+  bolinhaTexto: { color: c.sobreMarca, fontSize: 12, fontFamily: fonte.negrito },
+  separador: { height: 1, backgroundColor: c.borda, marginLeft: 82 },
+}));

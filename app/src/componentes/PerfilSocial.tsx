@@ -14,7 +14,6 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from 'react-native';
@@ -27,7 +26,8 @@ import type {
   StoriesDaPessoa,
 } from '@/api/tipos';
 import { useCorDaFaculdade, useSessao } from '@/sessao';
-import { cores, espaco, estilosBase, raio, suave } from '@/tema';
+import { espaco, fonte, raio, tipo } from '@/tema';
+import { criarEstilos, useBase, useTema } from '@/tema-provedor';
 import { alerta } from '@/utils/alerta';
 import { mesAno } from '@/utils/datas';
 import { enderecoDaFoto } from '@/utils/endereco';
@@ -58,6 +58,9 @@ const LINKS: {
  * (experiências, habilidades com recomendações, disciplinas, horários).
  */
 export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
+  const estilos = useEstilos();
+  const { c } = useTema();
+  const b = useBase();
   const { api } = useSessao();
   const cor = useCorDaFaculdade();
   const queryClient = useQueryClient();
@@ -144,6 +147,18 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
 
   const cabecalho = (
     <View style={estilos.cabecalho}>
+      <View style={estilos.capa}>
+        <View style={estilos.circuloCapa} />
+        <View
+          style={[estilos.faisca, { left: 26, top: 24, transform: [{ rotate: '-28deg' }] }]}
+        />
+        <View
+          style={[
+            estilos.faisca,
+            { left: 50, top: 46, width: 12, transform: [{ rotate: '18deg' }] },
+          ]}
+        />
+      </View>
       <View style={estilos.topo}>
         <Pressable
           onPress={abrirStories}
@@ -152,33 +167,17 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
           style={[
             estilos.anel,
             {
-              borderColor: storiesDela ? (temStoryNovo ? cor : cores.borda) : 'transparent',
+              borderColor: storiesDela ? (temStoryNovo ? cor : c.borda) : c.fundo,
             },
           ]}
         >
-          <Avatar nome={p.apelido} fotoUrl={p.fotoUrl} tamanho={84} />
+          <Avatar nome={p.apelido} fotoUrl={p.fotoUrl} tamanho={92} />
           {souEu && !storiesDela ? (
-            <View style={[estilos.mais, { backgroundColor: cor }]}>
-              <Ionicons name="add" size={16} color="#fff" />
+            <View style={estilos.mais}>
+              <Ionicons name="add" size={16} color={c.sobreDestaque} />
             </View>
           ) : null}
         </Pressable>
-        <View style={estilos.numeros}>
-          {(
-            [
-              ['Publicações', p.contadores.publicacoes],
-              ['Conexões', p.contadores.conexoes],
-              ['Recomendações', p.contadores.recomendacoes],
-            ] as const
-          ).map(([rotulo, valor]) => (
-            <View key={rotulo} style={estilos.numero}>
-              <Text style={estilos.valor}>{valor}</Text>
-              <Text style={estilos.rotuloNumero} numberOfLines={1} adjustsFontSizeToFit>
-                {rotulo}
-              </Text>
-            </View>
-          ))}
-        </View>
       </View>
 
       <View style={estilos.bio}>
@@ -192,14 +191,31 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
                 key={l.chave}
                 onPress={() => void Linking.openURL(p.links[l.chave]!)}
                 accessibilityRole="link"
-                style={estilos.link}
+                style={({ pressed }) => [estilos.link, pressed && { opacity: 0.7 }]}
               >
-                <Ionicons name={l.icone} size={15} color={cor} />
-                <Text style={[estilos.linkTexto, { color: cor }]}>{l.rotulo}</Text>
+                <Ionicons name={l.icone} size={14} color={c.texto} />
+                <Text style={estilos.linkTexto}>{l.rotulo}</Text>
               </Pressable>
             ))}
           </View>
         ) : null}
+      </View>
+
+      <View style={estilos.numeros}>
+        {(
+          [
+            ['Publicações', p.contadores.publicacoes],
+            ['Conexões', p.contadores.conexoes],
+            ['Recomendações', p.contadores.recomendacoes],
+          ] as const
+        ).map(([rotulo, valor]) => (
+          <View key={rotulo} style={estilos.numero}>
+            <Text style={estilos.valor}>{valor}</Text>
+            <Text style={estilos.rotuloNumero} numberOfLines={1} adjustsFontSizeToFit>
+              {rotulo}
+            </Text>
+          </View>
+        ))}
       </View>
 
       <View style={estilos.acoes}>
@@ -208,7 +224,9 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
             <View style={estilos.flex}>
               <Botao
                 titulo="Editar perfil"
-                variante="contorno"
+                variante="suave"
+                icone="create-outline"
+                compacto
                 aoTocar={() => router.push('/perfil/editar')}
               />
             </View>
@@ -216,6 +234,8 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
               <Botao
                 titulo="Atividade"
                 variante="contorno"
+                icone="heart-outline"
+                compacto
                 aoTocar={() => router.push('/atividade')}
               />
             </View>
@@ -224,6 +244,8 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
           <View style={estilos.flex}>
             <Botao
               titulo="Mensagem"
+              icone="chatbubble-ellipses"
+              compacto
               aoTocar={() =>
                 router.push({
                   pathname: '/chat/[id]',
@@ -237,6 +259,8 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
             <Botao
               titulo="Curtido · desfazer"
               variante="contorno"
+              icone="heart"
+              compacto
               carregando={descurtir.isPending}
               aoTocar={() => descurtir.mutate()}
             />
@@ -245,6 +269,8 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
           <View style={estilos.flex}>
             <Botao
               titulo={p.relacao.meCurtiu ? 'Curtir de volta' : 'Curtir'}
+              icone="heart-outline"
+              compacto
               carregando={curtir.isPending}
               aoTocar={() => curtir.mutate()}
             />
@@ -259,14 +285,15 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
             accessibilityRole="button"
             accessibilityLabel="Denunciar ou bloquear"
           >
-            <Ionicons name="flag-outline" size={20} color={cores.textoSuave} />
+            <Ionicons name="flag-outline" size={20} color={c.textoSuave} />
           </Pressable>
         ) : null}
       </View>
       {!souEu && p.relacao.meCurtiu && !p.relacao.conexaoId ? (
-        <Text style={[estilos.dica, { color: cor }]}>
-          Curtiu você. Curta de volta para conversar.
-        </Text>
+        <View style={estilos.dica}>
+          <Ionicons name="heart" size={14} color={c.sobreDestaque} />
+          <Text style={estilos.dicaTexto}>Curtiu você. Curta de volta para conversar.</Text>
+        </View>
       ) : null}
 
       {(destaques.data?.length ?? 0) > 0 || souEu ? (
@@ -284,8 +311,8 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
                 accessibilityRole="button"
                 accessibilityLabel="Novo destaque"
               >
-                <View style={[estilos.capa, estilos.capaNova]}>
-                  <Ionicons name="add" size={26} color={cores.texto} />
+                <View style={[estilos.capaDestaque, estilos.capaNova]}>
+                  <Ionicons name="add" size={26} color={c.texto} />
                 </View>
                 <Text style={estilos.tituloDestaque}>Novo</Text>
               </Pressable>
@@ -303,10 +330,10 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
               {item.capaUrl ? (
                 <Image
                   source={{ uri: enderecoDaFoto(item.capaUrl)! }}
-                  style={estilos.capa}
+                  style={estilos.capaDestaque}
                 />
               ) : (
-                <View style={estilos.capa} />
+                <View style={estilos.capaDestaque} />
               )}
               <Text style={estilos.tituloDestaque} numberOfLines={1}>
                 {item.titulo}
@@ -326,16 +353,19 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
           <Pressable
             key={valor}
             onPress={() => setAba(valor)}
-            style={[estilos.aba, aba === valor && { borderBottomColor: cor }]}
+            style={[estilos.aba, aba === valor && estilos.abaAtiva]}
             accessibilityRole="tab"
             accessibilityState={{ selected: aba === valor }}
             accessibilityLabel={rotulo}
           >
             <Ionicons
               name={icone}
-              size={22}
-              color={aba === valor ? cor : cores.textoSuave}
+              size={17}
+              color={aba === valor ? c.texto : c.textoSuave}
             />
+            <Text style={[estilos.abaTexto, aba === valor && estilos.abaTextoAtiva]}>
+              {rotulo}
+            </Text>
           </Pressable>
         ))}
       </View>
@@ -385,9 +415,7 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
               style={estilos.miniatura}
             />
           ) : (
-            <View
-              style={[estilos.miniatura, estilos.soTexto, { backgroundColor: suave(cor) }]}
-            >
+            <View style={[estilos.miniatura, estilos.soTexto]}>
               <Text style={estilos.textoMiniatura} numberOfLines={5}>
                 {item.texto}
               </Text>
@@ -400,8 +428,8 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
           <Carregando />
         ) : (
           <View style={estilos.vazio}>
-            <Ionicons name="images-outline" size={40} color={cores.textoSuave} />
-            <Text style={estilosBase.subtitulo}>
+            <Ionicons name="images-outline" size={40} color={c.textoSuave} />
+            <Text style={b.subtitulo}>
               {souEu ? 'Você ainda não publicou nada.' : 'Nenhuma publicação ainda.'}
             </Text>
           </View>
@@ -425,6 +453,9 @@ function Sobre({
   aoRecomendar: (h: HabilidadeRecomendada) => void;
   recomendando: boolean;
 }) {
+  const estilos = useEstilos();
+  const { c } = useTema();
+  const b = useBase();
   const cor = useCorDaFaculdade();
   const podeRecomendar = !p.relacao.souEu && Boolean(p.relacao.conexaoId);
   const porRelacao = RELACOES.map((r) => ({
@@ -445,7 +476,7 @@ function Sobre({
 
       <Secao titulo="Experiências">
         {p.experiencias.length === 0 ? (
-          <Text style={estilosBase.subtitulo}>
+          <Text style={b.subtitulo}>
             {p.relacao.souEu
               ? 'Adicione estágios, projetos e monitorias em Editar perfil.'
               : 'Nenhuma experiência cadastrada.'}
@@ -453,7 +484,7 @@ function Sobre({
         ) : (
           p.experiencias.map((e) => (
             <View key={e.id} style={estilos.experiencia}>
-              <View style={[estilos.marcador, { backgroundColor: suave(cor) }]}>
+              <View style={estilos.marcador}>
                 <Ionicons name="briefcase-outline" size={18} color={cor} />
               </View>
               <View style={estilos.flex}>
@@ -474,7 +505,7 @@ function Sobre({
       {p.habilidadesRecomendadas.length > 0 ? (
         <Secao titulo="Habilidades">
           {podeRecomendar ? (
-            <Text style={estilosBase.subtitulo}>Toque para recomendar uma habilidade.</Text>
+            <Text style={b.subtitulo}>Toque para recomendar uma habilidade.</Text>
           ) : null}
           {p.habilidadesRecomendadas.map((h) => (
             <Pressable
@@ -491,7 +522,7 @@ function Sobre({
                   <Ionicons
                     name={h.euRecomendei ? 'thumbs-up' : 'thumbs-up-outline'}
                     size={16}
-                    color={h.euRecomendei ? cor : cores.textoSuave}
+                    color={h.euRecomendei ? cor : c.textoSuave}
                   />
                 ) : null}
                 <Text style={estilos.meta}>
@@ -532,6 +563,7 @@ function Sobre({
 }
 
 function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+  const estilos = useEstilos();
   return (
     <View style={estilos.secao}>
       <Text style={estilos.tituloSecao}>{titulo}</Text>
@@ -540,40 +572,75 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
   );
 }
 
-const estilos = StyleSheet.create({
-  fundo: { flex: 1, backgroundColor: cores.superficie },
+const useEstilos = criarEstilos((c) => ({
+  fundo: { flex: 1, backgroundColor: c.fundo },
   flex: { flex: 1 },
-  cabecalho: { gap: espaco.m, paddingTop: espaco.g },
-  topo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: espaco.g,
-    gap: espaco.g,
+  cabecalho: { gap: espaco.m, paddingBottom: espaco.p },
+  capa: { height: 112, backgroundColor: c.marca, overflow: 'hidden' },
+  circuloCapa: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    right: -50,
+    top: -90,
+    backgroundColor: c.marcaForte,
   },
-  anel: { borderWidth: 3, borderRadius: 999, padding: 3 },
+  faisca: {
+    position: 'absolute',
+    width: 18,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: c.destaque,
+  },
+  topo: { paddingHorizontal: espaco.g, marginTop: -58 },
+  anel: {
+    alignSelf: 'flex-start',
+    borderWidth: 3,
+    borderRadius: 999,
+    padding: 3,
+    backgroundColor: c.fundo,
+  },
   mais: {
     position: 'absolute',
-    right: 2,
-    bottom: 2,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    right: 4,
+    bottom: 4,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
+    backgroundColor: c.destaque,
+    borderWidth: 3,
+    borderColor: c.fundo,
   },
-  numeros: { flex: 1, flexDirection: 'row' },
-  numero: { flex: 1, alignItems: 'center', paddingHorizontal: 2 },
-  valor: { fontSize: 18, fontWeight: '700', color: cores.texto },
-  rotuloNumero: { fontSize: 11, color: cores.textoSuave },
   bio: { paddingHorizontal: espaco.g, gap: 2 },
-  nome: { fontSize: 17, fontWeight: '700', color: cores.texto },
-  curso: { fontSize: 14, color: cores.textoSuave },
-  frase: { fontSize: 15, color: cores.texto, marginTop: 4, lineHeight: 21 },
-  links: { flexDirection: 'row', flexWrap: 'wrap', gap: espaco.m, marginTop: 6 },
-  link: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  linkTexto: { fontSize: 14, fontWeight: '600' },
+  nome: { ...tipo.titulo, color: c.texto },
+  curso: { ...tipo.apoio, fontSize: 14, color: c.textoSuave },
+  frase: { ...tipo.corpo, color: c.texto, marginTop: 6 },
+  links: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
+  link: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: raio.total,
+    backgroundColor: c.superficieAlta,
+  },
+  linkTexto: { fontSize: 13, fontFamily: fonte.semi, color: c.texto },
+  numeros: {
+    flexDirection: 'row',
+    marginHorizontal: espaco.g,
+    backgroundColor: c.superficie,
+    borderRadius: raio.g,
+    borderWidth: 1,
+    borderColor: c.borda,
+    paddingVertical: espaco.m,
+  },
+  numero: { flex: 1, alignItems: 'center', paddingHorizontal: 2, gap: 2 },
+  valor: { fontSize: 20, fontFamily: fonte.extra, color: c.texto, letterSpacing: -0.4 },
+  rotuloNumero: { fontFamily: fonte.medio, fontSize: 11.5, color: c.textoSuave },
   acoes: {
     flexDirection: 'row',
     gap: espaco.p,
@@ -581,70 +648,107 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
   },
   menu: {
-    width: 46,
-    height: 46,
-    borderRadius: raio.m,
-    borderWidth: 1,
-    borderColor: cores.borda,
+    width: 40,
+    height: 40,
+    borderRadius: raio.p + 2,
+    borderWidth: 1.5,
+    borderColor: c.borda,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dica: { paddingHorizontal: espaco.g, fontSize: 13, fontWeight: '600' },
-  destaques: { paddingHorizontal: espaco.g, gap: espaco.m },
-  destaque: { alignItems: 'center', width: 68, gap: 4 },
-  capa: {
+  dica: {
+    marginHorizontal: espaco.g,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 10,
+    borderRadius: raio.m,
+    backgroundColor: c.destaqueSuave,
+  },
+  dicaTexto: { fontSize: 13, fontFamily: fonte.semi, color: c.texto, flex: 1 },
+  destaques: { paddingHorizontal: espaco.g, gap: espaco.m, paddingVertical: 4 },
+  destaque: { alignItems: 'center', width: 70, gap: 6 },
+  capaDestaque: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: cores.fundo,
-    borderWidth: 1,
-    borderColor: cores.borda,
+    backgroundColor: c.superficieAlta,
+    borderWidth: 2,
+    borderColor: c.superficie,
   },
-  capaNova: { alignItems: 'center', justifyContent: 'center', borderStyle: 'dashed' },
-  tituloDestaque: { fontSize: 12, color: cores.texto },
+  capaNova: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderStyle: 'dashed',
+    borderColor: c.textoFraco,
+    backgroundColor: 'transparent',
+  },
+  tituloDestaque: { fontFamily: fonte.medio, fontSize: 12, color: c.texto },
   abas: {
     flexDirection: 'row',
-    borderTopWidth: 1,
-    borderColor: cores.borda,
+    marginHorizontal: espaco.g,
     marginTop: espaco.p,
+    padding: 4,
+    gap: 4,
+    borderRadius: raio.m,
+    backgroundColor: c.superficieAlta,
   },
   aba: {
     flex: 1,
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  colunas: { gap: 2 },
-  celula: { flex: 1 / 3, marginBottom: 2 },
-  miniatura: { width: '100%', aspectRatio: 1 },
-  soTexto: { padding: 8, justifyContent: 'center' },
-  textoMiniatura: { fontSize: 12, color: cores.texto },
-  vazio: { alignItems: 'center', gap: espaco.p, padding: espaco.gg },
-  sobre: { padding: espaco.g, gap: espaco.g },
-  secao: { gap: espaco.p },
-  tituloSecao: { fontSize: 16, fontWeight: '700', color: cores.texto },
-  paragrafo: { fontSize: 15, color: cores.texto, lineHeight: 21 },
-  experiencia: { flexDirection: 'row', gap: espaco.m, paddingVertical: 4 },
-  marcador: {
-    width: 36,
-    height: 36,
-    borderRadius: raio.p,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: raio.p,
   },
-  tituloExperiencia: { fontSize: 15, fontWeight: '700', color: cores.texto },
-  meta: { fontSize: 13, color: cores.textoSuave },
+  abaAtiva: { backgroundColor: c.superficie },
+  abaTexto: { fontFamily: fonte.semi, fontSize: 13.5, color: c.textoSuave },
+  abaTextoAtiva: { color: c.texto },
+  colunas: { gap: 4, paddingHorizontal: espaco.g },
+  celula: { flex: 1 / 3, marginBottom: 4 },
+  miniatura: { width: '100%', aspectRatio: 1, borderRadius: raio.p + 2 },
+  soTexto: {
+    padding: 10,
+    justifyContent: 'flex-end',
+    backgroundColor: c.superficie,
+    borderWidth: 1,
+    borderColor: c.borda,
+  },
+  textoMiniatura: { fontFamily: fonte.semi, fontSize: 12, lineHeight: 16, color: c.texto },
+  vazio: { alignItems: 'center', gap: espaco.p, padding: espaco.gg },
+  sobre: { padding: espaco.g, gap: espaco.m },
+  secao: {
+    gap: espaco.p,
+    backgroundColor: c.superficie,
+    borderRadius: raio.g,
+    borderWidth: 1,
+    borderColor: c.borda,
+    padding: espaco.g,
+  },
+  tituloSecao: { ...tipo.secao, color: c.texto },
+  paragrafo: { ...tipo.corpo, color: c.texto },
+  experiencia: { flexDirection: 'row', gap: espaco.m, paddingVertical: 4 },
+  marcador: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: c.marcaSuave,
+  },
+  tituloExperiencia: { ...tipo.nome, color: c.texto },
+  meta: { ...tipo.apoio, color: c.textoSuave },
   habilidade: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderColor: cores.borda,
+    borderColor: c.borda,
   },
-  nomeHabilidade: { fontSize: 15, fontWeight: '600', color: cores.texto },
+  nomeHabilidade: { fontSize: 15, fontFamily: fonte.semi, color: c.texto },
   recomendacao: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   grupoDisciplinas: { gap: 2 },
-  rotuloRelacao: { fontSize: 13, fontWeight: '700', color: cores.textoSuave },
-});
+  rotuloRelacao: { ...tipo.sobrescrito, color: c.textoSuave },
+}));

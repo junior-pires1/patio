@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Switch, StyleSheet, Text, View } from 'react-native';
+import { Switch, Text, View } from 'react-native';
 import { ErroApi } from '@/api/cliente';
 import type { MotivoDenuncia } from '@/api/tipos';
 import { Botao } from '@/componentes/Botao';
@@ -10,13 +10,16 @@ import { Chip } from '@/componentes/Chip';
 import { MensagemDeErro } from '@/componentes/Estados';
 import { Tela } from '@/componentes/Tela';
 import { useSessao } from '@/sessao';
-import { estilosBase } from '@/tema';
+import { fonte } from '@/tema';
+import { criarEstilos, useBase } from '@/tema-provedor';
 import { MOTIVOS } from '@/utils/opcoes';
 import { alerta } from '@/utils/alerta';
 import { voltar } from '@/utils/navegacao';
 
 /** Denúncia para a coordenação da faculdade, com opção de bloquear junto. */
 export default function Denunciar() {
+  const estilos = useEstilos();
+  const b = useBase();
   const { usuarioId, apelido } = useLocalSearchParams<{
     usuarioId: string;
     apelido?: string;
@@ -56,7 +59,7 @@ export default function Denunciar() {
 
   return (
     <Tela rolagem semTopo>
-      <Text style={estilosBase.subtitulo}>
+      <Text style={b.subtitulo}>
         O que aconteceu{apelido ? ` com ${apelido}` : ''}? Só a coordenação vê a denúncia.
       </Text>
       <View style={estilos.chips}>
@@ -93,9 +96,9 @@ export default function Denunciar() {
   );
 }
 
-const estilos = StyleSheet.create({
+const useEstilos = criarEstilos(() => ({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   multilinha: { minHeight: 100, paddingTop: 12, textAlignVertical: 'top' },
   linha: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  textoLinha: { fontSize: 16, fontWeight: '500' },
-});
+  textoLinha: { fontSize: 16, fontFamily: fonte.medio },
+}));

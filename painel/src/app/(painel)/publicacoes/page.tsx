@@ -96,7 +96,7 @@ export default function PaginaPublicacoes() {
                     <Selo tom="ok">Coordenação</Selo>
                   ) : null}
                   <Selo>{CATEGORIAS[p.categoria] ?? p.categoria}</Selo>
-                  <span className="text-xs text-slate-500">{dataHora(p.criadoEm)}</span>
+                  <span className="text-xs text-suave">{dataHora(p.criadoEm)}</span>
                 </div>
                 {p.texto ? <p className="mt-2 whitespace-pre-line">{p.texto}</p> : null}
                 {p.imagemUrl ? (
@@ -104,18 +104,18 @@ export default function PaginaPublicacoes() {
                     <img
                       src={enderecoDaApi(p.imagemUrl)}
                       alt="Imagem da publicação"
-                      className="mt-2 max-h-64 rounded-lg border border-slate-200 object-contain"
+                      className="mt-2 max-h-64 rounded-lg border border-borda object-contain"
                     />
                   </a>
                 ) : null}
                 {p.eventoInicio ? (
-                  <p className="mt-1 text-sm text-slate-600">
+                  <p className="mt-1 text-sm text-suave">
                     📅 {dataHora(p.eventoInicio)}
                     {p.eventoLocal ? ` · ${p.eventoLocal}` : ''} · {p.presencas}{' '}
                     confirmado(s)
                   </p>
                 ) : null}
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-suave">
                   {p.curtidas} curtida(s) · {p.comentarios} comentário(s)
                 </p>
               </div>
