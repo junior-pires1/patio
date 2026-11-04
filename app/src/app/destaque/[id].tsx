@@ -8,6 +8,7 @@ import { Aviso, Carregando } from '@/componentes/Estados';
 import { VisualizadorStories } from '@/componentes/VisualizadorStories';
 import { useSessao } from '@/sessao';
 import { alerta } from '@/utils/alerta';
+import { voltar } from '@/utils/navegacao';
 
 /** Abre um destaque do perfil (stories guardados). */
 export default function VerDestaque() {
@@ -18,7 +19,7 @@ export default function VerDestaque() {
     queryKey: ['destaque', id],
     queryFn: () => api.get<Destaque>(`/destaques/${id}`),
   });
-  const fechar = useCallback(() => router.back(), []);
+  const fechar = useCallback(() => voltar('/perfil'), []);
 
   if (destaque.isPending) return <Carregando />;
   if (destaque.isError || destaque.data.stories.length === 0) {

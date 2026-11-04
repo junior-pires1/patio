@@ -1,4 +1,3 @@
-import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { ErroApi } from '@/api/cliente';
@@ -8,6 +7,7 @@ import { MensagemDeErro } from '@/componentes/Estados';
 import { Tela } from '@/componentes/Tela';
 import { useSessao } from '@/sessao';
 import { estilosBase } from '@/tema';
+import { voltar } from '@/utils/navegacao';
 
 /** RF39: esqueci minha senha (e-mail → código de 6 números → senha nova). */
 export default function Esqueci() {
@@ -114,7 +114,7 @@ export default function Esqueci() {
       <Botao
         titulo="Voltar para entrar"
         variante="contorno"
-        aoTocar={() => router.back()}
+        aoTocar={() => voltar('/entrar')}
       />
     </Tela>
   );

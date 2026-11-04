@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Destaque, Story } from '@/api/tipos';
@@ -10,6 +10,7 @@ import { Carregando, MensagemDeErro } from '@/componentes/Estados';
 import { useCorDaFaculdade, useSessao, useUsuario } from '@/sessao';
 import { cores, espaco, estilosBase } from '@/tema';
 import { enderecoDaFoto } from '@/utils/endereco';
+import { voltar } from '@/utils/navegacao';
 
 /** Criar (ou editar, com ?id=) um destaque escolhendo stories do arquivo. */
 export default function NovoDestaque() {
@@ -52,7 +53,7 @@ export default function NovoDestaque() {
       else await api.post('/destaques', corpo);
       void queryClient.invalidateQueries({ queryKey: ['destaques', eu.id] });
       void queryClient.invalidateQueries({ queryKey: ['destaque', id] });
-      router.back();
+      voltar('/perfil');
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível salvar.');
     } finally {

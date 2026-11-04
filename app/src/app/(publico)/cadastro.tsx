@@ -1,4 +1,3 @@
-import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { ErroApi } from '@/api/cliente';
@@ -10,6 +9,7 @@ import { Tela } from '@/componentes/Tela';
 import { useSessao } from '@/sessao';
 import { cores, estilosBase, suave } from '@/tema';
 import { dataBrParaIso, mascaraData } from '@/utils/datas';
+import { voltar } from '@/utils/navegacao';
 
 /** Cadastro em 2 passos: e-mail institucional → código + dados da conta. */
 export default function Cadastro() {
@@ -103,7 +103,11 @@ export default function Cadastro() {
           carregando={enviando}
           desabilitado={!email}
         />
-        <Botao titulo="Já tenho conta" variante="contorno" aoTocar={() => router.back()} />
+        <Botao
+          titulo="Já tenho conta"
+          variante="contorno"
+          aoTocar={() => voltar('/entrar')}
+        />
       </Tela>
     );
   }

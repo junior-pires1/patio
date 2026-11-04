@@ -6,7 +6,7 @@ export const novaMensagem = z
     texto: z.string().trim().max(1000, 'No máximo 1.000 caracteres').default(''),
     imagemId: z.uuid('Imagem inválida').optional(),
   })
-  .refine((m) => m.texto.length > 0 || m.imagemId, {
+  .refine((m) => (typeof m.texto === 'string' && m.texto.length > 0) || m.imagemId, {
     message: 'Escreva uma mensagem',
     path: ['texto'],
   });

@@ -6,6 +6,7 @@ import { Carregando } from '@/componentes/Estados';
 import { VisualizadorStories } from '@/componentes/VisualizadorStories';
 import { useSessao } from '@/sessao';
 import { alerta } from '@/utils/alerta';
+import { voltar } from '@/utils/navegacao';
 
 /** Stories de uma pessoa; ao terminar, passa para a próxima da barra. */
 export default function VerStories() {
@@ -35,7 +36,7 @@ export default function VerStories() {
 
   const fechar = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['stories'] });
-    router.back();
+    voltar('/feed');
   }, [queryClient]);
   const proximo = useCallback(() => {
     const seguinte = grupos[posicao + 1];

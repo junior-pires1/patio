@@ -173,7 +173,9 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
           ).map(([rotulo, valor]) => (
             <View key={rotulo} style={estilos.numero}>
               <Text style={estilos.valor}>{valor}</Text>
-              <Text style={estilos.rotuloNumero}>{rotulo}</Text>
+              <Text style={estilos.rotuloNumero} numberOfLines={1} adjustsFontSizeToFit>
+                {rotulo}
+              </Text>
             </View>
           ))}
         </View>
@@ -561,10 +563,10 @@ const estilos = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#fff',
   },
-  numeros: { flex: 1, flexDirection: 'row', justifyContent: 'space-around' },
-  numero: { alignItems: 'center' },
+  numeros: { flex: 1, flexDirection: 'row' },
+  numero: { flex: 1, alignItems: 'center', paddingHorizontal: 2 },
   valor: { fontSize: 18, fontWeight: '700', color: cores.texto },
-  rotuloNumero: { fontSize: 12, color: cores.textoSuave },
+  rotuloNumero: { fontSize: 11, color: cores.textoSuave },
   bio: { paddingHorizontal: espaco.g, gap: 2 },
   nome: { fontSize: 17, fontWeight: '700', color: cores.texto },
   curso: { fontSize: 14, color: cores.textoSuave },

@@ -18,6 +18,10 @@ const textoOpcional = (max: number) =>
     .optional()
     .transform((v) => v || null);
 
+const datasValidas = (e: { inicio: unknown; fim?: unknown }) =>
+  e.inicio instanceof Date &&
+  (e.fim === null || e.fim === undefined || e.fim instanceof Date);
+
 const experiencia = z
   .object({
     tipo: z.enum(servico.TIPOS_DE_EXPERIENCIA),
@@ -27,10 +31,21 @@ const experiencia = z
     fim: data.nullable().optional(),
     descricao: textoOpcional(500),
   })
-  .refine((e) => !e.fim || e.fim >= e.inicio, {
+  // Se uma das datas já falhou no formato, as regras abaixo não rodam (senão viram erro 500).
+  .refine((e) => !datasValidas(e) || !e.fim || e.fim >= e.inicio, {
     message: 'O fim não pode ser antes do início',
     path: ['fim'],
-  });
+  })
+  .refine(
+    (e) =>
+      !datasValidas(e) ||
+      (e.inicio.getUTCFullYear() >= 1960 &&
+        e.inicio.getTime() < Date.now() + 366 * 86_400_000),
+    {
+      message: 'Confira a data de início',
+      path: ['inicio'],
+    },
+  );
 const habilidade = z.object({ habilidade: z.string().trim().min(1).max(40) });
 const busca = z.object({
   q: z.string().trim().min(2, 'Digite pelo menos 2 letras').max(60),

@@ -305,6 +305,7 @@ export default function PainelPlataforma() {
                     onChange={muda('cidade')}
                     required
                   />
+                  {erroDe('cidade')}
                 </label>
                 <label className="block text-sm">
                   UF{' '}
@@ -357,6 +358,7 @@ export default function PainelPlataforma() {
                   onChange={muda('coordNome')}
                   required
                 />
+                {erroDe('coordenacao.nome')}
               </label>
               <label className="block text-sm">
                 E-mail da coordenação{' '}

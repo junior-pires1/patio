@@ -13,6 +13,7 @@ import { useSessao } from '@/sessao';
 import { estilosBase } from '@/tema';
 import { MOTIVOS } from '@/utils/opcoes';
 import { alerta } from '@/utils/alerta';
+import { voltar } from '@/utils/navegacao';
 
 /** Denúncia para a coordenação da faculdade, com opção de bloquear junto. */
 export default function Denunciar() {
@@ -45,7 +46,7 @@ export default function Denunciar() {
         'A coordenação da sua faculdade vai analisar. Obrigado por avisar.',
       );
       if (bloquear) router.dismissTo('/conexoes');
-      else router.back();
+      else voltar('/feed');
     } catch (e) {
       setErro(e instanceof ErroApi ? e.message : 'Não foi possível enviar.');
     } finally {

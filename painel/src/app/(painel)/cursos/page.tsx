@@ -99,14 +99,14 @@ export default function PaginaCursos() {
       {erro ? (
         <p className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{erro}</p>
       ) : null}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
         <Cartao>
           <h2 className="mb-3 font-semibold">Cursos</h2>
           <form onSubmit={enviarCurso} className="mb-4 flex gap-2">
             <input
               aria-label="Nome do curso"
               placeholder="Ex.: Ciência da Computação"
-              className={`${campo} flex-1`}
+              className={`${campo} min-w-0 flex-1`}
               value={nomeCurso}
               onChange={(e) => setNomeCurso(e.target.value)}
             />
@@ -122,7 +122,10 @@ export default function PaginaCursos() {
           />
           <ul className="divide-y divide-slate-100">
             {cursos.data?.map((c) => (
-              <li key={c.id} className="flex items-center justify-between py-2 text-sm">
+              <li
+                key={c.id}
+                className="flex items-center justify-between gap-2 py-2 text-sm break-words"
+              >
                 {c.nome}
                 {botaoRemover('cursos', c)}
               </li>
@@ -165,7 +168,10 @@ export default function PaginaCursos() {
           />
           <ul className="divide-y divide-slate-100">
             {disciplinas.data?.map((d) => (
-              <li key={d.id} className="flex items-center justify-between py-2 text-sm">
+              <li
+                key={d.id}
+                className="flex items-center justify-between gap-2 py-2 text-sm break-words"
+              >
                 <span>
                   {d.nome}
                   <span className="block text-xs text-slate-500">

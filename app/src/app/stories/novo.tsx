@@ -1,6 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQueryClient } from '@tanstack/react-query';
-import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text } from 'react-native';
 import { Botao } from '@/componentes/Botao';
@@ -10,6 +9,7 @@ import { Tela } from '@/componentes/Tela';
 import { useSessao } from '@/sessao';
 import { cores, espaco, estilosBase, raio } from '@/tema';
 import { escolherImagem } from '@/utils/foto';
+import { voltar } from '@/utils/navegacao';
 
 /** Novo story: uma imagem com legenda opcional, visível por 24 horas para as conexões. */
 export default function NovoStory() {
@@ -46,7 +46,7 @@ export default function NovoStory() {
         legenda: legenda.trim() || undefined,
       });
       void queryClient.invalidateQueries({ queryKey: ['stories'] });
-      router.back();
+      voltar('/feed');
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível publicar.');
     } finally {

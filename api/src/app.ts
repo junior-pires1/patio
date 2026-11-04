@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { z } from 'zod';
 import cors from 'cors';
 import express from 'express';
 import { ipKeyGenerator, rateLimit } from 'express-rate-limit';
@@ -36,6 +37,9 @@ const muitasRequisicoes = new ErroApp(
   'muitas_requisicoes',
   'Muitas tentativas em pouco tempo. Aguarde um minuto.',
 );
+
+// Mensagens de validação em português (as que não definimos uma a uma).
+z.config(z.locales.ptBR());
 
 /** Monta a aplicação Express. As dependências entram por parâmetro, o que facilita os testes. */
 export function criarApp(opcoes: OpcoesApp) {

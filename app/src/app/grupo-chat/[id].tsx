@@ -21,6 +21,7 @@ import { cores, espaco, raio } from '@/tema';
 import { quando } from '@/utils/datas';
 import { alerta } from '@/utils/alerta';
 import { escolherImagem } from '@/utils/foto';
+import { useMensagensAntigas } from '@/utils/mensagensAntigas';
 
 type Pagina = { mensagens: MensagemGrupo[]; temMais: boolean };
 
@@ -37,6 +38,7 @@ export default function ChatDoGrupo() {
     queryKey: ['grupo-mensagens', id],
     queryFn: () => api.get<Pagina>(`/grupos/${id}/mensagens`),
   });
+  const antigas = useMensagensAntigas(`/grupos/${id}/mensagens`, mensagens.data);
   const enviar = useMutation({
     mutationFn: async ({ t, imagem }: { t: string; imagem?: Blob }) => {
       const enviada = imagem ? await api.enviarImagem(imagem) : null;
@@ -92,7 +94,14 @@ export default function ChatDoGrupo() {
       >
         <FlatList
           inverted
-          data={[...mensagens.data.mensagens].reverse()}
+          data={[...antigas.todas].reverse()}
+          onEndReached={() => void antigas.carregar()}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={
+            antigas.carregando ? (
+              <Text style={estilos.carregando}>Carregando…</Text>
+            ) : undefined
+          }
           keyExtractor={(m) => m.id}
           contentContainerStyle={estilos.lista}
           renderItem={({ item }) => {
@@ -161,6 +170,11 @@ export default function ChatDoGrupo() {
 }
 
 const estilos = StyleSheet.create({
+  carregando: {
+    textAlign: 'center',
+    color: cores.textoSuave,
+    padding: espaco.p,
+  },
   fundo: { flex: 1, backgroundColor: cores.fundo },
   lista: { padding: espaco.m, gap: 6, flexGrow: 1 },
   balao: {
