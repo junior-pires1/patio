@@ -21,14 +21,24 @@ const novoPost = z
       .optional(),
     eventoLocal: z.string().trim().max(120).optional(),
   })
-  .refine((p) => p.texto.length > 0 || p.imagemId, {
+  .refine((p) => (typeof p.texto === 'string' && p.texto.length > 0) || p.imagemId, {
     message: 'Escreva alguma coisa ou escolha uma imagem',
     path: ['texto'],
   })
   .refine((p) => p.categoria !== 'EVENTO' || p.eventoInicio, {
     message: 'Evento precisa de data e hora de início',
     path: ['eventoInicio'],
-  });
+  })
+  // Uma hora de folga para quem publica o evento enquanto ele começa.
+  .refine(
+    (p) =>
+      !(p.eventoInicio instanceof Date) ||
+      p.eventoInicio.getTime() > Date.now() - 3_600_000,
+    {
+      message: 'O evento não pode ser no passado',
+      path: ['eventoInicio'],
+    },
+  );
 const texto = z.object({
   texto: z
     .string()

@@ -89,3 +89,28 @@ describe('tempo real (Socket.IO)', () => {
     await expect(conectado(abrir('token-falso'))).rejects.toThrow('nao_autenticado');
   });
 });
+
+describe('conta inativa no tempo real', () => {
+  test('conta suspensa não conecta, mesmo com token válido', async () => {
+    const servidor = createServer();
+    const comConferencia = criarTempoReal(servidor, {
+      segredoJwt: SEGREDO_TESTE,
+      origensPermitidas: ['*'],
+      contaAtiva: async (u) => u.id !== ID_B,
+    });
+    await new Promise<void>((ok) => servidor.listen(0, ok));
+    const endereco = `http://localhost:${(servidor.address() as AddressInfo).port}`;
+    const abrirEm = (token: string) => {
+      const s = conectar(endereco, {
+        auth: { token },
+        transports: ['websocket'],
+        reconnection: false,
+      });
+      sockets.push(s);
+      return s;
+    };
+    await conectado(abrirEm(tokenDe(ID_A)));
+    await expect(conectado(abrirEm(tokenDe(ID_B)))).rejects.toThrow();
+    await comConferencia.fechar();
+  });
+});

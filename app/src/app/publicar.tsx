@@ -1,5 +1,4 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { router } from 'expo-router';
 import { useState } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -15,6 +14,7 @@ import { cores, espaco, estilosBase, raio } from '@/tema';
 import { dataHoraBrParaIso, mascaraData, mascaraHora } from '@/utils/datas';
 import { escolherImagem } from '@/utils/foto';
 import { CATEGORIAS } from '@/utils/opcoes';
+import { voltar } from '@/utils/navegacao';
 
 /** RF18: nova publicação. Evento pede data, hora e local. */
 export default function Publicar() {
@@ -58,7 +58,7 @@ export default function Publicar() {
         ...(evento ? { eventoInicio: inicio, eventoLocal: local.trim() || undefined } : {}),
       });
       void queryClient.invalidateQueries({ queryKey: ['feed'] });
-      router.back();
+      voltar('/feed');
     } catch (e) {
       if (e instanceof ErroApi) {
         setErro(e.message);

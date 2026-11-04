@@ -23,6 +23,8 @@ import { cores, espaco, raio } from '@/tema';
 import { quando } from '@/utils/datas';
 import { alerta } from '@/utils/alerta';
 import { escolherImagem } from '@/utils/foto';
+import { voltar } from '@/utils/navegacao';
+import { useMensagensAntigas } from '@/utils/mensagensAntigas';
 
 type Pagina = { mensagens: Mensagem[]; temMais: boolean };
 
@@ -43,6 +45,7 @@ export default function Chat() {
     queryKey: ['mensagens', id],
     queryFn: () => api.get<Pagina>(`/matches/${id}/mensagens`),
   });
+  const antigas = useMensagensAntigas(`/matches/${id}/mensagens`, mensagens.data);
 
   const enviar = useMutation({
     mutationFn: async ({ t, imagem }: { t: string; imagem?: Blob }) => {
@@ -79,13 +82,13 @@ export default function Chat() {
   async function desfazer() {
     await api.delete(`/matches/${id}`);
     void queryClient.invalidateQueries({ queryKey: ['matches'] });
-    router.back();
+    voltar('/conexoes');
   }
   async function bloquear() {
     if (!pessoa) return;
     await api.post('/bloqueios', { usuarioId: pessoa.id });
     void queryClient.invalidateQueries({ queryKey: ['matches'] });
-    router.back();
+    voltar('/conexoes');
   }
 
   function abrirOpcoes() {
@@ -176,7 +179,7 @@ export default function Chat() {
         <Aviso
           titulo="Conversa indisponível"
           texto={mensagens.error.message}
-          acao={{ titulo: 'Voltar', aoTocar: () => router.back() }}
+          acao={{ titulo: 'Voltar', aoTocar: () => voltar('/conexoes') }}
         />
       </>
     );
@@ -201,7 +204,14 @@ export default function Chat() {
         ) : null}
         <FlatList
           inverted
-          data={[...mensagens.data.mensagens].reverse()}
+          data={[...antigas.todas].reverse()}
+          onEndReached={() => void antigas.carregar()}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={
+            antigas.carregando ? (
+              <Text style={estilos.carregando}>Carregando…</Text>
+            ) : undefined
+          }
           keyExtractor={(m) => m.id}
           contentContainerStyle={estilos.lista}
           ListEmptyComponent={<Text style={estilos.vazio}>Comece a conversa</Text>}
@@ -269,6 +279,11 @@ export default function Chat() {
 }
 
 const estilos = StyleSheet.create({
+  carregando: {
+    textAlign: 'center',
+    color: cores.textoSuave,
+    padding: espaco.p,
+  },
   fundo: { flex: 1, backgroundColor: cores.fundo },
   tituloCabecalho: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   tituloTexto: { fontSize: 17, fontWeight: '700', color: cores.texto },

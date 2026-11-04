@@ -1,6 +1,6 @@
 import type { Server as ServidorHttp } from 'node:http';
 import { Server } from 'socket.io';
-import { verificarAcesso } from './seguranca/tokens';
+import { verificarAcesso, type Autenticado } from './seguranca/tokens';
 import type { Notificador } from './servicos/notificador';
 
 /**
@@ -11,15 +11,22 @@ import type { Notificador } from './servicos/notificador';
  */
 export function criarTempoReal(
   http: ServidorHttp,
-  opcoes: { segredoJwt: string; origensPermitidas: string[] },
+  opcoes: {
+    segredoJwt: string;
+    origensPermitidas: string[];
+    /** Confere no banco se a conta e a faculdade continuam ativas (o token vale 15 min). */
+    contaAtiva?: (usuario: Autenticado) => Promise<boolean>;
+  },
 ): Notificador & { fechar: () => Promise<void> } {
   const io = new Server(http, { cors: { origin: opcoes.origensPermitidas } });
 
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     try {
       const token: unknown = socket.handshake.auth.token;
       if (typeof token !== 'string') throw new Error('sem token');
       const usuario = verificarAcesso(token, opcoes.segredoJwt);
+      if (opcoes.contaAtiva && !(await opcoes.contaAtiva(usuario)))
+        throw new Error('inativa');
       void socket.join([`usuario:${usuario.id}`, `faculdade:${usuario.instituicaoId}`]);
       socket.data.usuario = usuario;
       next();

@@ -9,11 +9,22 @@ import { registrar } from './auditoria';
 // Cadastros feitos pela coordenação: cursos, disciplinas e contas de alunos
 // com senha provisória (para turmas que não recebem o código por e-mail).
 
+/** "Administração" e "administração" são o mesmo nome. */
+const jaExiste = (oque: string) =>
+  new ErroApp(409, 'duplicado', `${oque} com esse nome já existe.`, {
+    nome: 'Nome já usado',
+  });
+
 const emUso = (oque: string) =>
   new ErroApp(409, 'em_uso', `${oque} já está em uso e não pode ser removido.`);
 
 export function criarCurso(ctx: Contexto, eu: Autenticado, nome: string) {
   return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
+    if (
+      await tx.curso.findFirst({ where: { nome: { equals: nome, mode: 'insensitive' } } })
+    ) {
+      throw jaExiste('Curso');
+    }
     const curso = await tx.curso.create({
       data: { instituicaoId: eu.instituicaoId, nome },
       select: { id: true, nome: true },
@@ -47,6 +58,10 @@ export function criarDisciplina(
         cursoId: 'Curso não encontrado',
       });
     }
+    const repetida = await tx.disciplina.findFirst({
+      where: { nome: { equals: dados.nome, mode: 'insensitive' } },
+    });
+    if (repetida) throw jaExiste('Disciplina');
     const disciplina = await tx.disciplina.create({
       data: {
         instituicaoId: eu.instituicaoId,

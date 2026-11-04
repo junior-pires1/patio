@@ -6,6 +6,49 @@ import { assinarPlataforma, DURACAO_PLATAFORMA_SEGUNDOS } from './acesso';
 // As consultas daqui rodam como dono do banco (fora do RLS): são da
 // plataforma, não de uma faculdade. RN17: só totais, nunca dados de alunos.
 
+/** Provedores de e-mail de qualquer pessoa e sufixos genéricos: nunca são de uma faculdade só. */
+const DOMINIOS_PUBLICOS = new Set([
+  'gmail.com',
+  'googlemail.com',
+  'hotmail.com',
+  'hotmail.com.br',
+  'outlook.com',
+  'outlook.com.br',
+  'live.com',
+  'msn.com',
+  'yahoo.com',
+  'yahoo.com.br',
+  'icloud.com',
+  'me.com',
+  'aol.com',
+  'proton.me',
+  'protonmail.com',
+  'bol.com.br',
+  'uol.com.br',
+  'terra.com.br',
+  'ig.com.br',
+  'zipmail.com.br',
+  'r7.com',
+  'gmx.com',
+]);
+const SUFIXOS_GENERICOS = new Set([
+  'br',
+  'com',
+  'org',
+  'net',
+  'edu',
+  'gov',
+  'com.br',
+  'edu.br',
+  'org.br',
+  'net.br',
+  'gov.br',
+  'art.br',
+  'ind.br',
+]);
+export const dominioPublico = (d: string) =>
+  DOMINIOS_PUBLICOS.has(d) || SUFIXOS_GENERICOS.has(d);
+
 const credenciaisInvalidas = () =>
   new ErroApp(401, 'credenciais_invalidas', 'E-mail ou senha incorretos.');
 
@@ -72,15 +115,34 @@ export async function cadastrarFaculdade(
       },
     );
   }
-  const existentes = await ctx.prisma.dominioEmail.findMany({
-    where: { dominio: { in: dados.dominios } },
-    select: { dominio: true },
-  });
-  if (existentes.length > 0) {
+  const publico = dados.dominios.find(dominioPublico);
+  if (publico) {
+    throw new ErroApp(
+      422,
+      'dominio_publico',
+      `"${publico}" é um domínio público (de qualquer pessoa), não de uma faculdade.`,
+      { dominios: 'Use o domínio próprio da faculdade, como faculdade.edu.br' },
+    );
+  }
+  // Domínio igual, "dentro" (aluno.x.edu.br quando x.edu.br já existe) ou "por
+  // cima" (x.edu.br quando aluno.x.edu.br existe) roubaria os alunos de outra faculdade.
+  const todos = await ctx.prisma.dominioEmail.findMany({ select: { dominio: true } });
+  const conflitos = todos
+    .map((d) => d.dominio)
+    .filter((existente) =>
+      dados.dominios.some(
+        (novo) =>
+          novo === existente ||
+          novo.endsWith(`.${existente}`) ||
+          existente.endsWith(`.${novo}`),
+      ),
+    );
+  if (conflitos.length > 0) {
     throw new ErroApp(
       409,
       'dominio_em_uso',
-      `Domínio já usado por outra faculdade: ${existentes.map((d) => d.dominio).join(', ')}.`,
+      `Domínio já usado (ou sobreposto) por outra faculdade: ${conflitos.join(', ')}.`,
+      { dominios: 'Domínio já usado por outra faculdade' },
     );
   }
 

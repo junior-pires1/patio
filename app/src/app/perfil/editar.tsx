@@ -79,11 +79,21 @@ export default function EditarPerfil() {
     setForm((f) => ({ ...f, [campo]: valor }));
   const temRelacao = (disciplinaId: string, relacao: Relacao) =>
     minhas.some((m) => m.disciplinaId === disciplinaId && m.relacao === relacao);
+  // "Posso ajudar" e "Preciso de ajuda" na mesma disciplina se excluem.
+  const OPOSTA: Partial<Record<Relacao, Relacao>> = {
+    POSSO_AJUDAR: 'PRECISO_AJUDA',
+    PRECISO_AJUDA: 'POSSO_AJUDAR',
+  };
   const alternarRelacao = (disciplinaId: string, relacao: Relacao) =>
     setMinhas((lista) =>
       temRelacao(disciplinaId, relacao)
         ? lista.filter((m) => !(m.disciplinaId === disciplinaId && m.relacao === relacao))
-        : [...lista, { disciplinaId, relacao }],
+        : [
+            ...lista.filter(
+              (m) => !(m.disciplinaId === disciplinaId && m.relacao === OPOSTA[relacao]),
+            ),
+            { disciplinaId, relacao },
+          ],
     );
 
   async function salvar() {

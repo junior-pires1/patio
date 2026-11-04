@@ -130,7 +130,16 @@ export function perfilCompleto(ctx: Contexto, eu: Autenticado, id: string) {
 }
 
 /** Publicações de um aluno, das mais novas para as mais antigas (grade do perfil). */
-export function postsDoUsuario(ctx: Contexto, eu: Autenticado, id: string, antes?: Date) {
+export async function postsDoUsuario(
+  ctx: Contexto,
+  eu: Autenticado,
+  id: string,
+  antes?: Date,
+) {
+  const visivel = await naFaculdade(ctx.prisma, eu.instituicaoId, (tx) =>
+    tx.usuario.count({ where: { AND: [{ id }, visivelPara(eu)] } }),
+  );
+  if (!visivel) throw naoEncontrado('Perfil não encontrado.');
   return listarPosts(ctx, eu, { autorId: id, antes });
 }
 

@@ -10,6 +10,7 @@ import { Tela } from '@/componentes/Tela';
 import { useCorDaFaculdade, useSessao } from '@/sessao';
 import { cores, espaco, estilosBase, raio, suave } from '@/tema';
 import { alerta } from '@/utils/alerta';
+import { voltar } from '@/utils/navegacao';
 
 /** Detalhe do grupo: informações, membros, entrar/sair e acesso ao chat. */
 export default function TelaGrupo() {
@@ -35,7 +36,7 @@ export default function TelaGrupo() {
     mutationFn: () => api.post<{ grupoApagado: boolean }>(`/grupos/${id}/sair`),
     onSuccess: (r) => {
       atualizar();
-      if (r.grupoApagado) router.back();
+      if (r.grupoApagado) voltar('/grupos');
     },
   });
 
