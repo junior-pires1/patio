@@ -332,7 +332,35 @@ async function principal() {
   }
 
   let novos = 0;
-  await emParalelo(alunos, 3, async (a) => {
+  /** Entra com a senha provisória e troca pela senha de demonstração. */
+  const definirSenhaDemo = async (email: string, provisoria: string) => {
+    const s = await chamar<Sessao>('POST', '/auth/login', {
+      corpo: { email, senha: provisoria },
+    });
+    return chamar<Sessao>('PUT', '/auth/senha', {
+      token: s.acessoToken,
+      corpo: { senhaAtual: provisoria, novaSenha: SENHA_DEMO },
+    });
+  };
+  /** Conta que ficou pela metade numa execução anterior: a coordenação gera senha nova. */
+  const recuperar = async (email: string) => {
+    const busca = await chamar<{ itens: { id: string; email: string }[] }>(
+      'GET',
+      `/coordenacao/alunos?busca=${encodeURIComponent(email)}`,
+      { token: tc },
+    );
+    const conta = busca.itens.find((x) => x.email === email);
+    if (!conta) throw new Error(`Conta ${email} não encontrada`);
+    const nova = await chamar<{ senhaProvisoria: string }>(
+      'POST',
+      `/coordenacao/alunos/${conta.id}/senha`,
+      { token: tc },
+    );
+    return definirSenhaDemo(email, nova.senhaProvisoria);
+  };
+
+  // Um de cada vez: criar conta e trocar senha usam bcrypt, que é lento no servidor grátis.
+  await emParalelo(alunos, 1, async (a) => {
     try {
       const criado = await chamar<{ senhaProvisoria: string }>(
         'POST',
@@ -348,20 +376,24 @@ async function principal() {
           },
         },
       );
-      const s = await chamar<Sessao>('POST', '/auth/login', {
-        corpo: { email: a.email, senha: criado.senhaProvisoria },
-      });
-      a.sessao = await chamar<Sessao>('PUT', '/auth/senha', {
-        token: s.acessoToken,
-        corpo: { senhaAtual: criado.senhaProvisoria, novaSenha: SENHA_DEMO },
-      });
+      try {
+        a.sessao = await definirSenhaDemo(a.email, criado.senhaProvisoria);
+      } catch {
+        a.sessao = await recuperar(a.email);
+      }
       novos++;
     } catch (e) {
       if (!(e instanceof ErroDaApi) || e.status !== 409) throw e;
       // Já existia (script rodado antes): entra com a senha de demonstração.
-      a.sessao = await chamar<Sessao>('POST', '/auth/login', {
-        corpo: { email: a.email, senha: SENHA_DEMO },
-      });
+      try {
+        a.sessao = await chamar<Sessao>('POST', '/auth/login', {
+          corpo: { email: a.email, senha: SENHA_DEMO },
+        });
+      } catch (erro) {
+        if (!(erro instanceof ErroDaApi) || erro.status !== 401) throw erro;
+        a.sessao = await recuperar(a.email);
+        novos++; // ficou sem perfil na vez anterior
+      }
     }
     process.stdout.write('.');
   });
@@ -388,7 +420,7 @@ async function principal() {
   }
 
   // 5) Perfis completos
-  await emParalelo(comSessao, 4, async (a) => {
+  await emParalelo(comSessao, 2, async (a) => {
     const t = a.sessao.acessoToken;
     const habilidades = alguns(D.HABILIDADES, inteiro(2, 6));
     await chamar('PATCH', '/eu', {
@@ -440,7 +472,7 @@ async function principal() {
 
   // 6) Publicações, curtidas e comentários
   const posts: string[] = [];
-  await emParalelo(comSessao, 3, async (a) => {
+  await emParalelo(comSessao, 2, async (a) => {
     const quantos = inteiro(1, 3);
     for (let i = 0; i < quantos; i++) {
       const p = um(D.POSTS);
@@ -463,7 +495,7 @@ async function principal() {
   });
   console.log(`Publicações: ${posts.length}`);
 
-  await emParalelo(comSessao, 4, async (a) => {
+  await emParalelo(comSessao, 2, async (a) => {
     const t = a.sessao.acessoToken;
     for (const id of alguns(posts, inteiro(3, 10))) {
       await ignorarSe([404], () => chamar('PUT', `/posts/${id}/curtida`, { token: t }));
@@ -579,7 +611,7 @@ async function publicarStories(
   destaques = false,
 ) {
   let stories = 0;
-  await emParalelo(alguns(comSessao, Math.ceil(comSessao.length / 2)), 3, async (a) => {
+  await emParalelo(alguns(comSessao, Math.ceil(comSessao.length / 2)), 2, async (a) => {
     const t = a.sessao.acessoToken;
     const ids: string[] = [];
     const quantos = inteiro(1, 3);
