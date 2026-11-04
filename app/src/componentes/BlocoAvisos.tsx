@@ -5,7 +5,10 @@ import type { Aviso } from '@/api/tipos';
 import { useCorDaFaculdade, useSessao } from '@/sessao';
 import { cores, espaco, raio } from '@/tema';
 
-/** RF21: avisos oficiais fixados pela coordenação. Tocar abre o texto completo. */
+/**
+ * RF21: avisos oficiais da coordenação. Os fixados ficam sempre à vista; os
+ * outros aparecem ao tocar em "Ver mais avisos". Tocar num aviso abre o texto.
+ */
 export function BlocoAvisos() {
   const { api } = useSessao();
   const cor = useCorDaFaculdade();
@@ -14,12 +17,16 @@ export function BlocoAvisos() {
     queryFn: () => api.get<Aviso[]>('/avisos'),
   });
   const [aberto, setAberto] = useState<string | null>(null);
-  const fixados = avisos.data?.filter((a) => a.fixado) ?? [];
-  if (fixados.length === 0) return null;
+  const [todos, setTodos] = useState(false);
+  const lista = avisos.data ?? [];
+  const fixados = lista.filter((a) => a.fixado);
+  const outros = lista.filter((a) => !a.fixado);
+  if (lista.length === 0) return null;
+  const visiveis = todos ? lista : fixados;
 
   return (
     <View style={estilos.lista}>
-      {fixados.map((aviso) => (
+      {visiveis.map((aviso) => (
         <Pressable
           key={aviso.id}
           onPress={() => setAberto((atual) => (atual === aviso.id ? null : aviso.id))}
@@ -32,6 +39,19 @@ export function BlocoAvisos() {
           {aberto === aviso.id ? <Text style={estilos.texto}>{aviso.texto}</Text> : null}
         </Pressable>
       ))}
+      {outros.length > 0 ? (
+        <Pressable
+          onPress={() => setTodos((t) => !t)}
+          accessibilityRole="button"
+          hitSlop={6}
+        >
+          <Text style={[estilos.mais, { color: cor }]}>
+            {todos
+              ? 'Mostrar só os fixados'
+              : `📢 Ver mais ${outros.length} aviso(s) da coordenação`}
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -48,4 +68,5 @@ const estilos = StyleSheet.create({
   rotulo: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
   titulo: { fontSize: 15, fontWeight: '700', color: cores.texto },
   texto: { fontSize: 14, color: cores.texto, marginTop: 4, lineHeight: 20 },
+  mais: { fontSize: 14, fontWeight: '600', paddingVertical: 2 },
 });

@@ -141,7 +141,7 @@ export async function criarAluno(
 export async function novaSenhaDoAluno(ctx: Contexto, eu: Autenticado, id: string) {
   const senha = senhaProvisoria();
   const senhaHash = await gerarHash(senha);
-  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
+  const resultado = await naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
     const aluno = await tx.usuario.findFirst({
       where: { id, papel: 'ALUNO' },
       select: { id: true, email: true },
@@ -155,4 +155,6 @@ export async function novaSenhaDoAluno(ctx: Contexto, eu: Autenticado, id: strin
     await registrar(tx, eu, 'senha_do_aluno_redefinida', { tipo: 'usuario', id });
     return { email: aluno.email, senhaProvisoria: senha };
   });
+  ctx.notificar.desconectar([id]);
+  return resultado;
 }

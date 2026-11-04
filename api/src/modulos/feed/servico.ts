@@ -4,6 +4,7 @@ import { ErroApp, naoEncontrado } from '../../erros';
 import type { Prisma } from '../../generated/prisma/client';
 import type { Autenticado } from '../../seguranca/tokens';
 import { registrar } from '../coordenacao/auditoria';
+import { exigirImagemPropria, urlDaImagem } from '../imagens/servico';
 
 export const POSTS_POR_PAGINA = 20;
 export type Categoria = 'GERAL' | 'EVENTO' | 'ESTUDOS' | 'VAGA' | 'ACHADOS';
@@ -28,7 +29,7 @@ function selecaoDoPost(eu: Autenticado) {
     id: true,
     categoria: true,
     texto: true,
-    imagemUrl: true,
+    imagemId: true,
     eventoInicio: true,
     eventoLocal: true,
     criadoEm: true,
@@ -41,9 +42,13 @@ function selecaoDoPost(eu: Autenticado) {
 
 type PostDoBanco = Prisma.PostGetPayload<{ select: ReturnType<typeof selecaoDoPost> }>;
 
-function formatar({ curtidas, presencas, _count, ...p }: PostDoBanco, eu: Autenticado) {
+function formatar(
+  { curtidas, presencas, _count, imagemId, ...p }: PostDoBanco,
+  eu: Autenticado,
+) {
   return {
     ...p,
+    imagemUrl: urlDaImagem(imagemId),
     curtidas: _count.curtidas,
     comentarios: _count.comentarios,
     presencas: _count.presencas,
@@ -100,12 +105,13 @@ export async function publicar(
   dados: {
     categoria: Categoria;
     texto: string;
-    imagemUrl?: string;
+    imagemId?: string;
     eventoInicio?: Date;
     eventoLocal?: string;
   },
 ) {
   const post = await naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
+    await exigirImagemPropria(tx, eu, dados.imagemId);
     const criado = await tx.post.create({
       data: { ...dados, instituicaoId: eu.instituicaoId, autorId: eu.id },
       select: selecaoDoPost(eu),
@@ -124,7 +130,13 @@ export async function removerPost(ctx: Contexto, eu: Autenticado, postId: string
     if (!ehAutor && eu.papel !== 'COORDENACAO') {
       throw new ErroApp(403, 'sem_permissao', 'Só quem publicou pode remover.');
     }
-    await tx.post.update({ where: { id: postId }, data: { removidoEm: new Date() } });
+    const { imagemId } = await tx.post.update({
+      where: { id: postId },
+      data: { removidoEm: new Date() },
+      select: { imagemId: true },
+    });
+    // A imagem de uma publicação removida deixa de ser servida.
+    if (imagemId) await tx.imagem.delete({ where: { id: imagemId } });
     if (!ehAutor) {
       await registrar(
         tx,
@@ -138,49 +150,73 @@ export async function removerPost(ctx: Contexto, eu: Autenticado, postId: string
   ctx.notificar.enviarFaculdade(eu.instituicaoId, 'post:removido', { postId });
 }
 
+/** Totais da publicação, enviados à faculdade para os contadores mudarem sem recarregar. */
+async function contagens(tx: Transacao, postId: string) {
+  const [curtidas, comentarios, presencas] = await Promise.all([
+    tx.curtidaPost.count({ where: { postId } }),
+    tx.comentario.count({ where: { postId } }),
+    tx.presencaEvento.count({ where: { postId } }),
+  ]);
+  return { postId, curtidas, comentarios, presencas };
+}
+
 /** RF19: curtir ou descurtir a publicação. Devolve o total atualizado. */
-export function curtirPost(
+export async function curtirPost(
   ctx: Contexto,
   eu: Autenticado,
   postId: string,
   curtir: boolean,
 ) {
-  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
-    await exigirPost(tx, eu, postId);
-    if (curtir) {
-      await tx.curtidaPost.createMany({
-        data: [{ instituicaoId: eu.instituicaoId, postId, usuarioId: eu.id }],
-        skipDuplicates: true,
-      });
-    } else {
-      await tx.curtidaPost.deleteMany({ where: { postId, usuarioId: eu.id } });
-    }
-    return { curti: curtir, curtidas: await tx.curtidaPost.count({ where: { postId } }) };
-  });
+  const { resposta, totais } = await naFaculdade(
+    ctx.prisma,
+    eu.instituicaoId,
+    async (tx) => {
+      await exigirPost(tx, eu, postId);
+      if (curtir) {
+        await tx.curtidaPost.createMany({
+          data: [{ instituicaoId: eu.instituicaoId, postId, usuarioId: eu.id }],
+          skipDuplicates: true,
+        });
+      } else {
+        await tx.curtidaPost.deleteMany({ where: { postId, usuarioId: eu.id } });
+      }
+      const totais = await contagens(tx, postId);
+      return { resposta: { curti: curtir, curtidas: totais.curtidas }, totais };
+    },
+  );
+  ctx.notificar.enviarFaculdade(eu.instituicaoId, 'post:atualizado', totais);
+  return resposta;
 }
 
 /** RF20: confirmar ou desmarcar presença. Só em publicações de evento. */
-export function marcarPresenca(
+export async function marcarPresenca(
   ctx: Contexto,
   eu: Autenticado,
   postId: string,
   vou: boolean,
 ) {
-  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
-    const post = await exigirPost(tx, eu, postId);
-    if (post.categoria !== 'EVENTO') {
-      throw new ErroApp(422, 'nao_e_evento', 'Só dá para confirmar presença em eventos.');
-    }
-    if (vou) {
-      await tx.presencaEvento.createMany({
-        data: [{ instituicaoId: eu.instituicaoId, postId, usuarioId: eu.id }],
-        skipDuplicates: true,
-      });
-    } else {
-      await tx.presencaEvento.deleteMany({ where: { postId, usuarioId: eu.id } });
-    }
-    return { vou, presencas: await tx.presencaEvento.count({ where: { postId } }) };
-  });
+  const { resposta, totais } = await naFaculdade(
+    ctx.prisma,
+    eu.instituicaoId,
+    async (tx) => {
+      const post = await exigirPost(tx, eu, postId);
+      if (post.categoria !== 'EVENTO') {
+        throw new ErroApp(422, 'nao_e_evento', 'Só dá para confirmar presença em eventos.');
+      }
+      if (vou) {
+        await tx.presencaEvento.createMany({
+          data: [{ instituicaoId: eu.instituicaoId, postId, usuarioId: eu.id }],
+          skipDuplicates: true,
+        });
+      } else {
+        await tx.presencaEvento.deleteMany({ where: { postId, usuarioId: eu.id } });
+      }
+      const totais = await contagens(tx, postId);
+      return { resposta: { vou, presencas: totais.presencas }, totais };
+    },
+  );
+  ctx.notificar.enviarFaculdade(eu.instituicaoId, 'post:atualizado', totais);
+  return resposta;
 }
 
 /** RF19: comentários, do mais antigo para o mais novo. */
@@ -197,28 +233,54 @@ export function listarComentarios(ctx: Contexto, eu: Autenticado, postId: string
   });
 }
 
-export function comentar(ctx: Contexto, eu: Autenticado, postId: string, texto: string) {
-  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
-    await exigirPost(tx, eu, postId);
-    const c = await tx.comentario.create({
-      data: { instituicaoId: eu.instituicaoId, postId, autorId: eu.id, texto },
-      select: { id: true, texto: true, criadoEm: true, autor: AUTOR },
-    });
-    return { ...c, meu: true };
-  });
+export async function comentar(
+  ctx: Contexto,
+  eu: Autenticado,
+  postId: string,
+  texto: string,
+) {
+  const { comentario, totais } = await naFaculdade(
+    ctx.prisma,
+    eu.instituicaoId,
+    async (tx) => {
+      await exigirPost(tx, eu, postId);
+      const c = await tx.comentario.create({
+        data: { instituicaoId: eu.instituicaoId, postId, autorId: eu.id, texto },
+        select: { id: true, texto: true, criadoEm: true, autor: AUTOR },
+      });
+      return { comentario: { ...c, meu: true }, totais: await contagens(tx, postId) };
+    },
+  );
+  ctx.notificar.enviarFaculdade(eu.instituicaoId, 'post:atualizado', totais);
+  return comentario;
 }
 
 /** O autor apaga o próprio comentário; a coordenação, qualquer um. */
-export function apagarComentario(ctx: Contexto, eu: Autenticado, comentarioId: string) {
-  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
+export async function apagarComentario(
+  ctx: Contexto,
+  eu: Autenticado,
+  comentarioId: string,
+) {
+  const totais = await naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
     const c = await tx.comentario.findUnique({
       where: { id: comentarioId },
-      select: { autorId: true },
+      select: { autorId: true, postId: true },
     });
     if (!c) throw naoEncontrado('Comentário não encontrado.');
     if (c.autorId !== eu.id && eu.papel !== 'COORDENACAO') {
       throw new ErroApp(403, 'sem_permissao', 'Só quem comentou pode apagar.');
     }
     await tx.comentario.delete({ where: { id: comentarioId } });
+    if (c.autorId !== eu.id) {
+      await registrar(
+        tx,
+        eu,
+        'comentario_removido',
+        { tipo: 'comentario', id: comentarioId },
+        { autorId: c.autorId, postId: c.postId },
+      );
+    }
+    return contagens(tx, c.postId);
   });
+  ctx.notificar.enviarFaculdade(eu.instituicaoId, 'post:atualizado', totais);
 }

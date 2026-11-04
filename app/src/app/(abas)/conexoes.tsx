@@ -51,7 +51,7 @@ export default function Conexoes() {
       renderItem={({ item }) => {
         const ultima = item.ultimaMensagem;
         const previa = ultima
-          ? `${ultima.autorId === eu.id ? 'Você: ' : ''}${ultima.texto}`
+          ? `${ultima.autorId === eu.id ? 'Você: ' : ''}${ultima.texto || (ultima.imagemUrl ? '📷 Foto' : '')}`
           : 'Diga oi! 👋';
         return (
           <Pressable

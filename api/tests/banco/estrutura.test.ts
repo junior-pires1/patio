@@ -18,6 +18,7 @@ const TABELAS_DA_FACULDADE = [
   'grupo_membros',
   'grupo_mensagens',
   'grupos_estudo',
+  'imagens',
   'matches',
   'mensagens',
   'posts',
@@ -36,7 +37,7 @@ beforeAll(() => {
 afterAll(() => pool.end());
 
 describe('estrutura do banco', () => {
-  test('tem as 24 tabelas do dicionário de dados, fotos e aparelhos de push', async () => {
+  test('tem as 24 tabelas do dicionário de dados, fotos, aparelhos de push e imagens', async () => {
     const { rows } = await pool.query<{ tablename: string }>(
       `SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename`,
     );

@@ -33,7 +33,7 @@ export async function enviarFoto(ctx: Contexto, eu: Autenticado, dados: Uint8Arr
   if (!tipo)
     throw new ErroApp(415, 'formato_invalido', 'Use uma foto em JPG, PNG ou WebP.');
 
-  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
+  const resultado = await naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
     await tx.foto.deleteMany({ where: { usuarioId: eu.id } });
     const foto = await tx.foto.create({
       data: {
@@ -48,21 +48,37 @@ export async function enviarFoto(ctx: Contexto, eu: Autenticado, dados: Uint8Arr
     await tx.usuario.update({ where: { id: eu.id }, data: { fotoUrl } });
     return { fotoUrl };
   });
+  avisarColegas(ctx, eu);
+  return resultado;
 }
 
-export function removerFoto(ctx: Contexto, eu: Autenticado) {
-  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
+export async function removerFoto(ctx: Contexto, eu: Autenticado) {
+  await naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
     await tx.foto.deleteMany({ where: { usuarioId: eu.id } });
     await tx.usuario.update({ where: { id: eu.id }, data: { fotoUrl: null } });
   });
+  avisarColegas(ctx, eu);
 }
+
+/** A foto aparece no feed, nas conexões e nas cartas dos colegas. */
+const avisarColegas = (ctx: Contexto, eu: Autenticado) =>
+  ctx.notificar.enviarFaculdade(eu.instituicaoId, 'perfil:atualizado', {
+    usuarioId: eu.id,
+  });
 
 /** Serve a imagem. Consulta direta pelo id (fora do RLS): o id aleatório é a chave de acesso. */
 export async function lerFoto(ctx: Contexto, id: string) {
   const foto = await ctx.prisma.foto.findUnique({
     where: { id },
-    select: { tipo: true, dados: true, usuario: { select: { status: true } } },
+    select: {
+      tipo: true,
+      dados: true,
+      usuario: { select: { status: true } },
+      instituicao: { select: { ativa: true } },
+    },
   });
-  if (!foto || foto.usuario.status !== 'ATIVA') throw naoEncontrado('Foto não encontrada.');
+  if (!foto || foto.usuario.status !== 'ATIVA' || !foto.instituicao.ativa) {
+    throw naoEncontrado('Foto não encontrada.');
+  }
   return foto;
 }

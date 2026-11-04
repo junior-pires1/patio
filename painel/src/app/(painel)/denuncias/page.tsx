@@ -21,6 +21,7 @@ export default function PaginaDenuncias() {
 
   const lista = useQuery({
     queryKey: ['denuncias', status, pagina],
+    refetchInterval: 30_000,
     queryFn: () =>
       api.get<Pagina<Denuncia>>(`/coordenacao/denuncias?status=${status}&pagina=${pagina}`),
   });

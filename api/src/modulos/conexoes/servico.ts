@@ -5,6 +5,7 @@ import type { Prisma } from '../../generated/prisma/client';
 import type { Autenticado } from '../../seguranca/tokens';
 import { PERFIL_PUBLICO } from '../perfil/servico';
 import { calcularAfinidade } from './afinidade';
+import { urlDaImagem } from '../imagens/servico';
 
 export const LIMITE_CARTAS = 20;
 const CANDIDATOS_ANALISADOS = 300;
@@ -206,12 +207,20 @@ export function listarMatches(ctx: Contexto, eu: Autenticado) {
         criadoEm: m.criadoEm,
         // Depois do match, os contatos opcionais ficam visíveis (RN).
         pessoa: m.usuarioAId === eu.id ? m.usuarioB : m.usuarioA,
-        ultimaMensagem: m.mensagens[0] ?? null,
+        ultimaMensagem: m.mensagens[0] ? formatarMensagem(m.mensagens[0]) : null,
         naoLidas: m._count.mensagens,
       }))
       .sort((x, y) => atividade(y) - atividade(x));
   });
 }
+
+const formatarMensagem = <M extends { imagemId: string | null }>({
+  imagemId,
+  ...m
+}: M) => ({
+  ...m,
+  imagemUrl: urlDaImagem(imagemId),
+});
 
 const atividade = (m: { criadoEm: Date; ultimaMensagem: { criadoEm: Date } | null }) =>
   (m.ultimaMensagem?.criadoEm ?? m.criadoEm).getTime();

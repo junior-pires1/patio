@@ -3,7 +3,7 @@ import { router, usePathname } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { ErroApi } from './api/cliente';
-import type { Carta, Mensagem, MensagemGrupo } from './api/tipos';
+import type { Carta, Mensagem, MensagemGrupo, Post } from './api/tipos';
 import { useNotificar } from './componentes/Notificacoes';
 import { API_URL } from './config';
 import { useSessao } from './sessao';
@@ -74,6 +74,11 @@ export function useTempoReal() {
     socket.on('connect_error', () => {
       if (!socket.active) tentarReconectar();
     });
+    // A API derrubou a conexão (conta suspensa, senha trocada pela coordenação):
+    // a chamada à API decide se a sessão continua; se não, o app volta ao login.
+    socket.on('disconnect', (motivo) => {
+      if (motivo === 'io server disconnect') tentarReconectar();
+    });
 
     // Mudanças da faculdade: os eventos só trazem ids; o conteúdo vem da API,
     // que aplica bloqueios e permissões.
@@ -81,8 +86,41 @@ export function useTempoReal() {
     socket.on('post:removido', (evento: { postId: string }) =>
       atualizar(['feed'], ['post', evento.postId], ['comentarios', evento.postId]),
     );
+    // Curtidas, comentários e presenças: troca só os números, sem buscar o feed de novo.
+    socket.on(
+      'post:atualizado',
+      (totais: {
+        postId: string;
+        curtidas: number;
+        comentarios: number;
+        presencas: number;
+      }) => {
+        const { postId, ...numeros } = totais;
+        queryClient.setQueriesData<{ pages: { posts: Post[] }[] }>(
+          { queryKey: ['feed'] },
+          (dados) =>
+            dados && {
+              ...dados,
+              pages: dados.pages.map((p) => ({
+                ...p,
+                posts: p.posts.map((x) => (x.id === postId ? { ...x, ...numeros } : x)),
+              })),
+            },
+        );
+        queryClient.setQueryData<Post>(['post', postId], (p) => p && { ...p, ...numeros });
+        atualizar(['comentarios', postId]);
+      },
+    );
     socket.on('aviso:novo', () => atualizar(['avisos']));
+    socket.on('aviso:removido', () => atualizar(['avisos']));
     socket.on('grupo:novo', () => atualizar(['grupos']));
+    socket.on('grupo:atualizado', (evento: { grupoId: string }) =>
+      atualizar(['grupos'], ['grupo', evento.grupoId]),
+    );
+    socket.on('grupo:removido', (evento: { grupoId: string }) => {
+      atualizar(['grupos']);
+      queryClient.removeQueries({ queryKey: ['grupo', evento.grupoId] });
+    });
     socket.on('perfil:atualizado', (evento: { usuarioId: string }) => {
       atualizar(
         ['feed'],
@@ -92,19 +130,27 @@ export function useTempoReal() {
         ['grupo'],
         ['grupo-mensagens'],
       );
-      // Só troca o apelido na carta: buscar as cartas de novo mudaria a carta atual.
+      // Só troca apelido e foto na carta: buscar as cartas de novo mudaria a carta atual.
       const temCarta = queryClient
         .getQueriesData<Carta[]>({ queryKey: ['descobrir'] })
         .some(([, cartas]) => cartas?.some((c) => c.id === evento.usuarioId));
       if (!temCarta) return;
       api
-        .get<{ apelido: string }>(`/usuarios/${evento.usuarioId}`)
-        .then(({ apelido }) =>
+        .get<{ apelido: string; fotoUrl: string | null }>(`/usuarios/${evento.usuarioId}`)
+        .then(({ apelido, fotoUrl }) =>
           queryClient.setQueriesData<Carta[]>({ queryKey: ['descobrir'] }, (cartas) =>
-            cartas?.map((c) => (c.id === evento.usuarioId ? { ...c, apelido } : c)),
+            cartas?.map((c) =>
+              c.id === evento.usuarioId ? { ...c, apelido, fotoUrl } : c,
+            ),
           ),
         )
-        .catch(() => undefined);
+        // Conta suspensa ou bloqueada: a carta sai da pilha.
+        .catch((erro: unknown) => {
+          if (!(erro instanceof ErroApi) || erro.status !== 404) return;
+          queryClient.setQueriesData<Carta[]>({ queryKey: ['descobrir'] }, (cartas) =>
+            cartas?.filter((c) => c.id !== evento.usuarioId),
+          );
+        });
     });
 
     socket.on('curtida:nova', () => {
@@ -125,6 +171,9 @@ export function useTempoReal() {
       });
     });
     socket.on('match:desfeito', () => atualizar(['matches']));
+    socket.on('mensagens:lidas', (evento: { matchId: string }) =>
+      atualizar(['mensagens', evento.matchId]),
+    );
     socket.on('mensagem:nova', (evento: { matchId: string; mensagem: Mensagem }) => {
       atualizar(['mensagens', evento.matchId], ['matches']);
       const naConversa = caminhoAtual.current === `/chat/${evento.matchId}`;

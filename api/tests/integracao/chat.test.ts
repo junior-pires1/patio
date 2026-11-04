@@ -98,3 +98,25 @@ describe('chat das conexões', () => {
     expect((await enviar(x, 'Oi?', m.body.match.id)).status).toBe(404);
   });
 });
+
+describe('confirmação de leitura', () => {
+  test('abrir a conversa avisa quem mandou que as mensagens foram lidas', async () => {
+    const [x, y] = await Promise.all([t.cadastrarNovo(), t.cadastrarNovo()]);
+    await request(t.app).post('/curtidas').set(auth(x)).send({ paraId: y.usuario.id });
+    const m = await request(t.app)
+      .post('/curtidas')
+      .set(auth(y))
+      .send({ paraId: x.usuario.id });
+    const id = m.body.match.id as string;
+    await enviar(x, 'Oi!', id);
+    t.eventos.length = 0;
+    await request(t.app).get(`/matches/${id}/mensagens`).set(auth(y));
+    expect(t.eventos.filter((e) => e.evento === 'mensagens:lidas')).toEqual([
+      { usuarioIds: [x.usuario.id], evento: 'mensagens:lidas', dados: { matchId: id } },
+    ]);
+    // Abrir de novo, sem mensagem nova, não avisa
+    t.eventos.length = 0;
+    await request(t.app).get(`/matches/${id}/mensagens`).set(auth(y));
+    expect(t.eventos.filter((e) => e.evento === 'mensagens:lidas')).toEqual([]);
+  });
+});

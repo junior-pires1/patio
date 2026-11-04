@@ -50,8 +50,8 @@ export async function publicarAviso(
 }
 
 /** RF32: remover aviso (remoção lógica, fica no histórico). */
-export function removerAviso(ctx: Contexto, eu: Autenticado, avisoId: string) {
-  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
+export async function removerAviso(ctx: Contexto, eu: Autenticado, avisoId: string) {
+  await naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
     const { count } = await tx.aviso.updateMany({
       where: { id: avisoId, removidoEm: null },
       data: { removidoEm: new Date() },
@@ -59,4 +59,5 @@ export function removerAviso(ctx: Contexto, eu: Autenticado, avisoId: string) {
     if (count === 0) throw naoEncontrado('Aviso não encontrado.');
     await registrar(tx, eu, 'aviso_removido', { tipo: 'aviso', id: avisoId });
   });
+  ctx.notificar.enviarFaculdade(eu.instituicaoId, 'aviso:removido', { avisoId });
 }

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import type { Contexto } from '../../contexto';
 import { autenticar, exigirPapel, quem } from '../../seguranca/autenticar';
+import { novaMensagem } from '../imagens/esquemas';
 import * as servico from './servico';
 
 const id = z.object({ id: z.uuid('Identificador inválido') });
@@ -33,13 +34,6 @@ const novoGrupo = z.object({
     .default(10),
 });
 const pagina = z.object({ antes: z.iso.datetime({ offset: true }).optional() });
-const mensagem = z.object({
-  texto: z
-    .string()
-    .trim()
-    .min(1, 'Escreva uma mensagem')
-    .max(1000, 'No máximo 1.000 caracteres'),
-});
 
 /** Grupos de estudo (RF22–RF24). Só alunos participam. */
 export function rotasGrupos(ctx: Contexto) {
@@ -75,10 +69,10 @@ export function rotasGrupos(ctx: Contexto) {
     );
   });
   r.post('/grupos/:id/mensagens', ...aluno, async (req, res) => {
-    const { texto } = mensagem.parse(req.body);
+    const dados = novaMensagem.parse(req.body);
     res
       .status(201)
-      .json(await servico.enviarMensagem(ctx, quem(req), id.parse(req.params).id, texto));
+      .json(await servico.enviarMensagem(ctx, quem(req), id.parse(req.params).id, dados));
   });
 
   return r;

@@ -135,41 +135,53 @@ async function suspenderNaTransacao(tx: Transacao, usuarioId: string) {
 }
 
 /** RF30 / RN15: decide a denúncia — arquivar, advertir ou suspender. */
-export function decidirDenuncia(
+export async function decidirDenuncia(
   ctx: Contexto,
   eu: Autenticado,
   denunciaId: string,
   acao: 'ARQUIVADA' | 'ADVERTENCIA' | 'SUSPENSAO',
 ) {
-  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
-    const denuncia = await tx.denuncia.findUnique({ where: { id: denunciaId } });
-    if (!denuncia) throw naoEncontrado('Denúncia não encontrada.');
-    if (denuncia.status === 'RESOLVIDA') {
-      throw new ErroApp(409, 'ja_resolvida', 'Esta denúncia já foi resolvida.');
-    }
+  const { resolvida, denunciadoId } = await naFaculdade(
+    ctx.prisma,
+    eu.instituicaoId,
+    async (tx) => {
+      const denuncia = await tx.denuncia.findUnique({ where: { id: denunciaId } });
+      if (!denuncia) throw naoEncontrado('Denúncia não encontrada.');
+      if (denuncia.status === 'RESOLVIDA') {
+        throw new ErroApp(409, 'ja_resolvida', 'Esta denúncia já foi resolvida.');
+      }
 
-    if (acao === 'ADVERTENCIA') {
-      await tx.usuario.update({
-        where: { id: denuncia.denunciadoId },
-        data: { advertencias: { increment: 1 } },
+      if (acao === 'ADVERTENCIA') {
+        await tx.usuario.update({
+          where: { id: denuncia.denunciadoId },
+          data: { advertencias: { increment: 1 } },
+        });
+      }
+      if (acao === 'SUSPENSAO') await suspenderNaTransacao(tx, denuncia.denunciadoId);
+
+      const resolvida = await tx.denuncia.update({
+        where: { id: denunciaId },
+        data: { status: 'RESOLVIDA', acao, resolvidaPorId: eu.id, resolvidaEm: new Date() },
+        select: { id: true, status: true, acao: true, resolvidaEm: true },
       });
-    }
-    if (acao === 'SUSPENSAO') await suspenderNaTransacao(tx, denuncia.denunciadoId);
+      await registrar(
+        tx,
+        eu,
+        `denuncia_${acao.toLowerCase()}`,
+        { tipo: 'denuncia', id: denunciaId },
+        { denunciadoId: denuncia.denunciadoId, motivo: denuncia.motivo },
+      );
+      return { resolvida, denunciadoId: denuncia.denunciadoId };
+    },
+  );
+  if (acao === 'SUSPENSAO') aposSuspender(ctx, eu, denunciadoId);
+  return resolvida;
+}
 
-    const resolvida = await tx.denuncia.update({
-      where: { id: denunciaId },
-      data: { status: 'RESOLVIDA', acao, resolvidaPorId: eu.id, resolvidaEm: new Date() },
-      select: { id: true, status: true, acao: true, resolvidaEm: true },
-    });
-    await registrar(
-      tx,
-      eu,
-      `denuncia_${acao.toLowerCase()}`,
-      { tipo: 'denuncia', id: denunciaId },
-      { denunciadoId: denuncia.denunciadoId, motivo: denuncia.motivo },
-    );
-    return resolvida;
-  });
+/** A conta suspensa sai do tempo real e some das telas dos colegas. */
+function aposSuspender(ctx: Contexto, eu: Autenticado, usuarioId: string) {
+  ctx.notificar.desconectar([usuarioId]);
+  ctx.notificar.enviarFaculdade(eu.instituicaoId, 'perfil:atualizado', { usuarioId });
 }
 
 /** RF31: busca de alunos por nome, apelido ou e-mail. */
@@ -228,16 +240,16 @@ async function exigirAluno(tx: Transacao, id: string) {
 }
 
 /** RF31 / RN16: suspender a conta (encerra as sessões) ou reativar. */
-export function mudarStatusDoAluno(
+export async function mudarStatusDoAluno(
   ctx: Contexto,
   eu: Autenticado,
   alunoId: string,
   novo: 'SUSPENSA' | 'ATIVA',
 ) {
-  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
+  const { aluno, mudou } = await naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
     const aluno = await exigirAluno(tx, alunoId);
     if (aluno.status === 'EXCLUIDA') throw naoEncontrado('Aluno não encontrado.');
-    if (aluno.status === novo) return aluno;
+    if (aluno.status === novo) return { aluno, mudou: false };
 
     if (novo === 'SUSPENSA') await suspenderNaTransacao(tx, alunoId);
     else await tx.usuario.update({ where: { id: alunoId }, data: { status: 'ATIVA' } });
@@ -246,8 +258,15 @@ export function mudarStatusDoAluno(
       tipo: 'usuario',
       id: alunoId,
     });
-    return { ...aluno, status: novo };
+    return { aluno: { ...aluno, status: novo }, mudou: true };
   });
+  if (mudou && novo === 'SUSPENSA') aposSuspender(ctx, eu, alunoId);
+  else if (mudou) {
+    ctx.notificar.enviarFaculdade(eu.instituicaoId, 'perfil:atualizado', {
+      usuarioId: alunoId,
+    });
+  }
+  return aluno;
 }
 
 /** RF33: registro de auditoria das ações da coordenação. */

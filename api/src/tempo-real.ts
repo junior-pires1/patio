@@ -36,6 +36,13 @@ export function criarTempoReal(
     enviarFaculdade(instituicaoId, evento, dados) {
       io.to(`faculdade:${instituicaoId}`).emit(evento, dados);
     },
+    desconectar(usuarioIds) {
+      if (usuarioIds.length === 0) return;
+      io.in(usuarioIds.map((id) => `usuario:${id}`)).disconnectSockets(true);
+    },
+    desconectarFaculdade(instituicaoId) {
+      io.in(`faculdade:${instituicaoId}`).disconnectSockets(true);
+    },
     fechar: () => new Promise((ok) => void io.close(() => ok())),
   };
 }

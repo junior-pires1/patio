@@ -1,7 +1,7 @@
 import { Router, type RequestHandler } from 'express';
 import { z } from 'zod';
 import type { Contexto } from '../../contexto';
-import { email } from '../auth/esquemas';
+import { email, trocarSenha } from '../auth/esquemas';
 import { adminDe, autenticarPlataforma } from './acesso';
 import * as servico from './servico';
 
@@ -32,6 +32,7 @@ const novaFaculdade = z.object({
 });
 const id = z.object({ id: z.uuid('Identificador inválido') });
 const ativacao = z.object({ ativa: z.boolean() });
+const daCoordenacao = z.object({ email });
 
 /** Painel da equipe da plataforma (RF34–RF37). */
 export function rotasPlataforma(ctx: Contexto, limiteCredenciais: RequestHandler) {
@@ -64,6 +65,24 @@ export function rotasPlataforma(ctx: Contexto, limiteCredenciais: RequestHandler
     res.json(
       await servico.mudarAtivacao(ctx, adminDe(req), id.parse(req.params).id, ativa),
     );
+  });
+
+  r.post('/plataforma/faculdades/:id/coordenacao/senha', admin, async (req, res) => {
+    const dados = daCoordenacao.parse(req.body);
+    res.json(
+      await servico.novaSenhaDaCoordenacao(
+        ctx,
+        adminDe(req),
+        id.parse(req.params).id,
+        dados.email,
+      ),
+    );
+  });
+
+  r.put('/plataforma/senha', admin, async (req, res) => {
+    const dados = trocarSenha.parse(req.body);
+    await servico.trocarSenhaDoAdmin(ctx, adminDe(req), dados.senhaAtual, dados.novaSenha);
+    res.status(204).end();
   });
 
   return r;
