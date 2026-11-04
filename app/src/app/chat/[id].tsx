@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Conexao, Mensagem } from '@/api/tipos';
+import { Avatar } from '@/componentes/Avatar';
 import { Aviso, Carregando } from '@/componentes/Estados';
 import { Imagem } from '@/componentes/Imagem';
 import { useCorDaFaculdade, useSessao, useUsuario } from '@/sessao';
@@ -133,6 +134,21 @@ export default function Chat() {
     <Stack.Screen
       options={{
         title: pessoa?.apelido ?? 'Conversa',
+        // Tocar no nome abre o perfil da pessoa.
+        headerTitle: () => (
+          <Pressable
+            onPress={() =>
+              pessoa &&
+              router.push({ pathname: '/usuario/[id]', params: { id: pessoa.id } })
+            }
+            accessibilityRole="button"
+            accessibilityLabel="Ver perfil"
+            style={estilos.tituloCabecalho}
+          >
+            <Avatar nome={pessoa?.apelido ?? '?'} fotoUrl={pessoa?.fotoUrl} tamanho={30} />
+            <Text style={estilos.tituloTexto}>{pessoa?.apelido ?? 'Conversa'}</Text>
+          </Pressable>
+        ),
         headerRight: () => (
           <Pressable
             onPress={abrirOpcoes}
@@ -188,7 +204,7 @@ export default function Chat() {
           data={[...mensagens.data.mensagens].reverse()}
           keyExtractor={(m) => m.id}
           contentContainerStyle={estilos.lista}
-          ListEmptyComponent={<Text style={estilos.vazio}>Comece a conversa 🙂</Text>}
+          ListEmptyComponent={<Text style={estilos.vazio}>Comece a conversa</Text>}
           renderItem={({ item }) => {
             const minha = item.autorId === eu.id;
             return (
@@ -254,6 +270,8 @@ export default function Chat() {
 
 const estilos = StyleSheet.create({
   fundo: { flex: 1, backgroundColor: cores.fundo },
+  tituloCabecalho: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  tituloTexto: { fontSize: 17, fontWeight: '700', color: cores.texto },
   contatos: {
     textAlign: 'center',
     fontSize: 13,

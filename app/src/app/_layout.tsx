@@ -56,6 +56,32 @@ function Navegacao() {
           options={{ headerShown: true, title: 'Novo grupo', presentation: 'modal' }}
         />
         <Stack.Screen
+          name="usuario/[id]"
+          options={{ headerShown: true, title: 'Perfil' }}
+        />
+        <Stack.Screen
+          name="perfil/editar"
+          options={{ headerShown: true, title: 'Editar perfil' }}
+        />
+        <Stack.Screen
+          name="perfil/experiencias"
+          options={{ headerShown: true, title: 'Experiências' }}
+        />
+        <Stack.Screen
+          name="atividade"
+          options={{ headerShown: true, title: 'Atividade' }}
+        />
+        <Stack.Screen
+          name="stories/novo"
+          options={{ headerShown: true, title: 'Novo story', presentation: 'modal' }}
+        />
+        <Stack.Screen name="stories/[autorId]" options={{ animation: 'fade' }} />
+        <Stack.Screen name="destaque/[id]" options={{ animation: 'fade' }} />
+        <Stack.Screen
+          name="destaques/novo"
+          options={{ headerShown: true, title: 'Novo destaque', presentation: 'modal' }}
+        />
+        <Stack.Screen
           name="denunciar/[usuarioId]"
           options={{ headerShown: true, title: 'Denunciar', presentation: 'modal' }}
         />

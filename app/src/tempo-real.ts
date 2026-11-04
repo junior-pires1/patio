@@ -154,9 +154,9 @@ export function useTempoReal() {
     });
 
     socket.on('curtida:nova', () => {
-      atualizar(['curtidas-recebidas'], ['descobrir']);
+      atualizar(['curtidas-recebidas'], ['descobrir'], ['atividade']);
       notificar({
-        titulo: 'Alguém curtiu você 💙',
+        titulo: 'Alguém curtiu você',
         texto: 'A pessoa aparece primeiro nas suas cartas. Toque para ver.',
         aoTocar: () => router.navigate('/'),
       });
@@ -164,13 +164,17 @@ export function useTempoReal() {
     socket.on('match:novo', (evento: { matchId: string }) => {
       atualizar(['matches'], ['curtidas-recebidas']);
       notificar({
-        titulo: 'Nova conexão! 🎉',
+        titulo: 'Nova conexão!',
         texto: 'Vocês se curtiram. Toque para conversar.',
         aoTocar: () =>
           router.push({ pathname: '/chat/[id]', params: { id: evento.matchId } }),
       });
     });
     socket.on('match:desfeito', () => atualizar(['matches']));
+    socket.on('story:novo', () => atualizar(['stories']));
+    socket.on('curtidas:atualizadas', () =>
+      atualizar(['curtidas-recebidas'], ['descobrir'], ['atividade'], ['perfil']),
+    );
     socket.on('mensagens:lidas', (evento: { matchId: string }) =>
       atualizar(['mensagens', evento.matchId]),
     );

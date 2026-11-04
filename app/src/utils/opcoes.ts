@@ -1,4 +1,10 @@
-import type { CategoriaPost, MotivoDenuncia, Relacao, Turno } from '@/api/tipos';
+import type {
+  CategoriaPost,
+  MotivoDenuncia,
+  Relacao,
+  TipoExperiencia,
+  Turno,
+} from '@/api/tipos';
 
 export const TURNOS: { valor: Turno; rotulo: string }[] = [
   { valor: 'MANHA', rotulo: 'Manhã' },
@@ -61,13 +67,25 @@ export function resumo(p: {
     .join(' · ');
 }
 
-export const CATEGORIAS: { valor: CategoriaPost; rotulo: string; emoji: string }[] = [
-  { valor: 'GERAL', rotulo: 'Geral', emoji: '💬' },
-  { valor: 'ESTUDOS', rotulo: 'Estudos', emoji: '📚' },
-  { valor: 'EVENTO', rotulo: 'Evento', emoji: '📅' },
-  { valor: 'VAGA', rotulo: 'Vagas', emoji: '💼' },
-  { valor: 'ACHADOS', rotulo: 'Achados', emoji: '🔎' },
+export const CATEGORIAS: { valor: CategoriaPost; rotulo: string }[] = [
+  { valor: 'GERAL', rotulo: 'Geral' },
+  { valor: 'ESTUDOS', rotulo: 'Estudos' },
+  { valor: 'EVENTO', rotulo: 'Evento' },
+  { valor: 'VAGA', rotulo: 'Vagas' },
+  { valor: 'ACHADOS', rotulo: 'Achados' },
 ];
 
 export const categoria = (valor: CategoriaPost) =>
   CATEGORIAS.find((c) => c.valor === valor) ?? CATEGORIAS[0]!;
+
+export const TIPOS_EXPERIENCIA: { valor: TipoExperiencia; rotulo: string }[] = [
+  { valor: 'ESTAGIO', rotulo: 'Estágio' },
+  { valor: 'EMPREGO', rotulo: 'Emprego' },
+  { valor: 'PROJETO', rotulo: 'Projeto' },
+  { valor: 'MONITORIA', rotulo: 'Monitoria' },
+  { valor: 'PESQUISA', rotulo: 'Pesquisa' },
+  { valor: 'VOLUNTARIADO', rotulo: 'Voluntariado' },
+  { valor: 'CURSO', rotulo: 'Curso' },
+];
+export const rotuloExperiencia = (t: TipoExperiencia) =>
+  TIPOS_EXPERIENCIA.find((x) => x.valor === t)?.rotulo ?? t;

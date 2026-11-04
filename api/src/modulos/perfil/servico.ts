@@ -29,6 +29,7 @@ export const PERFIL_PROPRIO = {
   habilidades: true,
   horariosLivres: true,
   contatos: true,
+  links: true,
   status: true,
   criadoEm: true,
   curso: { select: { id: true, nome: true } },
@@ -49,6 +50,7 @@ export const PERFIL_PUBLICO = {
   interesses: true,
   habilidades: true,
   horariosLivres: true,
+  links: true,
   curso: { select: { id: true, nome: true } },
   disciplinas: DISCIPLINAS,
 } satisfies Prisma.UsuarioSelect;

@@ -58,12 +58,28 @@ function formatar(
   };
 }
 
+export type FiltroPosts = {
+  categoria?: Categoria;
+  antes?: Date;
+  /** Só as publicações desta pessoa (grade do perfil). */
+  autorId?: string;
+  /** Texto contido na publicação (busca). */
+  texto?: string;
+  /** Só as que esta pessoa curtiu (atividade). */
+  curtidoPor?: string;
+};
+
 /** RF18/RF21: feed da faculdade, do mais novo para o mais antigo. */
 export function listarFeed(
   ctx: Contexto,
   eu: Autenticado,
   filtro: { categoria?: Categoria; antes?: Date },
 ) {
+  return listarPosts(ctx, eu, filtro);
+}
+
+/** Publicações visíveis para a pessoa, com filtros (feed, perfil, busca, curtidas). */
+export function listarPosts(ctx: Contexto, eu: Autenticado, filtro: FiltroPosts) {
   return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
     const posts = await tx.post.findMany({
       where: {
@@ -71,6 +87,11 @@ export function listarFeed(
         autor: autorVisivel(eu),
         ...(filtro.categoria ? { categoria: filtro.categoria } : {}),
         ...(filtro.antes ? { criadoEm: { lt: filtro.antes } } : {}),
+        ...(filtro.autorId ? { autorId: filtro.autorId } : {}),
+        ...(filtro.texto ? { texto: { contains: filtro.texto, mode: 'insensitive' } } : {}),
+        ...(filtro.curtidoPor
+          ? { curtidas: { some: { usuarioId: filtro.curtidoPor } } }
+          : {}),
       },
       orderBy: { criadoEm: 'desc' },
       take: POSTS_POR_PAGINA,

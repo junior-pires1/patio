@@ -76,7 +76,7 @@ export default function Publicar() {
         {CATEGORIAS.map((c) => (
           <Chip
             key={c.valor}
-            texto={`${c.emoji} ${c.rotulo}`}
+            texto={c.rotulo}
             ativo={cat === c.valor}
             aoTocar={() => setCat(c.valor)}
           />

@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import type { CategoriaPost, Post } from '@/api/tipos';
+import { BarraStories } from '@/componentes/BarraStories';
 import { BlocoAvisos } from '@/componentes/BlocoAvisos';
 import { Botao } from '@/componentes/Botao';
 import { CartaoPost } from '@/componentes/CartaoPost';
@@ -36,8 +37,9 @@ export default function Feed() {
 
   const cabecalho = (
     <View style={estilos.cabecalho}>
+      <BarraStories />
       <BlocoAvisos />
-      <Botao titulo="✏️  Publicar" aoTocar={() => router.push('/publicar')} />
+      <Botao titulo="Publicar" aoTocar={() => router.push('/publicar')} />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -47,7 +49,7 @@ export default function Feed() {
         {CATEGORIAS.map((c) => (
           <Chip
             key={c.valor}
-            texto={`${c.emoji} ${c.rotulo}`}
+            texto={c.rotulo}
             ativo={filtro === c.valor}
             aoTocar={() => setFiltro(c.valor)}
           />

@@ -33,6 +33,7 @@ export async function enviarImagem(ctx: Contexto, eu: Autenticado, dados: Uint8A
         posts: { none: {} },
         mensagens: { none: {} },
         grupoMensagens: { none: {} },
+        stories: { none: {} },
       },
     });
     const naUltimaHora = await tx.imagem.count({

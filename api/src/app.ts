@@ -19,6 +19,8 @@ import { rotasPerfil } from './modulos/perfil/rotas';
 import { rotasPlataforma } from './modulos/plataforma/rotas';
 import { rotasPush } from './modulos/push/rotas';
 import { rotasProtecao } from './modulos/protecao/rotas';
+import { rotasSocial } from './modulos/social/rotas';
+import { rotasStories } from './modulos/stories/rotas';
 
 export type OpcoesApp = Contexto & {
   origensPermitidas: string[];
@@ -100,6 +102,8 @@ export function criarApp(opcoes: OpcoesApp) {
   app.use(rotasImagens(ctx));
   app.use(rotasPush(ctx));
   app.use(rotasGrupos(ctx));
+  app.use(rotasSocial(ctx));
+  app.use(rotasStories(ctx));
 
   app.use((_req, res) => {
     res.status(404).json({ erro: 'rota_inexistente', mensagem: 'Rota não encontrada.' });

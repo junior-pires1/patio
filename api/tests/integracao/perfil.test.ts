@@ -86,7 +86,9 @@ describe('GET e PATCH /eu', () => {
     const casos = [
       [{ semestre: 13 }, 'semestre'],
       [{ horariosLivres: ['terça à noite'] }, 'horariosLivres.0'],
-      [{ fotoUrl: 'http://inseguro.com/foto.png' }, 'fotoUrl'],
+      // A foto só muda por PUT /eu/foto; endereço externo não é aceito.
+      [{ fotoUrl: 'https://rastreio.com/foto.png' }, '_'],
+      [{ links: { github: 'http://github.com/x' } }, 'links.github'],
       [{ papel: 'COORDENACAO' }, '_'],
       [{}, '_'],
     ] as const;

@@ -121,67 +121,77 @@ desativa faculdades.
 
 Respostas de erro sempre no formato `{ "erro": "codigo", "mensagem": "texto", "campos": { ... } }`.
 
-| Método e rota                                         | Quem        | O que faz                                                                |
-| ----------------------------------------------------- | ----------- | ------------------------------------------------------------------------ |
-| `GET /saude`                                          | público     | Verifica se a API está no ar                                             |
-| `POST /auth/codigo`                                   | público     | Envia código de 6 números ao e-mail institucional (vale 10 min)          |
-| `POST /auth/cadastro`                                 | público     | Cria a conta com o código (5 tentativas; 18 anos; senha forte)           |
-| `POST /auth/login`                                    | público     | Entra com e-mail e senha; devolve token de acesso (15 min) e renovação   |
-| `POST /auth/renovar`                                  | público     | Troca o token de renovação por um novo par (rotação, 30 dias)            |
-| `POST /auth/sair`                                     | público     | Encerra a sessão deste aparelho                                          |
-| `POST /auth/senha/codigo` · `/redefinir`              | público     | Esqueci minha senha: código por e-mail e senha nova                      |
-| `PUT /auth/senha`                                     | logado      | Troca a senha (confere a atual)                                          |
-| `GET /eu`                                             | logado      | Perfil próprio                                                           |
-| `PATCH /eu`                                           | logado      | Atualiza o perfil                                                        |
-| `PUT /eu/disciplinas`                                 | logado      | Define cursando / posso ajudar / preciso de ajuda                        |
-| `GET /usuarios/:id`                                   | logado      | Perfil público de um colega da mesma faculdade                           |
-| `GET /cursos`                                         | logado      | Cursos da faculdade                                                      |
-| `GET /disciplinas`                                    | logado      | Disciplinas da faculdade (`?cursoId=` filtra pelo curso)                 |
-| `GET /descobrir`                                      | aluno       | Cartas de colegas, da maior para a menor afinidade, com os motivos       |
-| `POST /curtidas`                                      | aluno       | Curte (`paraId`); se for recíproca, cria o match                         |
-| `POST /pulos`                                         | aluno       | Pula um perfil (`paraId`)                                                |
-| `GET /matches`                                        | aluno       | Conexões, com contatos, última mensagem e não lidas                      |
-| `DELETE /matches/:id`                                 | aluno       | Desfaz a conexão                                                         |
-| `GET /matches/:id/mensagens`                          | aluno       | Mensagens (`?antes=` pagina); marca como lidas                           |
-| `POST /matches/:id/mensagens`                         | aluno       | Envia mensagem                                                           |
-| `GET/POST /bloqueios`                                 | aluno       | Lista / bloqueia (`usuarioId`); bloquear desfaz a conexão                |
-| `DELETE /bloqueios/:usuarioId`                        | aluno       | Desbloqueia                                                              |
-| `POST /denuncias`                                     | aluno       | Denuncia à coordenação (`denunciadoId`, `motivo`, `bloquear?`)           |
-| `PUT/DELETE /eu/foto` · `GET /fotos/:id`              | logado      | Foto de perfil (até 1 MB; JPG, PNG ou WebP)                              |
-| `POST /imagens` · `GET /imagens/:id`                  | logado      | Imagem de publicação ou mensagem (até 1 MB; 30 por hora); devolve o `id` |
-| `PUT/DELETE /eu/push`                                 | logado      | Registra o aparelho para notificações                                    |
-| `GET /curtidas/recebidas`                             | aluno       | Quantas curtidas esperam resposta                                        |
-| `GET /avisos`                                         | logado      | Avisos oficiais da faculdade                                             |
-| `GET /coordenacao/resumo`                             | coordenação | Indicadores da faculdade                                                 |
-| `GET /coordenacao/denuncias`                          | coordenação | Fila de denúncias (`?status=ABERTA\|RESOLVIDA`)                          |
-| `POST /coordenacao/denuncias/:id/decisao`             | coordenação | `ARQUIVADA`, `ADVERTENCIA` ou `SUSPENSAO`                                |
-| `GET /coordenacao/alunos`                             | coordenação | Busca (`?busca=&status=&pagina=`)                                        |
-| `POST /coordenacao/alunos`                            | coordenação | Cria conta de aluno já verificada; devolve a senha provisória            |
-| `POST /coordenacao/alunos/:id/senha`                  | coordenação | Nova senha provisória (encerra as sessões do aluno)                      |
-| `POST /coordenacao/cursos` · `/disciplinas`           | coordenação | Cadastra curso / disciplina                                              |
-| `DELETE /coordenacao/cursos/:id` · `/disciplinas/:id` | coordenação | Remove (só se ninguém estiver usando)                                    |
-| `POST /coordenacao/alunos/:id/suspender`              | coordenação | Suspende e encerra as sessões                                            |
-| `POST /coordenacao/alunos/:id/reativar`               | coordenação | Reativa a conta                                                          |
-| `POST /coordenacao/avisos`                            | coordenação | Publica aviso                                                            |
-| `DELETE /coordenacao/avisos/:id`                      | coordenação | Remove aviso                                                             |
-| `GET /coordenacao/auditoria`                          | coordenação | Registro das decisões                                                    |
-| `GET /feed`                                           | logado      | Publicações (`?categoria=&antes=`)                                       |
-| `POST /posts` · `DELETE /posts/:id`                   | logado      | Publica (texto e/ou `imagemId`) / remove (autor ou coordenação)          |
-| `PUT/DELETE /posts/:id/curtida`                       | logado      | Curte / descurte                                                         |
-| `PUT/DELETE /posts/:id/presenca`                      | logado      | Confirma / desmarca presença em evento                                   |
-| `GET/POST /posts/:id/comentarios`                     | logado      | Comentários                                                              |
-| `GET/POST /grupos` · `GET /grupos/:id`                | aluno       | Grupos de estudo (`?disciplinaId=&meus=true`)                            |
-| `POST /grupos/:id/entrar` · `/sair`                   | aluno       | Entra (respeita as vagas) / sai                                          |
-| `GET/POST /grupos/:id/mensagens`                      | aluno       | Chat do grupo (só membros)                                               |
-| `POST /plataforma/login`                              | público     | Entrar como equipe da plataforma (token de 8 horas)                      |
-| `GET /plataforma/metricas`                            | plataforma  | Totais gerais (sem dados de alunos)                                      |
-| `GET/POST /plataforma/faculdades`                     | plataforma  | Lista / cadastra faculdade com domínios e coordenação                    |
-| `PATCH /plataforma/faculdades/:id`                    | plataforma  | Ativa ou desativa (`{ "ativa": false }`)                                 |
-| `POST /plataforma/faculdades/:id/coordenacao/senha`   | plataforma  | Nova senha provisória da coordenação (`{ "email" }`)                     |
-| `PUT /plataforma/senha`                               | plataforma  | Troca a senha da equipe da plataforma                                    |
+| Método e rota                                                                         | Quem        | O que faz                                                                            |
+| ------------------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------ |
+| `GET /saude`                                                                          | público     | Verifica se a API está no ar                                                         |
+| `POST /auth/codigo`                                                                   | público     | Envia código de 6 números ao e-mail institucional (vale 10 min)                      |
+| `POST /auth/cadastro`                                                                 | público     | Cria a conta com o código (5 tentativas; 18 anos; senha forte)                       |
+| `POST /auth/login`                                                                    | público     | Entra com e-mail e senha; devolve token de acesso (15 min) e renovação               |
+| `POST /auth/renovar`                                                                  | público     | Troca o token de renovação por um novo par (rotação, 30 dias)                        |
+| `POST /auth/sair`                                                                     | público     | Encerra a sessão deste aparelho                                                      |
+| `POST /auth/senha/codigo` · `/redefinir`                                              | público     | Esqueci minha senha: código por e-mail e senha nova                                  |
+| `PUT /auth/senha`                                                                     | logado      | Troca a senha (confere a atual)                                                      |
+| `GET /eu`                                                                             | logado      | Perfil próprio                                                                       |
+| `PATCH /eu`                                                                           | logado      | Atualiza o perfil                                                                    |
+| `PUT /eu/disciplinas`                                                                 | logado      | Define cursando / posso ajudar / preciso de ajuda                                    |
+| `GET /usuarios/:id`                                                                   | logado      | Perfil público de um colega da mesma faculdade                                       |
+| `GET /cursos`                                                                         | logado      | Cursos da faculdade                                                                  |
+| `GET /disciplinas`                                                                    | logado      | Disciplinas da faculdade (`?cursoId=` filtra pelo curso)                             |
+| `GET /descobrir`                                                                      | aluno       | Cartas de colegas, da maior para a menor afinidade, com os motivos                   |
+| `POST /curtidas`                                                                      | aluno       | Curte (`paraId`); se for recíproca, cria o match                                     |
+| `POST /pulos`                                                                         | aluno       | Pula um perfil (`paraId`)                                                            |
+| `GET /matches`                                                                        | aluno       | Conexões, com contatos, última mensagem e não lidas                                  |
+| `DELETE /matches/:id`                                                                 | aluno       | Desfaz a conexão                                                                     |
+| `GET /matches/:id/mensagens`                                                          | aluno       | Mensagens (`?antes=` pagina); marca como lidas                                       |
+| `POST /matches/:id/mensagens`                                                         | aluno       | Envia mensagem                                                                       |
+| `GET/POST /bloqueios`                                                                 | aluno       | Lista / bloqueia (`usuarioId`); bloquear desfaz a conexão                            |
+| `DELETE /bloqueios/:usuarioId`                                                        | aluno       | Desbloqueia                                                                          |
+| `POST /denuncias`                                                                     | aluno       | Denuncia à coordenação (`denunciadoId`, `motivo`, `bloquear?`)                       |
+| `PUT/DELETE /eu/foto` · `GET /fotos/:id`                                              | logado      | Foto de perfil (até 1 MB; JPG, PNG ou WebP)                                          |
+| `POST /imagens` · `GET /imagens/:id`                                                  | logado      | Imagem de publicação ou mensagem (até 1 MB; 30 por hora); devolve o `id`             |
+| `PUT/DELETE /eu/push`                                                                 | logado      | Registra o aparelho para notificações                                                |
+| `GET /curtidas/recebidas`                                                             | aluno       | Quantas curtidas esperam resposta                                                    |
+| `GET /avisos`                                                                         | logado      | Avisos oficiais da faculdade                                                         |
+| `GET /coordenacao/resumo`                                                             | coordenação | Indicadores da faculdade                                                             |
+| `GET /coordenacao/denuncias`                                                          | coordenação | Fila de denúncias (`?status=ABERTA\|RESOLVIDA`)                                      |
+| `POST /coordenacao/denuncias/:id/decisao`                                             | coordenação | `ARQUIVADA`, `ADVERTENCIA` ou `SUSPENSAO`                                            |
+| `GET /coordenacao/alunos`                                                             | coordenação | Busca (`?busca=&status=&pagina=`)                                                    |
+| `POST /coordenacao/alunos`                                                            | coordenação | Cria conta de aluno já verificada; devolve a senha provisória                        |
+| `POST /coordenacao/alunos/:id/senha`                                                  | coordenação | Nova senha provisória (encerra as sessões do aluno)                                  |
+| `POST /coordenacao/cursos` · `/disciplinas`                                           | coordenação | Cadastra curso / disciplina                                                          |
+| `DELETE /coordenacao/cursos/:id` · `/disciplinas/:id`                                 | coordenação | Remove (só se ninguém estiver usando)                                                |
+| `POST /coordenacao/alunos/:id/suspender`                                              | coordenação | Suspende e encerra as sessões                                                        |
+| `POST /coordenacao/alunos/:id/reativar`                                               | coordenação | Reativa a conta                                                                      |
+| `POST /coordenacao/avisos`                                                            | coordenação | Publica aviso                                                                        |
+| `DELETE /coordenacao/avisos/:id`                                                      | coordenação | Remove aviso                                                                         |
+| `GET /coordenacao/auditoria`                                                          | coordenação | Registro das decisões                                                                |
+| `GET /feed`                                                                           | logado      | Publicações (`?categoria=&antes=`)                                                   |
+| `POST /posts` · `DELETE /posts/:id`                                                   | logado      | Publica (texto e/ou `imagemId`) / remove (autor ou coordenação)                      |
+| `PUT/DELETE /posts/:id/curtida`                                                       | logado      | Curte / descurte                                                                     |
+| `PUT/DELETE /posts/:id/presenca`                                                      | logado      | Confirma / desmarca presença em evento                                               |
+| `GET/POST /posts/:id/comentarios`                                                     | logado      | Comentários                                                                          |
+| `GET/POST /grupos` · `GET /grupos/:id`                                                | aluno       | Grupos de estudo (`?disciplinaId=&meus=true`)                                        |
+| `POST /grupos/:id/entrar` · `/sair`                                                   | aluno       | Entra (respeita as vagas) / sai                                                      |
+| `GET/POST /grupos/:id/mensagens`                                                      | aluno       | Chat do grupo (só membros)                                                           |
+| `GET /usuarios/:id/perfil` · `/posts`                                                 | logado      | Perfil completo (números, links, experiências, recomendações) e grade de publicações |
+| `POST/PUT/DELETE /eu/experiencias`                                                    | aluno       | Experiências do perfil (estágio, projeto, monitoria...)                              |
+| `PUT/DELETE /usuarios/:id/recomendacoes`                                              | aluno       | Recomendar uma habilidade (só conexões)                                              |
+| `GET /busca?q=&tipo=`                                                                 | logado      | Pessoas, publicações e grupos da faculdade                                           |
+| `GET /eu/curtidas` · `/eu/curtidas/recebidas`                                         | aluno       | Histórico de curtidas feitas e recebidas                                             |
+| `DELETE /curtidas/:usuarioId` · `GET /eu/posts-curtidos`                              | aluno       | Desfazer curtida (sem conexão) / publicações curtidas                                |
+| `GET/POST /stories` · `DELETE /stories/:id`                                           | aluno       | Stories de 24 h, só para conexões                                                    |
+| `POST /stories/:id/visto` · `GET /stories/:id/visualizacoes`                          | aluno       | Marcar como visto / quem viu (só o autor)                                            |
+| `GET /eu/stories/arquivo`                                                             | aluno       | Meus stories dos últimos 30 dias                                                     |
+| `GET /usuarios/:id/destaques` · `GET/PATCH/DELETE /destaques/:id` · `POST /destaques` | aluno       | Destaques do perfil (só conexões veem)                                               |
+| `POST /plataforma/login`                                                              | público     | Entrar como equipe da plataforma (token de 8 horas)                                  |
+| `GET /plataforma/metricas`                                                            | plataforma  | Totais gerais (sem dados de alunos)                                                  |
+| `GET/POST /plataforma/faculdades`                                                     | plataforma  | Lista / cadastra faculdade com domínios e coordenação                                |
+| `PATCH /plataforma/faculdades/:id`                                                    | plataforma  | Ativa ou desativa (`{ "ativa": false }`)                                             |
+| `POST /plataforma/faculdades/:id/coordenacao/senha`                                   | plataforma  | Nova senha provisória da coordenação (`{ "email" }`)                                 |
+| `PUT /plataforma/senha`                                                               | plataforma  | Troca a senha da equipe da plataforma                                                |
 
 **Tempo real:** o app conecta no Socket.IO na mesma porta da API com
-`io(URL, { auth: { token: acessoToken } })` e recebe `curtida:nova`, `match:novo`, `mensagem:nova`, `mensagens:lidas`, `match:desfeito` e `grupo:mensagem`.
+`io(URL, { auth: { token: acessoToken } })` e recebe `curtida:nova`, `curtidas:atualizadas`, `story:novo`, `match:novo`, `mensagem:nova`, `mensagens:lidas`, `match:desfeito` e `grupo:mensagem`.
 Toda a faculdade recebe também `post:novo`, `post:removido`, `post:atualizado` (totais de curtidas, comentários e presenças), `perfil:atualizado` (apelido, foto ou suspensão), `aviso:novo`, `aviso:removido`, `grupo:novo`, `grupo:atualizado` e `grupo:removido`. Os eventos levam só identificadores e totais: o app busca o conteúdo pela API, que aplica bloqueios e permissões. Conta suspensa, senha trocada pela coordenação e faculdade desativada derrubam a conexão.
 
 **Limite de requisições:** 300 por minuto por pessoa logada e 3.000 por minuto por IP (uma rede de faculdade inteira sai pelo mesmo IP); rotas de senha, 10 por minuto por IP e e-mail.

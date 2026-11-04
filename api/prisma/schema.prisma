@@ -137,6 +137,12 @@ model Instituicao {
   avisos             Aviso[]
   denuncias          Denuncia[]
   fotos              Foto[]
+  experiencias       Experiencia[]
+  endossos           Endosso[]
+  stories            Story[]
+  storyVisualizacoes StoryVisualizacao[]
+  destaques          Destaque[]
+  destaqueStories    DestaqueStory[]
   imagens            Imagem[]
   dispositivosPush   DispositivoPush[]
 
@@ -237,6 +243,7 @@ model Usuario {
   habilidades       String[]     @default([])
   horariosLivres    String[]     @default([]) @map("horarios_livres")
   contatos          Json         @default("{}")
+  links             Json         @default("{}")
   status            StatusConta  @default(ATIVA)
   advertencias      Int          @default(0) @db.SmallInt
   emailVerificadoEm DateTime?    @map("email_verificado_em") @db.Timestamptz(6)
@@ -270,6 +277,12 @@ model Usuario {
   denunciasRecebidas  Denuncia[]          @relation("Denunciado")
   denunciasResolvidas Denuncia[]          @relation("ResolvidaPor")
   foto                Foto?
+  experiencias        Experiencia[]
+  endossosRecebidos   Endosso[]           @relation("EndossoPara")
+  endossosFeitos      Endosso[]           @relation("EndossoDe")
+  stories             Story[]
+  storiesVistos       StoryVisualizacao[]
+  destaques           Destaque[]
   imagens             Imagem[]
   dispositivosPush    DispositivoPush[]
 
@@ -619,10 +632,111 @@ model Imagem {
   posts          Post[]          @relation("ImagemDoPost")
   mensagens      Mensagem[]      @relation("ImagemDaMensagem")
   grupoMensagens GrupoMensagem[] @relation("ImagemDoGrupo")
+  stories        Story[]
 
   @@unique([instituicaoId, id], map: "imagens_instituicao_id_key")
   @@index([autorId, criadoEm], map: "imagens_autor_idx")
   @@map("imagens")
+}
+
+// ───────────────────────── Perfil social (migração 7) ─────────────────────────
+
+model Experiencia {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId String    @map("instituicao_id") @db.Uuid
+  usuarioId     String    @map("usuario_id") @db.Uuid
+  tipo          String    @db.VarChar(20)
+  titulo        String    @db.VarChar(100)
+  organizacao   String?   @db.VarChar(100)
+  inicio        DateTime  @db.Date
+  fim           DateTime? @db.Date
+  descricao     String?   @db.VarChar(500)
+  criadoEm      DateTime  @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  usuario     Usuario     @relation(fields: [instituicaoId, usuarioId], references: [instituicaoId, id], onDelete: Cascade, map: "experiencias_usuario_fk")
+
+  @@index([usuarioId], map: "experiencias_usuario_idx")
+  @@map("experiencias")
+}
+
+model Endosso {
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  usuarioId     String   @map("usuario_id") @db.Uuid
+  autorId       String   @map("autor_id") @db.Uuid
+  habilidade    String   @db.VarChar(40)
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  usuario     Usuario     @relation("EndossoPara", fields: [instituicaoId, usuarioId], references: [instituicaoId, id], onDelete: Cascade, map: "endossos_usuario_fk")
+  autor       Usuario     @relation("EndossoDe", fields: [instituicaoId, autorId], references: [instituicaoId, id], onDelete: Cascade, map: "endossos_autor_fk")
+
+  @@id([usuarioId, autorId, habilidade])
+  @@map("endossos")
+}
+
+model Story {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  autorId       String   @map("autor_id") @db.Uuid
+  imagemId      String   @unique(map: "stories_imagem_key") @map("imagem_id") @db.Uuid
+  legenda       String?  @db.VarChar(200)
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+  expiraEm      DateTime @default(dbgenerated("(now() + '24:00:00'::interval)")) @map("expira_em") @db.Timestamptz(6)
+
+  instituicao   Instituicao         @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  autor         Usuario             @relation(fields: [instituicaoId, autorId], references: [instituicaoId, id], onDelete: Cascade, map: "stories_autor_fk")
+  imagem        Imagem              @relation(fields: [instituicaoId, imagemId], references: [instituicaoId, id], onDelete: Cascade, map: "stories_imagem_fk")
+  visualizacoes StoryVisualizacao[]
+  destaques     DestaqueStory[]
+
+  @@unique([instituicaoId, id], map: "stories_instituicao_id_key")
+  @@index([autorId, criadoEm(sort: Desc)], map: "stories_autor_idx")
+  @@map("stories")
+}
+
+model StoryVisualizacao {
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  storyId       String   @map("story_id") @db.Uuid
+  usuarioId     String   @map("usuario_id") @db.Uuid
+  vistoEm       DateTime @default(now()) @map("visto_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  story       Story       @relation(fields: [instituicaoId, storyId], references: [instituicaoId, id], onDelete: Cascade, map: "story_visualizacoes_story_fk")
+  usuario     Usuario     @relation(fields: [instituicaoId, usuarioId], references: [instituicaoId, id], onDelete: Cascade, map: "story_visualizacoes_usuario_fk")
+
+  @@id([storyId, usuarioId])
+  @@map("story_visualizacoes")
+}
+
+model Destaque {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  usuarioId     String   @map("usuario_id") @db.Uuid
+  titulo        String   @db.VarChar(30)
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao     @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  usuario     Usuario         @relation(fields: [instituicaoId, usuarioId], references: [instituicaoId, id], onDelete: Cascade, map: "destaques_usuario_fk")
+  stories     DestaqueStory[]
+
+  @@unique([instituicaoId, id], map: "destaques_instituicao_id_key")
+  @@index([usuarioId], map: "destaques_usuario_idx")
+  @@map("destaques")
+}
+
+model DestaqueStory {
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  destaqueId    String   @map("destaque_id") @db.Uuid
+  storyId       String   @map("story_id") @db.Uuid
+  adicionadoEm  DateTime @default(now()) @map("adicionado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  destaque    Destaque    @relation(fields: [instituicaoId, destaqueId], references: [instituicaoId, id], onDelete: Cascade, map: "destaque_stories_destaque_fk")
+  story       Story       @relation(fields: [instituicaoId, storyId], references: [instituicaoId, id], onDelete: Cascade, map: "destaque_stories_story_fk")
+
+  @@id([destaqueId, storyId])
+  @@map("destaque_stories")
 }
 
 // ───────────────────────── Notificações push (migração 5) ─────────────────────────

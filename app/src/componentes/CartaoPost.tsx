@@ -9,6 +9,7 @@ import { dataDoEvento, quando } from '@/utils/datas';
 import { categoria } from '@/utils/opcoes';
 import { Avatar } from './Avatar';
 import { Imagem } from './Imagem';
+import { Info } from './Info';
 import { alerta } from '@/utils/alerta';
 
 type Props = { post: Post; detalhe?: boolean };
@@ -75,22 +76,34 @@ export function CartaoPost({ post, detalhe = false }: Props) {
     ]);
   }
 
+  // Coordenação não tem perfil social; alunos abrem o perfil.
+  const abrirAutor = () =>
+    post.autor.papel === 'ALUNO' &&
+    router.push({ pathname: '/usuario/[id]', params: { id: post.autor.id } });
+
   const abrir = () =>
     !detalhe && router.push({ pathname: '/post/[id]', params: { id: post.id } });
 
   return (
     <View style={estilos.cartao}>
       <View style={estilos.topo}>
-        <Avatar nome={post.autor.apelido} fotoUrl={post.autor.fotoUrl} tamanho={40} />
-        <View style={estilos.flex}>
-          <Text style={estilos.autor}>
-            {post.autor.apelido}
-            {post.autor.papel === 'COORDENACAO' ? ' · Coordenação' : ''}
-          </Text>
-          <Text style={estilos.meta}>
-            {cat.emoji} {cat.rotulo} · {quando(post.criadoEm)}
-          </Text>
-        </View>
+        <Pressable
+          onPress={abrirAutor}
+          style={estilos.autorToque}
+          accessibilityRole="button"
+          accessibilityLabel={`Perfil de ${post.autor.apelido}`}
+        >
+          <Avatar nome={post.autor.apelido} fotoUrl={post.autor.fotoUrl} tamanho={40} />
+          <View style={estilos.flex}>
+            <Text style={estilos.autor}>
+              {post.autor.apelido}
+              {post.autor.papel === 'COORDENACAO' ? ' · Coordenação' : ''}
+            </Text>
+            <Text style={estilos.meta}>
+              {cat.rotulo} · {quando(post.criadoEm)}
+            </Text>
+          </View>
+        </Pressable>
         {post.meu ? (
           <Pressable
             onPress={confirmarRemocao}
@@ -117,9 +130,11 @@ export function CartaoPost({ post, detalhe = false }: Props) {
       {post.categoria === 'EVENTO' && post.eventoInicio ? (
         <View style={[estilos.evento, { backgroundColor: suave(cor) }]}>
           <View style={estilos.flex}>
-            <Text style={estilos.eventoData}>📅 {dataDoEvento(post.eventoInicio)}</Text>
+            <Info icone="calendar-outline" cor={cores.texto} estilo={estilos.eventoData}>
+              {dataDoEvento(post.eventoInicio)}
+            </Info>
             {post.eventoLocal ? (
-              <Text style={estilos.meta}>📍 {post.eventoLocal}</Text>
+              <Info icone="location-outline">{post.eventoLocal}</Info>
             ) : null}
             <Text style={estilos.meta}>{post.presencas} confirmado(s)</Text>
           </View>
@@ -133,7 +148,7 @@ export function CartaoPost({ post, detalhe = false }: Props) {
             accessibilityState={{ checked: post.vou }}
           >
             <Text style={[estilos.vouTexto, { color: post.vou ? '#fff' : cor }]}>
-              {post.vou ? '✓ Vou' : 'Eu vou'}
+              {post.vou ? 'Vou' : 'Eu vou'}
             </Text>
           </Pressable>
         </View>
@@ -171,6 +186,7 @@ const estilos = StyleSheet.create({
     gap: espaco.m,
   },
   topo: { flexDirection: 'row', alignItems: 'center', gap: espaco.m },
+  autorToque: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: espaco.m },
   flex: { flex: 1 },
   autor: { fontSize: 15, fontWeight: '700', color: cores.texto },
   meta: { fontSize: 13, color: cores.textoSuave },

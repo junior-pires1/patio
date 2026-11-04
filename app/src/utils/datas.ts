@@ -59,3 +59,42 @@ export function dataDoEvento(iso: string): string {
   const d = new Date(iso);
   return `${DIAS_DA_SEMANA[d.getDay()]}, ${doisDigitos(d.getDate())}/${doisDigitos(d.getMonth() + 1)} às ${doisDigitos(d.getHours())}:${doisDigitos(d.getMinutes())}`;
 }
+
+const MESES = [
+  'jan',
+  'fev',
+  'mar',
+  'abr',
+  'mai',
+  'jun',
+  'jul',
+  'ago',
+  'set',
+  'out',
+  'nov',
+  'dez',
+];
+
+/** "2025-02-01" → "fev 2025". */
+export function mesAno(iso: string): string {
+  const [ano, mes] = iso.slice(0, 10).split('-');
+  return `${MESES[Number(mes) - 1] ?? ''} ${ano}`;
+}
+
+/** "02/2025" → "2025-02-01"; inválido → null. */
+export function mesAnoParaIso(texto: string): string | null {
+  const m = /^(\d{2})\/(\d{4})$/.exec(texto.trim());
+  if (!m) return null;
+  const mes = Number(m[1]);
+  if (mes < 1 || mes > 12) return null;
+  return `${m[2]}-${m[1]}-01`;
+}
+
+/** Máscara MM/AAAA enquanto digita. */
+export function mascaraMesAno(v: string): string {
+  const d = v.replace(/\D/g, '').slice(0, 6);
+  return d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
+}
+
+/** "2025-02-01" → "02/2025" (para editar). */
+export const isoParaMesAno = (iso: string) => `${iso.slice(5, 7)}/${iso.slice(0, 4)}`;

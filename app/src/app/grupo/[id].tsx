@@ -5,6 +5,7 @@ import type { GrupoDetalhe } from '@/api/tipos';
 import { Avatar } from '@/componentes/Avatar';
 import { Botao } from '@/componentes/Botao';
 import { Aviso, Carregando } from '@/componentes/Estados';
+import { Info } from '@/componentes/Info';
 import { Tela } from '@/componentes/Tela';
 import { useCorDaFaculdade, useSessao } from '@/sessao';
 import { cores, espaco, estilosBase, raio, suave } from '@/tema';
@@ -53,17 +54,17 @@ export default function TelaGrupo() {
       ) : null}
       {g.descricao ? <Text style={estilos.texto}>{g.descricao}</Text> : null}
       <View style={estilos.info}>
-        <Text style={estilos.meta}>🗓️ {g.encontro ?? 'Horário a combinar'}</Text>
-        <Text style={estilos.meta}>📍 {g.local ?? 'Local a combinar'}</Text>
-        <Text style={estilos.meta}>
-          👥 {g.membros} de {g.vagas} vagas
-        </Text>
+        <Info icone="time-outline">{g.encontro ?? 'Horário a combinar'}</Info>
+        <Info icone="location-outline">{g.local ?? 'Local a combinar'}</Info>
+        <Info icone="people-outline">
+          {g.membros} de {g.vagas} vagas
+        </Info>
       </View>
 
       {g.souMembro ? (
         <>
           <Botao
-            titulo="💬  Abrir chat do grupo"
+            titulo="Abrir chat do grupo"
             aoTocar={() =>
               router.push({
                 pathname: '/grupo-chat/[id]',

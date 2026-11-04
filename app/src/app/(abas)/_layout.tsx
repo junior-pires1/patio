@@ -50,7 +50,11 @@ export default function LayoutAbas() {
       />
       <Tabs.Screen
         name="feed"
-        options={{ title: 'Feed', tabBarIcon: icone('newspaper-outline') }}
+        options={{ title: 'Feed', tabBarIcon: icone('home-outline') }}
+      />
+      <Tabs.Screen
+        name="busca"
+        options={{ title: 'Buscar', tabBarIcon: icone('search-outline') }}
       />
       <Tabs.Screen
         name="grupos"

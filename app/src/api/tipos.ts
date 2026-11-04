@@ -12,6 +12,14 @@ export type DisciplinaDoPerfil = {
 
 export type Contatos = { whatsapp?: string; instagram?: string; linkedin?: string };
 
+/** Links que toda a faculdade vê no perfil. */
+export type Links = {
+  github?: string;
+  linkedin?: string;
+  portfolio?: string;
+  lattes?: string;
+};
+
 export type PerfilPublico = {
   id: string;
   apelido: string;
@@ -24,6 +32,7 @@ export type PerfilPublico = {
   interesses: string[];
   habilidades: string[];
   horariosLivres: string[];
+  links: Links;
   curso: { id: string; nome: string } | null;
   disciplinas: DisciplinaDoPerfil[];
 };
@@ -152,3 +161,93 @@ export type MensagemGrupo = {
   criadoEm: string;
   autor: { id: string; apelido: string };
 };
+
+// ───────────── Perfil social ─────────────
+
+export type TipoExperiencia =
+  'ESTAGIO' | 'EMPREGO' | 'PROJETO' | 'MONITORIA' | 'PESQUISA' | 'VOLUNTARIADO' | 'CURSO';
+
+export type Experiencia = {
+  id: string;
+  tipo: TipoExperiencia;
+  titulo: string;
+  organizacao: string | null;
+  inicio: string;
+  fim: string | null;
+  descricao: string | null;
+};
+
+export type HabilidadeRecomendada = {
+  habilidade: string;
+  recomendacoes: number;
+  euRecomendei: boolean;
+};
+
+export type PerfilCompleto = PerfilPublico & {
+  experiencias: Experiencia[];
+  habilidadesRecomendadas: HabilidadeRecomendada[];
+  contadores: { publicacoes: number; conexoes: number; recomendacoes: number };
+  relacao: {
+    souEu: boolean;
+    conexaoId: string | null;
+    euCurti: boolean;
+    meCurtiu: boolean;
+  };
+};
+
+/** Resumo de uma pessoa em listas (busca, curtidas, quem viu o story). */
+export type PessoaResumo = {
+  id: string;
+  apelido: string;
+  fotoUrl: string | null;
+  frase: string | null;
+  semestre: number | null;
+  curso: { nome: string } | null;
+};
+
+export type Story = {
+  id: string;
+  autorId: string;
+  imagemUrl: string;
+  legenda: string | null;
+  criadoEm: string;
+  expiraEm: string;
+  visto: boolean;
+};
+
+export type StoriesDaPessoa = {
+  autor: PessoaResumo;
+  stories: Story[];
+  meu: boolean;
+  todosVistos: boolean;
+};
+
+export type DestaqueResumo = {
+  id: string;
+  titulo: string;
+  capaUrl: string | null;
+  total: number;
+};
+
+export type Destaque = {
+  id: string;
+  titulo: string;
+  autor: PessoaResumo;
+  meu: boolean;
+  stories: Story[];
+};
+
+export type ResultadoBusca = {
+  pessoas: (PessoaResumo & { habilidades: string[] })[];
+  posts: Post[];
+  grupos: {
+    id: string;
+    nome: string;
+    vagas: number;
+    membros: number;
+    disciplina: { nome: string } | null;
+  }[];
+};
+
+export type CurtidaFeita = { pessoa: PessoaResumo; curtidoEm: string; conexao: boolean };
+export type CurtidaRecebida = { pessoa: PessoaResumo; curtidoEm: string };
