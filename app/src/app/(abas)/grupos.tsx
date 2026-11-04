@@ -21,7 +21,7 @@ export default function Grupos() {
 
   const cabecalho = (
     <View style={estilos.cabecalho}>
-      <Botao titulo="➕  Criar grupo" aoTocar={() => router.push('/grupos/novo')} />
+      <Botao titulo="Criar grupo" aoTocar={() => router.push('/grupos/novo')} />
       <View style={estilos.chips}>
         <Chip texto="Todos" ativo={!meus} aoTocar={() => setMeus(false)} />
         <Chip texto="Meus grupos" ativo={meus} aoTocar={() => setMeus(true)} />
@@ -81,7 +81,7 @@ export default function Grupos() {
               'Horário a combinar'}
           </Text>
           <Text style={estilos.meta}>
-            👥 {item.membros}/{item.vagas}{' '}
+            {item.membros}/{item.vagas} membros{' '}
             {item.vagasLivres === 0 ? '· lotado' : `· ${item.vagasLivres} vaga(s)`}
             {item.souMembro ? ' · você participa' : ''}
           </Text>

@@ -1,6 +1,8 @@
 /** Eventos em tempo real enviados ao aplicativo. */
 export type Evento =
   | 'curtida:nova'
+  | 'curtidas:atualizadas'
+  | 'story:novo'
   | 'match:novo'
   | 'mensagem:nova'
   | 'mensagens:lidas'

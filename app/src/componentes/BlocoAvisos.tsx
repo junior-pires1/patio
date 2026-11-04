@@ -34,7 +34,7 @@ export function BlocoAvisos() {
           accessibilityLabel={`Aviso da coordenação: ${aviso.titulo}`}
           style={[estilos.aviso, { borderColor: cor }]}
         >
-          <Text style={[estilos.rotulo, { color: cor }]}>📢 Aviso da coordenação</Text>
+          <Text style={[estilos.rotulo, { color: cor }]}>Aviso da coordenação</Text>
           <Text style={estilos.titulo}>{aviso.titulo}</Text>
           {aberto === aviso.id ? <Text style={estilos.texto}>{aviso.texto}</Text> : null}
         </Pressable>
@@ -48,7 +48,7 @@ export function BlocoAvisos() {
           <Text style={[estilos.mais, { color: cor }]}>
             {todos
               ? 'Mostrar só os fixados'
-              : `📢 Ver mais ${outros.length} aviso(s) da coordenação`}
+              : `Ver mais ${outros.length} aviso(s) da coordenação`}
           </Text>
         </Pressable>
       ) : null}

@@ -11,6 +11,11 @@ const horario = z
     'Use o formato dia-período, como ter-noite',
   );
 
+const link = z
+  .url({ protocol: /^https$/, message: 'Use um endereço completo, começando com https://' })
+  .max(200)
+  .optional();
+
 const textoOpcional = (max: number) => z.string().trim().max(max).nullable().optional();
 
 export const atualizarPerfil = z
@@ -21,11 +26,6 @@ export const atualizarPerfil = z
     turno: z.enum(['MANHA', 'TARDE', 'NOITE', 'INTEGRAL']).nullable().optional(),
     frase: textoOpcional(140),
     sobre: textoOpcional(1000),
-    fotoUrl: z
-      .url({ protocol: /^https$/ })
-      .max(300)
-      .nullable()
-      .optional(),
     objetivos: lista(6),
     interesses: lista(15),
     habilidades: lista(15),
@@ -35,6 +35,16 @@ export const atualizarPerfil = z
         whatsapp: z.string().trim().max(20).optional(),
         instagram: z.string().trim().max(40).optional(),
         linkedin: z.string().trim().max(120).optional(),
+      })
+      .strict()
+      .optional(),
+    // Links que toda a faculdade vê no perfil (estilo LinkedIn).
+    links: z
+      .object({
+        github: link,
+        linkedin: link,
+        portfolio: link,
+        lattes: link,
       })
       .strict()
       .optional(),

@@ -7,6 +7,7 @@ import { Avatar } from '@/componentes/Avatar';
 import { Botao } from '@/componentes/Botao';
 import { Chip } from '@/componentes/Chip';
 import { Aviso, Carregando } from '@/componentes/Estados';
+import { Info } from '@/componentes/Info';
 import { useCorDaFaculdade, useSessao, useUsuario } from '@/sessao';
 import { cores, espaco, estilosBase, raio, suave } from '@/tema';
 import { OBJETIVOS, RELACOES, resumo } from '@/utils/opcoes';
@@ -156,7 +157,7 @@ export default function Descobrir() {
             {carta.curtiuVoce ? (
               <View style={[estilos.curtiu, { backgroundColor: cor }]}>
                 <Text style={estilos.curtiuTexto}>
-                  💙 Curtiu você: curta de volta para conversar
+                  Curtiu você: curta de volta para conversar
                 </Text>
               </View>
             ) : null}
@@ -165,9 +166,9 @@ export default function Descobrir() {
             {carta.afinidade.motivos.length > 0 ? (
               <View style={[estilos.motivos, { backgroundColor: suave(cor) }]}>
                 {carta.afinidade.motivos.map((m) => (
-                  <Text key={m} style={estilos.motivo}>
-                    ✓ {m}
-                  </Text>
+                  <Info key={m} icone="checkmark-circle" cor={cor} estilo={estilos.motivo}>
+                    {m}
+                  </Info>
                 ))}
               </View>
             ) : null}
