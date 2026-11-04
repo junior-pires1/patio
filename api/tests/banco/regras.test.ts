@@ -18,11 +18,14 @@ const NOVO_ALUNO = `INSERT INTO usuarios (instituicao_id, nome, apelido, email, 
                     VALUES ($1, 'Teste', 'Teste', $2, 'x', $3)`;
 
 /** Data de nascimento de quem completa `anos` hoje (mais `dias`). */
+// Data no fuso do computador, o mesmo do banco local (current_date). Com
+// toISOString (UTC), depois das 21h no Brasil a data já seria a de amanhã.
 function nascidoHa(anos: number, dias = 0): string {
   const d = new Date();
   d.setFullYear(d.getFullYear() - anos);
   d.setDate(d.getDate() + dias);
-  return d.toISOString().slice(0, 10);
+  const doisDigitos = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${doisDigitos(d.getMonth() + 1)}-${doisDigitos(d.getDate())}`;
 }
 
 describe('regras de instituicoes e dominios_email', () => {
