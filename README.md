@@ -199,6 +199,20 @@ Toda a faculdade recebe também `post:novo`, `post:removido`, `post:atualizado` 
 Rotas com login usam o cabeçalho `Authorization: Bearer <acessoToken>`. Em desenvolvimento, o código
 de verificação aparece no terminal da API em vez de ir por e-mail.
 
+## Popular uma faculdade de demonstração
+
+Cria alunos fictícios (e-mail começando com `demo.`), cursos, disciplinas, avisos, publicações,
+curtidas, comentários, conexões com conversas, recomendações, grupos, stories e destaques, usando a
+API como se fossem pessoas no app. Na pasta `api`:
+
+```
+npm run popular -- --coordenacao coordenacao@ung.br
+```
+
+A senha da coordenação é pedida no terminal. As contas criadas usam a senha `PatioDemo2026`.
+Rodar de novo não duplica nada; `--stories` publica stories novos (eles somem em 24 horas).
+Outras opções no começo de `api/scripts/popular-faculdade.ts` (`--api`, `--alunos`, `--dominio`).
+
 ## Publicar na internet
 
 Passo a passo em [docs/DEPLOY.md](docs/DEPLOY.md): banco no **Neon**, API no **Render** (`render.yaml`),

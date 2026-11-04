@@ -20,7 +20,8 @@
     "db:nova-migracao": "prisma migrate dev --create-only",
     "db:semear": "prisma db seed",
     "db:resetar": "prisma migrate reset",
-    "db:estudio": "prisma studio"
+    "db:estudio": "prisma studio",
+    "popular": "tsx scripts/popular-faculdade.ts"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
