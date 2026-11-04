@@ -143,6 +143,14 @@ function Navegacao() {
           options={{ headerShown: true, title: 'Novo destaque', presentation: 'modal' }}
         />
         <Stack.Screen
+          name="notificacoes"
+          options={{ headerShown: true, title: 'Notificações' }}
+        />
+        <Stack.Screen
+          name="hashtag/[tag]"
+          options={{ headerShown: true, title: 'Hashtag' }}
+        />
+        <Stack.Screen
           name="denunciar/[usuarioId]"
           options={{ headerShown: true, title: 'Denunciar', presentation: 'modal' }}
         />

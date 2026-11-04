@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import Tabs from 'expo-router/js-tabs';
 import { Platform, Text, View, type ColorValue } from 'react-native';
 import type { Conexao } from '@/api/tipos';
+import { BotaoNotificacoes } from '@/componentes/BotaoNotificacoes';
 import { Marca } from '@/componentes/Marca';
 import { useCorDaInstituicao, useSessao, useUsuario } from '@/sessao';
 import { fonte, suave } from '@/tema';
@@ -29,7 +30,7 @@ function SeloFaculdade() {
   return (
     <View
       style={{
-        marginRight: 16,
+        marginRight: 6,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
@@ -94,14 +95,23 @@ export default function LayoutAbas() {
         options={{
           title: 'Descobrir',
           headerTitle: () => <Marca altura={34} />,
-          headerRight: () => <SeloFaculdade />,
+          headerRight: () => (
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <SeloFaculdade />
+              <BotaoNotificacoes />
+            </View>
+          ),
           tabBarIcon: icone('albums-outline', 'albums'),
           tabBarBadge: pendentes > 0 ? pendentes : undefined,
         }}
       />
       <Tabs.Screen
         name="feed"
-        options={{ title: 'Feed', tabBarIcon: icone('home-outline', 'home') }}
+        options={{
+          title: 'Feed',
+          headerRight: () => <BotaoNotificacoes />,
+          tabBarIcon: icone('home-outline', 'home'),
+        }}
       />
       <Tabs.Screen
         name="busca"

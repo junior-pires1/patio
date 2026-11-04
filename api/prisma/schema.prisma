@@ -145,6 +145,9 @@ model Instituicao {
   destaqueStories    DestaqueStory[]
   imagens            Imagem[]
   dispositivosPush   DispositivoPush[]
+  curtidasComentario CurtidaComentario[]
+  postsSalvos        PostSalvo[]
+  notificacoes       Notificacao[]
 
   @@map("instituicoes")
 }
@@ -285,6 +288,10 @@ model Usuario {
   destaques           Destaque[]
   imagens             Imagem[]
   dispositivosPush    DispositivoPush[]
+  curtidasComentario  CurtidaComentario[]
+  postsSalvos         PostSalvo[]
+  notificacoes        Notificacao[]       @relation("NotificacaoPara")
+  notificacoesFeitas  Notificacao[]       @relation("NotificacaoDe")
 
   @@unique([instituicaoId, id], map: "usuarios_instituicao_id_key")
   @@index([instituicaoId, status], map: "usuarios_instituicao_idx")
@@ -380,10 +387,11 @@ model Match {
   criadoEm      DateTime  @default(now()) @map("criado_em") @db.Timestamptz(6)
   desfeitoEm    DateTime? @map("desfeito_em") @db.Timestamptz(6)
 
-  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
-  usuarioA    Usuario     @relation("MatchA", fields: [instituicaoId, usuarioAId], references: [instituicaoId, id], onDelete: Cascade, map: "matches_a_fk")
-  usuarioB    Usuario     @relation("MatchB", fields: [instituicaoId, usuarioBId], references: [instituicaoId, id], onDelete: Cascade, map: "matches_b_fk")
-  mensagens   Mensagem[]
+  instituicao  Instituicao   @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  usuarioA     Usuario       @relation("MatchA", fields: [instituicaoId, usuarioAId], references: [instituicaoId, id], onDelete: Cascade, map: "matches_a_fk")
+  usuarioB     Usuario       @relation("MatchB", fields: [instituicaoId, usuarioBId], references: [instituicaoId, id], onDelete: Cascade, map: "matches_b_fk")
+  mensagens    Mensagem[]
+  notificacoes Notificacao[]
 
   @@unique([usuarioAId, usuarioBId], map: "matches_par_key")
   @@unique([instituicaoId, id], map: "matches_instituicao_id_key")
@@ -400,9 +408,11 @@ model Mensagem {
   imagemId      String?   @unique(map: "mensagens_imagem_key") @map("imagem_id") @db.Uuid
   criadoEm      DateTime  @default(now()) @map("criado_em") @db.Timestamptz(6)
   lidaEm        DateTime? @map("lida_em") @db.Timestamptz(6)
+  postId        String?   @map("post_id") @db.Uuid
 
   instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
   match       Match       @relation(fields: [instituicaoId, matchId], references: [instituicaoId, id], onDelete: Cascade, map: "mensagens_match_fk")
+  post        Post?       @relation(fields: [instituicaoId, postId], references: [instituicaoId, id], onDelete: Cascade, map: "mensagens_post_fk")
   autor       Usuario     @relation(fields: [instituicaoId, autorId], references: [instituicaoId, id], onDelete: Cascade, map: "mensagens_autor_fk")
   // No banco: ON DELETE SET NULL (imagem_id), só a coluna da imagem.
   imagem      Imagem?     @relation("ImagemDaMensagem", fields: [instituicaoId, imagemId], references: [instituicaoId, id], onDelete: NoAction, map: "mensagens_imagem_fk")
@@ -439,14 +449,18 @@ model Post {
   eventoLocal   String?       @map("evento_local") @db.VarChar(120)
   criadoEm      DateTime      @default(now()) @map("criado_em") @db.Timestamptz(6)
   removidoEm    DateTime?     @map("removido_em") @db.Timestamptz(6)
+  mencoes       String[]      @default([]) @db.Uuid
 
-  instituicao Instituicao      @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
-  autor       Usuario          @relation(fields: [instituicaoId, autorId], references: [instituicaoId, id], onDelete: Cascade, map: "posts_autor_fk")
+  instituicao  Instituicao      @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  autor        Usuario          @relation(fields: [instituicaoId, autorId], references: [instituicaoId, id], onDelete: Cascade, map: "posts_autor_fk")
   // No banco: ON DELETE SET NULL (imagem_id), só a coluna da imagem.
-  imagem      Imagem?          @relation("ImagemDoPost", fields: [instituicaoId, imagemId], references: [instituicaoId, id], onDelete: NoAction, map: "posts_imagem_fk")
-  comentarios Comentario[]
-  curtidas    CurtidaPost[]
-  presencas   PresencaEvento[]
+  imagem       Imagem?          @relation("ImagemDoPost", fields: [instituicaoId, imagemId], references: [instituicaoId, id], onDelete: NoAction, map: "posts_imagem_fk")
+  comentarios  Comentario[]
+  curtidas     CurtidaPost[]
+  presencas    PresencaEvento[]
+  salvos       PostSalvo[]
+  mensagens    Mensagem[]
+  notificacoes Notificacao[]
 
   @@unique([instituicaoId, id], map: "posts_instituicao_id_key")
   @@map("posts")
@@ -459,12 +473,20 @@ model Comentario {
   autorId       String   @map("autor_id") @db.Uuid
   texto         String   @db.VarChar(300)
   criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+  paiId         String?  @map("pai_id") @db.Uuid
+  mencoes       String[] @default([]) @db.Uuid
 
-  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
-  post        Post        @relation(fields: [instituicaoId, postId], references: [instituicaoId, id], onDelete: Cascade, map: "comentarios_post_fk")
-  autor       Usuario     @relation(fields: [instituicaoId, autorId], references: [instituicaoId, id], onDelete: Cascade, map: "comentarios_autor_fk")
+  instituicao  Instituicao         @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  post         Post                @relation(fields: [instituicaoId, postId], references: [instituicaoId, id], onDelete: Cascade, map: "comentarios_post_fk")
+  autor        Usuario             @relation(fields: [instituicaoId, autorId], references: [instituicaoId, id], onDelete: Cascade, map: "comentarios_autor_fk")
+  pai          Comentario?         @relation("Respostas", fields: [instituicaoId, paiId], references: [instituicaoId, id], onDelete: Cascade, map: "comentarios_pai_fk")
+  respostas    Comentario[]        @relation("Respostas")
+  curtidas     CurtidaComentario[]
+  notificacoes Notificacao[]
 
+  @@unique([instituicaoId, id], map: "comentarios_instituicao_id_key")
   @@index([postId, criadoEm], map: "comentarios_post_idx")
+  @@index([paiId], map: "comentarios_pai_idx")
   @@map("comentarios")
 }
 
@@ -753,4 +775,59 @@ model DispositivoPush {
 
   @@index([usuarioId], map: "dispositivos_push_usuario_idx")
   @@map("dispositivos_push")
+}
+
+// ───────────────────────── Social (migração 8) ─────────────────────────
+
+model CurtidaComentario {
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  comentarioId  String   @map("comentario_id") @db.Uuid
+  usuarioId     String   @map("usuario_id") @db.Uuid
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  comentario  Comentario  @relation(fields: [instituicaoId, comentarioId], references: [instituicaoId, id], onDelete: Cascade, map: "curtidas_comentario_comentario_fk")
+  usuario     Usuario     @relation(fields: [instituicaoId, usuarioId], references: [instituicaoId, id], onDelete: Cascade, map: "curtidas_comentario_usuario_fk")
+
+  @@id([comentarioId, usuarioId])
+  @@map("curtidas_comentario")
+}
+
+model PostSalvo {
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  usuarioId     String   @map("usuario_id") @db.Uuid
+  postId        String   @map("post_id") @db.Uuid
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  usuario     Usuario     @relation(fields: [instituicaoId, usuarioId], references: [instituicaoId, id], onDelete: Cascade, map: "posts_salvos_usuario_fk")
+  post        Post        @relation(fields: [instituicaoId, postId], references: [instituicaoId, id], onDelete: Cascade, map: "posts_salvos_post_fk")
+
+  @@id([usuarioId, postId])
+  @@index([usuarioId, criadoEm(sort: Desc)], map: "posts_salvos_usuario_idx")
+  @@map("posts_salvos")
+}
+
+model Notificacao {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId String    @map("instituicao_id") @db.Uuid
+  usuarioId     String    @map("usuario_id") @db.Uuid
+  atorId        String?   @map("ator_id") @db.Uuid
+  tipo          String    @db.VarChar(30)
+  postId        String?   @map("post_id") @db.Uuid
+  comentarioId  String?   @map("comentario_id") @db.Uuid
+  matchId       String?   @map("match_id") @db.Uuid
+  texto         String?   @db.VarChar(160)
+  criadoEm      DateTime  @default(now()) @map("criado_em") @db.Timestamptz(6)
+  lidaEm        DateTime? @map("lida_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  usuario     Usuario     @relation("NotificacaoPara", fields: [instituicaoId, usuarioId], references: [instituicaoId, id], onDelete: Cascade, map: "notificacoes_usuario_fk")
+  ator        Usuario?    @relation("NotificacaoDe", fields: [instituicaoId, atorId], references: [instituicaoId, id], onDelete: Cascade, map: "notificacoes_ator_fk")
+  post        Post?       @relation(fields: [instituicaoId, postId], references: [instituicaoId, id], onDelete: Cascade, map: "notificacoes_post_fk")
+  comentario  Comentario? @relation(fields: [instituicaoId, comentarioId], references: [instituicaoId, id], onDelete: Cascade, map: "notificacoes_comentario_fk")
+  match       Match?      @relation(fields: [instituicaoId, matchId], references: [instituicaoId, id], onDelete: Cascade, map: "notificacoes_match_fk")
+
+  @@index([usuarioId, criadoEm(sort: Desc)], map: "notificacoes_usuario_idx")
+  @@map("notificacoes")
 }

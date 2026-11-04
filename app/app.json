@@ -6,22 +6,28 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "br.ung.patio"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0E1330",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "permissions": ["android.permission.RECORD_AUDIO"]
+      "permissions": ["android.permission.RECORD_AUDIO"],
+      "package": "br.ung.patio"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "Pátio",
+      "shortName": "Pátio",
+      "themeColor": "#2A44C4",
+      "backgroundColor": "#F4F5FA"
     },
     "plugins": [
       "expo-router",
@@ -29,10 +35,23 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "O Pátio usa suas fotos para você escolher a foto de perfil."
+          "photosPermission": "O Pátio usa suas fotos para a foto de perfil, publicações, stories e mensagens."
         }
       ],
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#F4F5FA",
+          "dark": {
+            "image": "./assets/splash-icon-escuro.png",
+            "backgroundColor": "#090C18"
+          }
+        }
+      ]
     ],
     "extra": {
       "router": {
@@ -44,6 +63,7 @@
         "projectId": "d1a52ae2-1477-4ed0-b469-4f34d45e1c1a"
       }
     },
-    "owner": "juniorpiresz"
+    "owner": "juniorpiresz",
+    "backgroundColor": "#F4F5FA"
   }
 }

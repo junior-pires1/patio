@@ -3,6 +3,7 @@ import type { Contexto } from '../../contexto';
 import { ErroApp, naoEncontrado } from '../../erros';
 import type { Prisma } from '../../generated/prisma/client';
 import type { Autenticado } from '../../seguranca/tokens';
+import { avisar, notificar, type Aviso } from '../notificacoes/servico';
 import { colegasVisiveis, emOrdem } from '../conexoes/servico';
 import { listarPosts } from '../feed/servico';
 import { PERFIL_PUBLICO } from '../perfil/servico';
@@ -196,50 +197,65 @@ export function removerExperiencia(ctx: Contexto, eu: Autenticado, id: string) {
  * Recomendar (ou tirar a recomendação de) uma habilidade do colega. Como no
  * LinkedIn, só quem é conexão recomenda, e só habilidades que a pessoa colocou no perfil.
  */
-export function recomendar(
+export async function recomendar(
   ctx: Contexto,
   eu: Autenticado,
   usuarioId: string,
   habilidade: string,
   recomendar: boolean,
 ) {
-  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
-    const alvo = await tx.usuario.findFirst({
-      where: { AND: [{ id: usuarioId }, colegasVisiveis(eu.id)] },
-      select: { habilidades: true },
-    });
-    if (!alvo) throw naoEncontrado('Perfil não encontrado.');
-    if (!(await conexaoEntre(tx, eu.id, usuarioId))) {
-      throw new ErroApp(
-        403,
-        'so_conexoes',
-        'Só conexões podem recomendar habilidades. Curtam um ao outro primeiro.',
-      );
-    }
-    if (!alvo.habilidades.includes(habilidade)) {
-      throw new ErroApp(
-        422,
-        'habilidade_inexistente',
-        'Essa habilidade não está no perfil.',
-        {
-          habilidade: 'Habilidade não está no perfil',
-        },
-      );
-    }
-    if (recomendar) {
-      await tx.endosso.createMany({
-        data: [{ instituicaoId: eu.instituicaoId, usuarioId, autorId: eu.id, habilidade }],
-        skipDuplicates: true,
+  const { avisos, ...resposta } = await naFaculdade(
+    ctx.prisma,
+    eu.instituicaoId,
+    async (tx) => {
+      const alvo = await tx.usuario.findFirst({
+        where: { AND: [{ id: usuarioId }, colegasVisiveis(eu.id)] },
+        select: { habilidades: true },
       });
-    } else {
-      await tx.endosso.deleteMany({ where: { usuarioId, autorId: eu.id, habilidade } });
-    }
-    return {
-      habilidade,
-      recomendacoes: await tx.endosso.count({ where: { usuarioId, habilidade } }),
-      euRecomendei: recomendar,
-    };
-  });
+      if (!alvo) throw naoEncontrado('Perfil não encontrado.');
+      if (!(await conexaoEntre(tx, eu.id, usuarioId))) {
+        throw new ErroApp(
+          403,
+          'so_conexoes',
+          'Só conexões podem recomendar habilidades. Curtam um ao outro primeiro.',
+        );
+      }
+      if (!alvo.habilidades.includes(habilidade)) {
+        throw new ErroApp(
+          422,
+          'habilidade_inexistente',
+          'Essa habilidade não está no perfil.',
+          {
+            habilidade: 'Habilidade não está no perfil',
+          },
+        );
+      }
+      let avisos: Aviso[] = [];
+      if (recomendar) {
+        const { count } = await tx.endosso.createMany({
+          data: [
+            { instituicaoId: eu.instituicaoId, usuarioId, autorId: eu.id, habilidade },
+          ],
+          skipDuplicates: true,
+        });
+        if (count > 0) {
+          avisos = await notificar(tx, eu, [
+            { para: usuarioId, tipo: 'RECOMENDACAO', texto: habilidade },
+          ]);
+        }
+      } else {
+        await tx.endosso.deleteMany({ where: { usuarioId, autorId: eu.id, habilidade } });
+      }
+      return {
+        avisos,
+        habilidade,
+        recomendacoes: await tx.endosso.count({ where: { usuarioId, habilidade } }),
+        euRecomendei: recomendar,
+      };
+    },
+  );
+  avisar(ctx, avisos);
+  return resposta;
 }
 
 // ───────────── Busca ─────────────

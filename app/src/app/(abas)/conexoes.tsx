@@ -97,7 +97,7 @@ export default function Conexoes() {
       renderItem={({ item }) => {
         const ultima = item.ultimaMensagem;
         const previa = ultima
-          ? `${ultima.autorId === eu.id ? 'Você: ' : ''}${ultima.texto || (ultima.imagemUrl ? 'Foto' : '')}`
+          ? `${ultima.autorId === eu.id ? 'Você: ' : ''}${ultima.texto || (ultima.imagemUrl ? 'Foto' : 'Enviou uma publicação')}`
           : 'Diga oi!';
         return (
           <Pressable

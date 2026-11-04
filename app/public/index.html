@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
+    />
+    <title>Pátio</title>
+    <meta
+      name="description"
+      content="A rede da sua faculdade: estudo, monitoria e conexões."
+    />
+    <!-- Instalar como app (Android e iPhone: "Adicionar à tela de início") -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#F4F5FA" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#090C18" media="(prefers-color-scheme: dark)" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Pátio" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <style id="expo-reset">
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        overflow: hidden;
+        background-color: #f4f5fa;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: #090c18;
+        }
+      }
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+    <script>
+      // Service worker simples: deixa o site instalável sem guardar versões antigas.
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/sw.js').catch(function () {});
+        });
+      }
+    </script>
+  </head>
+
+  <body>
+    <noscript>Ative o JavaScript para usar o Pátio.</noscript>
+    <div id="root"></div>
+  </body>
+</html>

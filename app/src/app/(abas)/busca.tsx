@@ -42,8 +42,36 @@ export default function Busca() {
     enabled: termo.length >= 2,
   });
 
+  const emAlta = useQuery({
+    queryKey: ['hashtags-em-alta'],
+    queryFn: () => api.get<{ hashtag: string; posts: number }[]>('/hashtags/em-alta'),
+    enabled: termo.length < 2,
+    staleTime: 60_000,
+  });
+
   const vazio = (
     <View style={estilos.vazio}>
+      {termo.length < 2 && (emAlta.data?.length ?? 0) > 0 ? (
+        <View style={estilos.alta}>
+          <Text style={estilos.altaTitulo}>Em alta na faculdade</Text>
+          <View style={estilos.altaLista}>
+            {emAlta.data!.map((h) => (
+              <Pressable
+                key={h.hashtag}
+                onPress={() =>
+                  router.push({ pathname: '/hashtag/[tag]', params: { tag: h.hashtag } })
+                }
+                style={({ pressed }) => [estilos.tag, pressed && { opacity: 0.7 }]}
+                accessibilityRole="link"
+                accessibilityLabel={`Hashtag ${h.hashtag}, ${h.posts} publicações`}
+              >
+                <Text style={estilos.tagTexto}>#{h.hashtag}</Text>
+                <Text style={estilos.tagConta}>{h.posts}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
       <Aviso
         icone={termo.length < 2 ? 'search-outline' : 'file-tray-outline'}
         titulo={termo.length < 2 ? 'O que você procura?' : 'Nada encontrado'}
@@ -181,6 +209,20 @@ const useEstilos = criarEstilos((c) => ({
   entrada: { flex: 1, height: 50, fontFamily: fonte.medio, fontSize: 16, color: c.texto },
   chips: { flexDirection: 'row', gap: 6 },
   vazio: { minHeight: 320 },
+  alta: { gap: espaco.m, paddingTop: espaco.p },
+  altaTitulo: { fontFamily: fonte.negrito, fontSize: 16, color: c.texto },
+  altaLista: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: raio.total,
+    backgroundColor: c.marcaSuave,
+  },
+  tagTexto: { fontFamily: fonte.negrito, fontSize: 14, color: c.marca },
+  tagConta: { fontFamily: fonte.semi, fontSize: 12, color: c.textoSuave },
   centro: { textAlign: 'center' },
   grupo: {
     backgroundColor: c.superficie,

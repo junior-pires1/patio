@@ -66,6 +66,39 @@ export type Mensagem = {
   imagemUrl: string | null;
   criadoEm: string;
   lidaEm: string | null;
+  /** Publicação compartilhada na conversa (ou indisponível, se foi apagada). */
+  post: PostCompartilhado | { id: string; indisponivel: true } | null;
+};
+
+export type PostCompartilhado = {
+  id: string;
+  texto: string;
+  imagemUrl: string | null;
+  autor: { id: string; apelido: string; fotoUrl: string | null };
+};
+
+export type Mencionado = { id: string; apelido: string };
+
+export type TipoNotificacao =
+  | 'POST_CURTIDO'
+  | 'POST_COMENTADO'
+  | 'COMENTARIO_RESPONDIDO'
+  | 'COMENTARIO_CURTIDO'
+  | 'MENCAO'
+  | 'CONEXAO_NOVA'
+  | 'RECOMENDACAO';
+
+export type Notificacao = {
+  id: string;
+  tipo: TipoNotificacao;
+  frase: string;
+  texto: string | null;
+  criadoEm: string;
+  lida: boolean;
+  matchId: string | null;
+  comentarioId: string | null;
+  ator: { id: string; apelido: string; fotoUrl: string | null } | null;
+  post: { id: string; imagemUrl: string | null } | null;
 };
 
 export type Conexao = {
@@ -120,14 +153,21 @@ export type Post = {
   curti: boolean;
   vou: boolean;
   meu: boolean;
+  salvo: boolean;
+  mencoes: Mencionado[];
 };
 
 export type Comentario = {
   id: string;
   texto: string;
   criadoEm: string;
+  paiId: string | null;
   autor: AutorResumo;
   meu: boolean;
+  curtidas: number;
+  curti: boolean;
+  mencoes: Mencionado[];
+  respostas: Comentario[];
 };
 
 export type Grupo = {

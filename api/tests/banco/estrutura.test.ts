@@ -10,6 +10,7 @@ const TABELAS_DA_FACULDADE = [
   'comentarios',
   'cursos',
   'curtidas',
+  'curtidas_comentario',
   'curtidas_post',
   'denuncias',
   'destaque_stories',
@@ -25,7 +26,9 @@ const TABELAS_DA_FACULDADE = [
   'imagens',
   'matches',
   'mensagens',
+  'notificacoes',
   'posts',
+  'posts_salvos',
   'presencas_evento',
   'recusas',
   'sessoes',
@@ -43,7 +46,7 @@ beforeAll(() => {
 afterAll(() => pool.end());
 
 describe('estrutura do banco', () => {
-  test('tem as 24 tabelas do dicionário de dados, fotos, aparelhos de push, imagens e perfil social', async () => {
+  test('tem as tabelas do dicionário de dados, fotos, push, imagens, perfil social e notificações', async () => {
     const { rows } = await pool.query<{ tablename: string }>(
       `SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename`,
     );

@@ -17,6 +17,7 @@ import type { Conexao, Mensagem } from '@/api/tipos';
 import { Avatar } from '@/componentes/Avatar';
 import { Aviso, Carregando } from '@/componentes/Estados';
 import { Imagem } from '@/componentes/Imagem';
+import { PostNaMensagem } from '@/componentes/PostNaMensagem';
 import { useCorDaFaculdade, useSessao, useUsuario } from '@/sessao';
 import { espaco, fonte, raio } from '@/tema';
 import { criarEstilos, useTema } from '@/tema-provedor';
@@ -229,6 +230,7 @@ export default function Chat() {
                 {item.imagemUrl ? (
                   <Imagem url={item.imagemUrl} style={estilos.foto} />
                 ) : null}
+                {item.post ? <PostNaMensagem post={item.post} /> : null}
                 {item.texto ? (
                   <Text style={[estilos.texto, minha && estilos.textoMinha]}>
                     {item.texto}

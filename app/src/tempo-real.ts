@@ -18,6 +18,8 @@ const LISTAS_DA_FACULDADE = [
   ['grupo'],
   ['grupo-mensagens'],
   ['matches'],
+  ['notificacoes'],
+  ['notificacoes-nao-lidas'],
 ];
 const ESPERA_PARA_RECONECTAR_MS = 3000;
 
@@ -171,6 +173,21 @@ export function useTempoReal() {
       });
     });
     socket.on('match:desfeito', () => atualizar(['matches']));
+    socket.on(
+      'notificacao:nova',
+      (evento: { tipo: string; titulo: string; texto: string }) => {
+        atualizar(['notificacoes'], ['notificacoes-nao-lidas']);
+        // Conexão nova já tem o aviso próprio (match:novo).
+        if (caminhoAtual.current === '/notificacoes' || evento.tipo === 'CONEXAO_NOVA')
+          return;
+        notificar({
+          titulo: evento.titulo,
+          texto: evento.texto || undefined,
+          aoTocar: () => router.push('/notificacoes'),
+        });
+      },
+    );
+    socket.on('notificacoes:lidas', () => atualizar(['notificacoes-nao-lidas']));
     socket.on('story:novo', () => atualizar(['stories']));
     socket.on('curtidas:atualizadas', () =>
       atualizar(['curtidas-recebidas'], ['descobrir'], ['atividade'], ['perfil']),

@@ -39,7 +39,7 @@ import { Aviso, Carregando } from './Estados';
 import { Info } from './Info';
 
 type Pagina = { posts: Post[]; temMais: boolean };
-type Aba = 'posts' | 'sobre';
+type Aba = 'posts' | 'salvos' | 'sobre';
 
 const LINKS: {
   chave: keyof Links;
@@ -79,6 +79,17 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
         `/usuarios/${usuarioId}/posts${pageParam ? `?antes=${encodeURIComponent(pageParam)}` : ''}`,
       ),
     getNextPageParam: (u) => (u.temMais ? (u.posts.at(-1)?.criadoEm ?? null) : null),
+  });
+  // Salvos: só a própria pessoa vê (aba extra no próprio perfil).
+  const salvos = useInfiniteQuery({
+    queryKey: ['salvos'],
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam }) =>
+      api.get<Pagina>(
+        `/eu/salvos${pageParam ? `?antes=${encodeURIComponent(pageParam)}` : ''}`,
+      ),
+    getNextPageParam: (u) => (u.temMais ? (u.posts.at(-1)?.criadoEm ?? null) : null),
+    enabled: aba === 'salvos',
   });
   const destaques = useQuery({
     queryKey: ['destaques', usuarioId],
@@ -136,7 +147,8 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
   const souEu = p.relacao.souEu;
   const storiesDela = stories.data?.find((s) => s.autor.id === usuarioId);
   const temStoryNovo = storiesDela ? !storiesDela.todosVistos || souEu : false;
-  const lista = posts.data?.pages.flatMap((x) => x.posts) ?? [];
+  const fonteDaGrade = aba === 'salvos' ? salvos : posts;
+  const lista = fonteDaGrade.data?.pages.flatMap((x) => x.posts) ?? [];
   const links = LINKS.filter((l) => p.links?.[l.chave]);
 
   function abrirStories() {
@@ -347,6 +359,7 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
         {(
           [
             ['posts', 'grid-outline', 'Publicações'],
+            ...(souEu ? ([['salvos', 'bookmark-outline', 'Salvos']] as const) : []),
             ['sobre', 'person-outline', 'Sobre'],
           ] as const
         ).map(([valor, icone, rotulo]) => (
@@ -424,19 +437,25 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
         </Pressable>
       )}
       ListEmptyComponent={
-        posts.isPending ? (
+        fonteDaGrade.isPending ? (
           <Carregando />
         ) : (
           <View style={estilos.vazio}>
             <Ionicons name="images-outline" size={40} color={c.textoSuave} />
             <Text style={b.subtitulo}>
-              {souEu ? 'Você ainda não publicou nada.' : 'Nenhuma publicação ainda.'}
+              {aba === 'salvos'
+                ? 'Toque no marcador de uma publicação para guardar aqui.'
+                : souEu
+                  ? 'Você ainda não publicou nada.'
+                  : 'Nenhuma publicação ainda.'}
             </Text>
           </View>
         )
       }
       onEndReached={() =>
-        posts.hasNextPage && !posts.isFetchingNextPage && void posts.fetchNextPage()
+        fonteDaGrade.hasNextPage &&
+        !fonteDaGrade.isFetchingNextPage &&
+        void fonteDaGrade.fetchNextPage()
       }
       refreshControl={<RefreshControl refreshing={false} onRefresh={atualizar} />}
     />

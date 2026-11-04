@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import type { Contexto } from '../../contexto';
 import { autenticar, exigirPapel, quem } from '../../seguranca/autenticar';
-import { novaMensagem } from '../imagens/esquemas';
+import { novaMensagemConversa } from '../imagens/esquemas';
 import * as servico from './servico';
 
 const idMatch = z.object({ id: z.uuid('Identificador inválido') });
@@ -30,7 +30,14 @@ export function rotasChat(ctx: Contexto) {
     const { id } = idMatch.parse(req.params);
     res
       .status(201)
-      .json(await servico.enviarMensagem(ctx, quem(req), id, novaMensagem.parse(req.body)));
+      .json(
+        await servico.enviarMensagem(
+          ctx,
+          quem(req),
+          id,
+          novaMensagemConversa.parse(req.body),
+        ),
+      );
   });
 
   return r;
