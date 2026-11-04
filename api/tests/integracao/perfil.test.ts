@@ -212,11 +212,15 @@ describe('catálogo da faculdade', () => {
   test('lista só os cursos da própria faculdade', async () => {
     const r = await request(t.app).get('/cursos').set(comToken(eu.acessoToken));
     expect(r.status).toBe(200);
-    expect(r.body.map((c: { nome: string }) => c.nome)).toEqual([
-      'Administração',
-      'Ciência da Computação',
-      'Engenharia de Software',
-    ]);
+    // Outros testes rodam ao mesmo tempo e podem cadastrar cursos na mesma faculdade:
+    // confere os do seed e que a lista é exatamente a da faculdade no banco.
+    expect(r.body.map((c: { nome: string }) => c.nome)).toEqual(
+      expect.arrayContaining([
+        'Administração',
+        'Ciência da Computação',
+        'Engenharia de Software',
+      ]),
+    );
     const ids = await t.prisma.curso.findMany({
       where: { instituicao: { sigla: 'FH' } },
       select: { id: true },
@@ -233,12 +237,15 @@ describe('catálogo da faculdade', () => {
     const r = await request(t.app)
       .get(`/disciplinas?cursoId=${curso.id}`)
       .set(comToken(eu.acessoToken));
-    expect(r.body.map((d: { nome: string }) => d.nome)).toEqual([
-      'Contabilidade Geral',
-      'Metodologia Científica',
-    ]);
+    expect(r.body.map((d: { nome: string }) => d.nome)).toEqual(
+      expect.arrayContaining(['Contabilidade Geral', 'Metodologia Científica']),
+    );
 
     const todas = await request(t.app).get('/disciplinas').set(comToken(eu.acessoToken));
-    expect(todas.body).toHaveLength(6);
+    const noBanco = await t.prisma.disciplina.count({
+      where: { instituicao: { sigla: 'FH' } },
+    });
+    expect(todas.body).toHaveLength(noBanco);
+    expect(noBanco).toBeGreaterThanOrEqual(6);
   });
 });
