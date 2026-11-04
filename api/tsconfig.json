@@ -17,5 +17,5 @@
     "rootDir": ".",
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src", "tests", "prisma"]
+  "include": ["src", "tests", "prisma", "scripts"]
 }

@@ -214,20 +214,19 @@ export async function trocarSenha(
   eu: { id: string; instituicaoId: string },
   dados: { senhaAtual: string; novaSenha: string },
 ): Promise<Sessao> {
+  // O bcrypt é lento de propósito (e mais ainda num servidor pequeno): roda
+  // fora da transação, para ela não estourar o tempo limite.
+  const conta = await naFaculdade(ctx.prisma, eu.instituicaoId, (tx) =>
+    tx.usuario.findUniqueOrThrow({ where: { id: eu.id }, select: { senhaHash: true } }),
+  );
+  if (!(await conferir(dados.senhaAtual, conta.senhaHash))) {
+    throw new ErroApp(422, 'senha_atual_incorreta', 'A senha atual está incorreta.', {
+      senhaAtual: 'Senha atual incorreta',
+    });
+  }
+  const senhaHash = await gerarHash(dados.novaSenha);
   return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
-    const conta = await tx.usuario.findUniqueOrThrow({
-      where: { id: eu.id },
-      select: { senhaHash: true },
-    });
-    if (!(await conferir(dados.senhaAtual, conta.senhaHash))) {
-      throw new ErroApp(422, 'senha_atual_incorreta', 'A senha atual está incorreta.', {
-        senhaAtual: 'Senha atual incorreta',
-      });
-    }
-    await tx.usuario.update({
-      where: { id: eu.id },
-      data: { senhaHash: await gerarHash(dados.novaSenha) },
-    });
+    await tx.usuario.update({ where: { id: eu.id }, data: { senhaHash } });
     await tx.sessao.updateMany({
       where: { usuarioId: eu.id, revogadaEm: null },
       data: { revogadaEm: new Date() },
@@ -329,23 +328,26 @@ export async function entrar(
     throw credenciaisInvalidas();
   }
 
-  return naFaculdade(ctx.prisma, faculdade.id, async (tx) => {
-    const conta = await tx.usuario.findUnique({
+  // A senha é conferida fora da transação (o bcrypt é lento de propósito).
+  const conta = await naFaculdade(ctx.prisma, faculdade.id, (tx) =>
+    tx.usuario.findUnique({
       where: { email: dados.email },
       select: { id: true, senhaHash: true, status: true },
-    });
-    if (
-      !(await conferir(dados.senha, conta?.senhaHash)) ||
-      !conta ||
-      conta.status === 'EXCLUIDA'
-    ) {
-      throw credenciaisInvalidas();
-    }
-    if (conta.status === 'SUSPENSA') {
-      throw new ErroApp(403, 'conta_suspensa', 'Sua conta está suspensa pela coordenação.');
-    }
-    return abrirSessao(ctx, tx, conta.id, dados.dispositivo);
-  });
+    }),
+  );
+  if (
+    !(await conferir(dados.senha, conta?.senhaHash)) ||
+    !conta ||
+    conta.status === 'EXCLUIDA'
+  ) {
+    throw credenciaisInvalidas();
+  }
+  if (conta.status === 'SUSPENSA') {
+    throw new ErroApp(403, 'conta_suspensa', 'Sua conta está suspensa pela coordenação.');
+  }
+  return naFaculdade(ctx.prisma, faculdade.id, (tx) =>
+    abrirSessao(ctx, tx, conta.id, dados.dispositivo),
+  );
 }
 
 /**
