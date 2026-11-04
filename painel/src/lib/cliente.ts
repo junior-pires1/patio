@@ -145,6 +145,14 @@ export function criarCliente(opcoes: Opcoes) {
     /** Envia bytes (ex.: foto) com o tipo informado. */
     enviarArquivo: <T>(caminho: string, arquivo: Blob, tipo: string) =>
       requisitar<T>('PUT', caminho, arquivo, tipo),
+    /** Envia a imagem de uma publicação ou mensagem; devolve o id para usar no envio. */
+    enviarImagem: (arquivo: Blob) =>
+      requisitar<{ id: string; url: string }>(
+        'POST',
+        '/imagens',
+        arquivo,
+        arquivo.type || 'image/jpeg',
+      ),
 
     /** Token atual, para o Socket.IO. */
     tokenDeAcesso: () => acesso,

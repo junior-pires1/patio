@@ -13,20 +13,17 @@ const filtro = z.object({
 const novoPost = z
   .object({
     categoria: z.enum(CATEGORIAS).default('GERAL'),
-    texto: z
-      .string()
-      .trim()
-      .min(1, 'Escreva alguma coisa')
-      .max(500, 'No máximo 500 caracteres'),
-    imagemUrl: z
-      .url({ protocol: /^https$/ })
-      .max(300)
-      .optional(),
+    texto: z.string().trim().max(500, 'No máximo 500 caracteres').default(''),
+    imagemId: z.uuid('Imagem inválida').optional(),
     eventoInicio: z.iso
       .datetime({ offset: true })
       .transform((t) => new Date(t))
       .optional(),
     eventoLocal: z.string().trim().max(120).optional(),
+  })
+  .refine((p) => p.texto.length > 0 || p.imagemId, {
+    message: 'Escreva alguma coisa ou escolha uma imagem',
+    path: ['texto'],
   })
   .refine((p) => p.categoria !== 'EVENTO' || p.eventoInicio, {
     message: 'Evento precisa de data e hora de início',

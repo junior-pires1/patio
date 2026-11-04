@@ -4,12 +4,14 @@ import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-q
 import { useState } from 'react';
 import { Botao, Cartao, Estado, Selo, Titulo } from '@/componentes/ui';
 import { useSessao } from '@/lib/sessao';
+import { enderecoDaApi } from '@/lib/endereco';
 import { dataHora } from '@/lib/textos';
 
 type Post = {
   id: string;
   categoria: string;
   texto: string;
+  imagemUrl: string | null;
   eventoInicio: string | null;
   eventoLocal: string | null;
   criadoEm: string;
@@ -36,6 +38,8 @@ export default function PaginaPublicacoes() {
 
   const feed = useInfiniteQuery({
     queryKey: ['moderacao', categoria],
+    // A lista se atualiza sozinha a cada 30 segundos.
+    refetchInterval: 30_000,
     initialPageParam: null as string | null,
     queryFn: ({ pageParam }) => {
       const q = new URLSearchParams();
@@ -94,7 +98,16 @@ export default function PaginaPublicacoes() {
                   <Selo>{CATEGORIAS[p.categoria] ?? p.categoria}</Selo>
                   <span className="text-xs text-slate-500">{dataHora(p.criadoEm)}</span>
                 </div>
-                <p className="mt-2 whitespace-pre-line">{p.texto}</p>
+                {p.texto ? <p className="mt-2 whitespace-pre-line">{p.texto}</p> : null}
+                {p.imagemUrl ? (
+                  <a href={enderecoDaApi(p.imagemUrl)} target="_blank" rel="noreferrer">
+                    <img
+                      src={enderecoDaApi(p.imagemUrl)}
+                      alt="Imagem da publicação"
+                      className="mt-2 max-h-64 rounded-lg border border-slate-200 object-contain"
+                    />
+                  </a>
+                ) : null}
                 {p.eventoInicio ? (
                   <p className="mt-1 text-sm text-slate-600">
                     📅 {dataHora(p.eventoInicio)}

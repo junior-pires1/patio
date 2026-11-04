@@ -137,6 +137,7 @@ model Instituicao {
   avisos             Aviso[]
   denuncias          Denuncia[]
   fotos              Foto[]
+  imagens            Imagem[]
   dispositivosPush   DispositivoPush[]
 
   @@map("instituicoes")
@@ -269,6 +270,7 @@ model Usuario {
   denunciasRecebidas  Denuncia[]          @relation("Denunciado")
   denunciasResolvidas Denuncia[]          @relation("ResolvidaPor")
   foto                Foto?
+  imagens             Imagem[]
   dispositivosPush    DispositivoPush[]
 
   @@unique([instituicaoId, id], map: "usuarios_instituicao_id_key")
@@ -381,13 +383,16 @@ model Mensagem {
   instituicaoId String    @map("instituicao_id") @db.Uuid
   matchId       String    @map("match_id") @db.Uuid
   autorId       String    @map("autor_id") @db.Uuid
-  texto         String    @db.VarChar(1000)
+  texto         String    @default("") @db.VarChar(1000)
+  imagemId      String?   @unique(map: "mensagens_imagem_key") @map("imagem_id") @db.Uuid
   criadoEm      DateTime  @default(now()) @map("criado_em") @db.Timestamptz(6)
   lidaEm        DateTime? @map("lida_em") @db.Timestamptz(6)
 
   instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
   match       Match       @relation(fields: [instituicaoId, matchId], references: [instituicaoId, id], onDelete: Cascade, map: "mensagens_match_fk")
   autor       Usuario     @relation(fields: [instituicaoId, autorId], references: [instituicaoId, id], onDelete: Cascade, map: "mensagens_autor_fk")
+  // No banco: ON DELETE SET NULL (imagem_id), só a coluna da imagem.
+  imagem      Imagem?     @relation("ImagemDaMensagem", fields: [instituicaoId, imagemId], references: [instituicaoId, id], onDelete: NoAction, map: "mensagens_imagem_fk")
 
   @@index([matchId, criadoEm], map: "mensagens_match_idx")
   @@map("mensagens")
@@ -416,7 +421,7 @@ model Post {
   autorId       String        @map("autor_id") @db.Uuid
   categoria     CategoriaPost @default(GERAL)
   texto         String        @db.VarChar(500)
-  imagemUrl     String?       @map("imagem_url") @db.VarChar(300)
+  imagemId      String?       @unique(map: "posts_imagem_key") @map("imagem_id") @db.Uuid
   eventoInicio  DateTime?     @map("evento_inicio") @db.Timestamptz(6)
   eventoLocal   String?       @map("evento_local") @db.VarChar(120)
   criadoEm      DateTime      @default(now()) @map("criado_em") @db.Timestamptz(6)
@@ -424,6 +429,8 @@ model Post {
 
   instituicao Instituicao      @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
   autor       Usuario          @relation(fields: [instituicaoId, autorId], references: [instituicaoId, id], onDelete: Cascade, map: "posts_autor_fk")
+  // No banco: ON DELETE SET NULL (imagem_id), só a coluna da imagem.
+  imagem      Imagem?          @relation("ImagemDoPost", fields: [instituicaoId, imagemId], references: [instituicaoId, id], onDelete: NoAction, map: "posts_imagem_fk")
   comentarios Comentario[]
   curtidas    CurtidaPost[]
   presencas   PresencaEvento[]
@@ -524,10 +531,13 @@ model GrupoMensagem {
   instituicaoId String   @map("instituicao_id") @db.Uuid
   grupoId       String   @map("grupo_id") @db.Uuid
   autorId       String   @map("autor_id") @db.Uuid
-  texto         String   @db.VarChar(1000)
+  texto         String   @default("") @db.VarChar(1000)
+  imagemId      String?  @unique(map: "grupo_mensagens_imagem_key") @map("imagem_id") @db.Uuid
   criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
 
   instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  // No banco: ON DELETE SET NULL (imagem_id), só a coluna da imagem.
+  imagem      Imagem?     @relation("ImagemDoGrupo", fields: [instituicaoId, imagemId], references: [instituicaoId, id], onDelete: NoAction, map: "grupo_mensagens_imagem_fk")
   grupo       GrupoEstudo @relation(fields: [instituicaoId, grupoId], references: [instituicaoId, id], onDelete: Cascade, map: "grupo_mensagens_grupo_fk")
   autor       Usuario     @relation(fields: [instituicaoId, autorId], references: [instituicaoId, id], onDelete: Cascade, map: "grupo_mensagens_autor_fk")
 
@@ -591,6 +601,28 @@ model Foto {
 
   @@unique([instituicaoId, usuarioId], map: "fotos_instituicao_usuario_key")
   @@map("fotos")
+}
+
+// ───────────────────────── Imagens em publicações e conversas (migração 6) ─────────────────────────
+
+model Imagem {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  autorId       String   @map("autor_id") @db.Uuid
+  tipo          String   @db.VarChar(20)
+  dados         Bytes
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  instituicao    Instituicao     @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  autor          Usuario         @relation(fields: [instituicaoId, autorId], references: [instituicaoId, id], onDelete: Cascade, map: "imagens_autor_fk")
+  // Cada imagem é usada uma vez só (UNIQUE em imagem_id nas três tabelas).
+  posts          Post[]          @relation("ImagemDoPost")
+  mensagens      Mensagem[]      @relation("ImagemDaMensagem")
+  grupoMensagens GrupoMensagem[] @relation("ImagemDoGrupo")
+
+  @@unique([instituicaoId, id], map: "imagens_instituicao_id_key")
+  @@index([autorId, criadoEm], map: "imagens_autor_idx")
+  @@map("imagens")
 }
 
 // ───────────────────────── Notificações push (migração 5) ─────────────────────────

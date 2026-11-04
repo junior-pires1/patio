@@ -90,6 +90,38 @@ export default function PainelPlataforma() {
     onError: (e) =>
       setCampos(e instanceof ErroApi ? { ...e.campos, _: e.message } : { _: e.message }),
   });
+  const [senhaNova, setSenhaNova] = useState<{ email: string; senha: string } | null>(null);
+  const novaSenha = useMutation({
+    mutationFn: ({ id, email }: { id: string; email: string }) =>
+      pedir<{ email: string; senhaProvisoria: string }>(
+        'POST',
+        `/plataforma/faculdades/${id}/coordenacao/senha`,
+        { email },
+      ),
+    onSuccess: (r) => setSenhaNova({ email: r.email, senha: r.senhaProvisoria }),
+    onError: (e) => alert(e.message),
+  });
+  const [minhaSenha, setMinhaSenha] = useState({ atual: '', nova: '' });
+  const [avisoSenha, setAvisoSenha] = useState<{ ok: boolean; texto: string } | null>(null);
+  const trocarMinha = useMutation({
+    mutationFn: () =>
+      pedir('PUT', '/plataforma/senha', {
+        senhaAtual: minhaSenha.atual,
+        novaSenha: minhaSenha.nova,
+      }),
+    onSuccess: () => {
+      setMinhaSenha({ atual: '', nova: '' });
+      setAvisoSenha({ ok: true, texto: 'Senha trocada!' });
+    },
+    onError: (e) =>
+      setAvisoSenha({
+        ok: false,
+        texto:
+          e instanceof ErroApi
+            ? (Object.values(e.campos)[0] ?? e.message)
+            : 'Não foi possível trocar.',
+      }),
+  });
   const ativar = useMutation({
     mutationFn: ({ id, ativa }: { id: string; ativa: boolean }) =>
       pedir('PATCH', `/plataforma/faculdades/${id}`, { ativa }),
@@ -157,6 +189,19 @@ export default function PainelPlataforma() {
         <section className="grid gap-6 xl:grid-cols-[3fr_2fr]">
           <div>
             <h2 className="mb-3 text-lg font-semibold">Faculdades parceiras</h2>
+            {senhaNova ? (
+              <p
+                role="status"
+                className="mb-3 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900"
+              >
+                Nova senha provisória de <strong>{senhaNova.email}</strong>:{' '}
+                <code className="rounded bg-white px-1 font-mono">{senhaNova.senha}</code>.
+                Ela aparece só agora.{' '}
+                <button className="underline" onClick={() => setSenhaNova(null)}>
+                  Ok
+                </button>
+              </p>
+            ) : null}
             <Estado carregando={faculdades.isPending} erro={faculdades.error} />
             <div className="space-y-3">
               {faculdades.data?.map((f) => (
@@ -185,9 +230,28 @@ export default function PainelPlataforma() {
                         <p className="mt-1 text-xs text-slate-500">
                           Domínios: {f.dominios.join(', ')}
                         </p>
-                        <p className="text-xs text-slate-500">
-                          Coordenação: {f.coordenacao.join(', ') || '—'}
-                        </p>
+                        <div className="text-xs text-slate-500">
+                          Coordenação: {f.coordenacao.length === 0 ? '—' : null}
+                          {f.coordenacao.map((email) => (
+                            <span
+                              key={email}
+                              className="mr-2 inline-flex items-center gap-1"
+                            >
+                              {email}
+                              <button
+                                className="font-semibold text-slate-700 underline disabled:opacity-50"
+                                disabled={novaSenha.isPending}
+                                onClick={() =>
+                                  confirm(
+                                    `Gerar nova senha provisória para ${email}? A senha atual deixa de valer.`,
+                                  ) && novaSenha.mutate({ id: f.id, email })
+                                }
+                              >
+                                nova senha
+                              </button>
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     </div>
                     <Botao
@@ -329,6 +393,58 @@ export default function PainelPlataforma() {
                   </p>
                 </div>
               ) : null}
+            </form>
+          </Cartao>
+        </section>
+
+        <section className="max-w-md">
+          <Cartao>
+            <form
+              className="space-y-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                setAvisoSenha(null);
+                trocarMinha.mutate();
+              }}
+            >
+              <h2 className="text-lg font-semibold">Minha senha</h2>
+              <p className="text-sm text-slate-600">
+                Depois de trocar, a senha do Render (SENHA_ADMIN_PLATAFORMA) deixa de valer.
+              </p>
+              <label className="block text-sm">
+                Senha atual
+                <input
+                  type="password"
+                  className={campo}
+                  value={minhaSenha.atual}
+                  onChange={(e) => setMinhaSenha((m) => ({ ...m, atual: e.target.value }))}
+                  required
+                />
+              </label>
+              <label className="block text-sm">
+                Nova senha
+                <input
+                  type="password"
+                  className={campo}
+                  value={minhaSenha.nova}
+                  onChange={(e) => setMinhaSenha((m) => ({ ...m, nova: e.target.value }))}
+                  required
+                />
+                <span className="text-xs text-slate-500">
+                  Pelo menos 8 caracteres, com letras e números.
+                </span>
+              </label>
+              {avisoSenha ? (
+                <p
+                  role="status"
+                  className={`rounded-lg p-3 text-sm ${avisoSenha.ok ? 'bg-emerald-50 text-emerald-900' : 'bg-red-50 text-red-700'}`}
+                >
+                  {avisoSenha.texto}
+                </p>
+              ) : null}
+              <Botao type="submit" carregando={trocarMinha.isPending}>
+                Trocar minha senha
+              </Botao>
             </form>
           </Cartao>
         </section>

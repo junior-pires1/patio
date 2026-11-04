@@ -32,6 +32,8 @@ const app = criarApp({
     {
       enviar: (...args) => ponte.tempoReal?.enviar(...args),
       enviarFaculdade: (...args) => ponte.tempoReal?.enviarFaculdade(...args),
+      desconectar: (...args) => ponte.tempoReal?.desconectar(...args),
+      desconectarFaculdade: (...args) => ponte.tempoReal?.desconectarFaculdade(...args),
     },
     notificadorPush(prisma),
   ),

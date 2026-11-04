@@ -42,7 +42,7 @@ const gravar = (valor: { token: string; admin: Admin } | null) => {
 type Valor = {
   estado: Estado;
   pedir: <T>(
-    metodo: 'GET' | 'POST' | 'PATCH',
+    metodo: 'GET' | 'POST' | 'PATCH' | 'PUT',
     caminho: string,
     corpo?: unknown,
   ) => Promise<T>;
@@ -70,7 +70,7 @@ export function ProvedorPlataforma({ children }: { children: ReactNode }) {
 
   const valor = useMemo<Valor>(() => {
     async function pedir<T>(
-      metodo: 'GET' | 'POST' | 'PATCH',
+      metodo: 'GET' | 'POST' | 'PATCH' | 'PUT',
       caminho: string,
       corpo?: unknown,
       comToken = token,

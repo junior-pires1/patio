@@ -1,13 +1,14 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Post } from '@/api/tipos';
 import { useCorDaFaculdade, useSessao } from '@/sessao';
 import { cores, espaco, raio, suave } from '@/tema';
 import { dataDoEvento, quando } from '@/utils/datas';
 import { categoria } from '@/utils/opcoes';
 import { Avatar } from './Avatar';
+import { Imagem } from './Imagem';
 import { alerta } from '@/utils/alerta';
 
 type Props = { post: Post; detalhe?: boolean };
@@ -101,16 +102,17 @@ export function CartaoPost({ post, detalhe = false }: Props) {
         ) : null}
       </View>
 
-      <Pressable onPress={abrir} disabled={detalhe}>
-        <Text style={estilos.texto}>{post.texto}</Text>
-        {post.imagemUrl ? (
-          <Image
-            source={{ uri: post.imagemUrl }}
-            style={estilos.imagem}
-            resizeMode="cover"
-          />
-        ) : null}
-      </Pressable>
+      {post.texto ? (
+        <Pressable onPress={abrir} disabled={detalhe}>
+          <Text style={estilos.texto}>{post.texto}</Text>
+        </Pressable>
+      ) : null}
+      {post.imagemUrl ? (
+        <Imagem
+          url={post.imagemUrl}
+          style={[estilos.imagem, detalhe && estilos.imagemGrande]}
+        />
+      ) : null}
 
       {post.categoria === 'EVENTO' && post.eventoInicio ? (
         <View style={[estilos.evento, { backgroundColor: suave(cor) }]}>
@@ -144,9 +146,9 @@ export function CartaoPost({ post, detalhe = false }: Props) {
           accessibilityLabel={post.curti ? 'Descurtir' : 'Curtir'}
         >
           <Ionicons
-            name={post.curti ? 'heart' : 'heart-outline'}
+            name={post.curti ? 'thumbs-up' : 'thumbs-up-outline'}
             size={20}
-            color={post.curti ? '#E0245E' : cores.textoSuave}
+            color={post.curti ? cor : cores.textoSuave}
           />
           <Text style={estilos.contagem}>{post.curtidas}</Text>
         </Pressable>
@@ -173,7 +175,8 @@ const estilos = StyleSheet.create({
   autor: { fontSize: 15, fontWeight: '700', color: cores.texto },
   meta: { fontSize: 13, color: cores.textoSuave },
   texto: { fontSize: 16, color: cores.texto, lineHeight: 22 },
-  imagem: { width: '100%', height: 200, borderRadius: raio.m, marginTop: espaco.p },
+  imagem: { width: '100%', aspectRatio: 4 / 3, borderRadius: raio.m },
+  imagemGrande: { aspectRatio: 1 },
   evento: {
     flexDirection: 'row',
     alignItems: 'center',

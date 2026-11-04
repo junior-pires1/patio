@@ -124,4 +124,88 @@ describe('eventos de sincronização da faculdade', () => {
       },
     ]);
   });
+
+  test('curtir, comentar e apagar comentário mandam os totais da publicação', async () => {
+    const [a, b] = await Promise.all([t.cadastrarNovo(), t.cadastrarNovo()]);
+    const post = await request(t.app).post('/posts').set(auth(a)).send({ texto: 'Oi' });
+    limpar();
+    await request(t.app).put(`/posts/${post.body.id}/curtida`).set(auth(b));
+    const c = await request(t.app)
+      .post(`/posts/${post.body.id}/comentarios`)
+      .set(auth(b))
+      .send({ texto: 'Comentário fictício' });
+    await request(t.app).delete(`/comentarios/${c.body.id}`).set(auth(b));
+    expect(eventosDe('post:atualizado').map((e) => e.dados)).toEqual([
+      { postId: post.body.id, curtidas: 1, comentarios: 0, presencas: 0 },
+      { postId: post.body.id, curtidas: 1, comentarios: 1, presencas: 0 },
+      { postId: post.body.id, curtidas: 1, comentarios: 0, presencas: 0 },
+    ]);
+  });
+
+  test('aviso removido avisa a faculdade', async () => {
+    const coordenacao = await t.entrar('coordenacao@horizonte.edu.br');
+    const aviso = await request(t.app)
+      .post('/coordenacao/avisos')
+      .set(auth(coordenacao))
+      .send({ titulo: 'Some já', texto: 'Texto fictício' });
+    limpar();
+    await request(t.app)
+      .delete(`/coordenacao/avisos/${aviso.body.id}`)
+      .set(auth(coordenacao));
+    expect(eventosDe('aviso:removido').map((e) => e.dados)).toEqual([
+      { avisoId: aviso.body.id },
+    ]);
+  });
+
+  test('entrar e sair do grupo atualizam as vagas; o último a sair apaga o grupo', async () => {
+    const [a, b] = await Promise.all([t.cadastrarNovo(), t.cadastrarNovo()]);
+    const g = await request(t.app)
+      .post('/grupos')
+      .set(auth(a))
+      .send({ nome: 'Grupo que some', vagas: 5 });
+    limpar();
+    await request(t.app).post(`/grupos/${g.body.id}/entrar`).set(auth(b));
+    await request(t.app).post(`/grupos/${g.body.id}/sair`).set(auth(b));
+    await request(t.app).post(`/grupos/${g.body.id}/sair`).set(auth(a));
+    expect(
+      t.eventosDaFaculdade
+        .filter((e) => e.evento.startsWith('grupo:'))
+        .map((e) => [e.evento, e.dados]),
+    ).toEqual([
+      ['grupo:atualizado', { grupoId: g.body.id }],
+      ['grupo:atualizado', { grupoId: g.body.id }],
+      ['grupo:removido', { grupoId: g.body.id }],
+    ]);
+  });
+
+  test('trocar ou tirar a foto avisa a faculdade', async () => {
+    const a = await t.cadastrarNovo();
+    const png = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64',
+    );
+    await request(t.app)
+      .put('/eu/foto')
+      .set(auth(a))
+      .set('Content-Type', 'image/png')
+      .send(png);
+    await request(t.app).delete('/eu/foto').set(auth(a));
+    expect(eventosDe('perfil:atualizado').map((e) => e.dados)).toEqual([
+      { usuarioId: a.usuario.id },
+      { usuarioId: a.usuario.id },
+    ]);
+  });
+
+  test('suspender derruba o tempo real da pessoa e atualiza as telas dos colegas', async () => {
+    const coordenacao = await t.entrar('coordenacao@horizonte.edu.br');
+    const a = await t.cadastrarNovo();
+    t.desconectados.length = 0;
+    await request(t.app)
+      .post(`/coordenacao/alunos/${a.usuario.id}/suspender`)
+      .set(auth(coordenacao));
+    expect(t.desconectados).toEqual([a.usuario.id]);
+    expect(eventosDe('perfil:atualizado').map((e) => e.dados)).toEqual([
+      { usuarioId: a.usuario.id },
+    ]);
+  });
 });

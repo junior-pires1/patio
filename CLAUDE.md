@@ -49,6 +49,10 @@ npm run verificar           # tudo o que a integração contínua confere
 
 Erros da API sempre no formato `{ erro, mensagem, campos }`, lançados com `ErroApp`.
 
+Imagens (fotos de perfil e de publicações/mensagens) ficam no próprio banco (`fotos`, `imagens`), até
+1 MB, já reduzidas pelo app. Mudança que outros alunos precisam ver na hora = evento em
+`ctx.notificar` (veja `api/src/servicos/notificador.ts`) e o tratamento em `app/src/tempo-real.ts`.
+
 ## No ar
 
 API https://patio-api-llzk.onrender.com · app https://patio-app-beta.vercel.app ·

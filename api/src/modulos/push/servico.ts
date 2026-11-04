@@ -7,6 +7,10 @@ import type { Evento, Notificador } from '../../servicos/notificador';
 const ENDERECO_EXPO = 'https://exp.host/--/api/v2/push/send';
 
 /** RF27: guarda o token do aparelho (o mesmo token passa para a conta que entrou por último). */
+/** Texto da notificação: a mensagem ou, se for só imagem, um aviso de foto. */
+const resumo = (m: { texto?: string; imagemUrl?: string | null } | undefined) =>
+  m?.texto || (m?.imagemUrl ? '📷 Foto' : '');
+
 export function registrar(ctx: Contexto, eu: Autenticado, token: string) {
   return ctx.prisma.$transaction(async (tx) => {
     // Fora do RLS: o token pode ter sido de outra conta (até de outra faculdade) no mesmo aparelho.
@@ -53,20 +57,26 @@ export function mensagemDoEvento(
         dados: { tipo: 'match', matchId: d.matchId },
       };
     case 'mensagem:nova': {
-      const m = d.mensagem as { autorId?: string; texto?: string } | undefined;
+      const m = d.mensagem as
+        { autorId?: string; texto?: string; imagemUrl?: string | null } | undefined;
       return {
         titulo: 'Nova mensagem',
-        texto: m?.texto ?? '',
+        texto: resumo(m),
         destino: usuarioIds.filter((id) => id !== m?.autorId),
         dados: { tipo: 'mensagem', matchId: d.matchId },
       };
     }
     case 'grupo:mensagem': {
       const m = d.mensagem as
-        { autor?: { id?: string; apelido?: string }; texto?: string } | undefined;
+        | {
+            autor?: { id?: string; apelido?: string };
+            texto?: string;
+            imagemUrl?: string | null;
+          }
+        | undefined;
       return {
         titulo: `${m?.autor?.apelido ?? 'Alguém'} no grupo`,
-        texto: m?.texto ?? '',
+        texto: resumo(m),
         destino: usuarioIds.filter((id) => id !== m?.autor?.id),
         dados: { tipo: 'grupo', grupoId: d.grupoId },
       };
@@ -88,6 +98,8 @@ export function notificadorPush(
   return {
     // Mudanças da faculdade só atualizam quem está com o app aberto: não viram push.
     enviarFaculdade() {},
+    desconectar() {},
+    desconectarFaculdade() {},
     enviar(usuarioIds, evento, dados) {
       const mensagem = mensagemDoEvento(usuarioIds, evento, dados);
       if (!mensagem || mensagem.destino.length === 0) return;

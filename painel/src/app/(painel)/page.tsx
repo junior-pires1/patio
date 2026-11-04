@@ -27,6 +27,7 @@ export default function PaginaResumo() {
   const { api } = useSessao();
   const resumo = useQuery({
     queryKey: ['resumo'],
+    refetchInterval: 60_000,
     queryFn: () => api.get<Resumo>('/coordenacao/resumo'),
   });
 

@@ -3,6 +3,21 @@ import type { Contexto } from '../../contexto';
 import { ErroApp, naoEncontrado } from '../../erros';
 import type { Prisma } from '../../generated/prisma/client';
 import type { Autenticado } from '../../seguranca/tokens';
+import type { NovaMensagem } from '../imagens/esquemas';
+import { exigirImagemPropria, urlDaImagem } from '../imagens/servico';
+
+const MENSAGEM_DO_GRUPO = {
+  id: true,
+  texto: true,
+  imagemId: true,
+  criadoEm: true,
+  autor: { select: { id: true, apelido: true } },
+} as const;
+
+const formatarMensagem = <M extends { imagemId: string | null }>({
+  imagemId,
+  ...m
+}: M) => ({ ...m, imagemUrl: urlDaImagem(imagemId) });
 
 export const MENSAGENS_POR_PAGINA = 50;
 
@@ -149,8 +164,8 @@ export async function criarGrupo(
 }
 
 /** RF23: entrar no grupo, respeitando as vagas (o gatilho do banco garante o limite). */
-export function entrar(ctx: Contexto, eu: Autenticado, grupoId: string) {
-  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
+export async function entrar(ctx: Contexto, eu: Autenticado, grupoId: string) {
+  const grupo = await naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
     await exigirGrupo(tx, grupoId);
     const ja = await tx.grupoMembro.findUnique({
       where: { grupoId_usuarioId: { grupoId, usuarioId: eu.id } },
@@ -162,14 +177,16 @@ export function entrar(ctx: Contexto, eu: Autenticado, grupoId: string) {
     }
     return formatar(await exigirGrupo(tx, grupoId), { lidoAte: null });
   });
+  ctx.notificar.enviarFaculdade(eu.instituicaoId, 'grupo:atualizado', { grupoId });
+  return grupo;
 }
 
 /**
  * RF23: sair do grupo. Se quem sai é o criador, o membro mais antigo passa
  * a ser o criador; se ninguém fica, o grupo é apagado.
  */
-export function sair(ctx: Contexto, eu: Autenticado, grupoId: string) {
-  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
+export async function sair(ctx: Contexto, eu: Autenticado, grupoId: string) {
+  const resultado = await naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
     const membro = await exigirMembro(tx, eu, grupoId);
     await tx.grupoMembro.delete({
       where: { grupoId_usuarioId: { grupoId, usuarioId: eu.id } },
@@ -194,6 +211,12 @@ export function sair(ctx: Contexto, eu: Autenticado, grupoId: string) {
     }
     return { grupoApagado: false };
   });
+  ctx.notificar.enviarFaculdade(
+    eu.instituicaoId,
+    resultado.grupoApagado ? 'grupo:removido' : 'grupo:atualizado',
+    { grupoId },
+  );
+  return resultado;
 }
 
 /** RF24: mensagens do grupo (só membros). Abrir marca como lidas. */
@@ -209,18 +232,16 @@ export function listarMensagens(
       where: { grupoId, ...(antes ? { criadoEm: { lt: antes } } : {}) },
       orderBy: { criadoEm: 'desc' },
       take: MENSAGENS_POR_PAGINA,
-      select: {
-        id: true,
-        texto: true,
-        criadoEm: true,
-        autor: { select: { id: true, apelido: true } },
-      },
+      select: MENSAGEM_DO_GRUPO,
     });
     await tx.grupoMembro.update({
       where: { grupoId_usuarioId: { grupoId, usuarioId: eu.id } },
       data: { lidoAte: new Date() },
     });
-    return { mensagens: pagina.reverse(), temMais: pagina.length === MENSAGENS_POR_PAGINA };
+    return {
+      mensagens: pagina.reverse().map(formatarMensagem),
+      temMais: pagina.length === MENSAGENS_POR_PAGINA,
+    };
   });
 }
 
@@ -229,27 +250,23 @@ export async function enviarMensagem(
   ctx: Contexto,
   eu: Autenticado,
   grupoId: string,
-  texto: string,
+  { texto, imagemId }: NovaMensagem,
 ) {
   const { mensagem, membros } = await naFaculdade(
     ctx.prisma,
     eu.instituicaoId,
     async (tx) => {
       await exigirMembro(tx, eu, grupoId);
+      await exigirImagemPropria(tx, eu, imagemId);
       const criada = await tx.grupoMensagem.create({
-        data: { instituicaoId: eu.instituicaoId, grupoId, autorId: eu.id, texto },
-        select: {
-          id: true,
-          texto: true,
-          criadoEm: true,
-          autor: { select: { id: true, apelido: true } },
-        },
+        data: { instituicaoId: eu.instituicaoId, grupoId, autorId: eu.id, texto, imagemId },
+        select: MENSAGEM_DO_GRUPO,
       });
       const todos = await tx.grupoMembro.findMany({
         where: { grupoId },
         select: { usuarioId: true },
       });
-      return { mensagem: criada, membros: todos.map((m) => m.usuarioId) };
+      return { mensagem: formatarMensagem(criada), membros: todos.map((m) => m.usuarioId) };
     },
   );
   ctx.notificar.enviar(membros, 'grupo:mensagem', { grupoId, mensagem });

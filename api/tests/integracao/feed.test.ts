@@ -164,14 +164,13 @@ describe('feed', () => {
     ).toBe(404);
   });
 
-  test('valida o texto e o endereço da imagem', async () => {
+  test('valida a categoria e a imagem; sem texto e sem imagem não publica', async () => {
     const a = await t.cadastrarNovo();
-    const r = await publicar(a, {
-      texto: '   ',
-      imagemUrl: 'http://inseguro.com/x.png',
-      categoria: 'FOFOCA',
-    });
+    const r = await publicar(a, { imagemId: 'nao-e-uuid', categoria: 'FOFOCA' });
     expect(r.status).toBe(400);
-    expect(Object.keys(r.body.campos).sort()).toEqual(['categoria', 'imagemUrl', 'texto']);
+    expect(Object.keys(r.body.campos).sort()).toEqual(['categoria', 'imagemId']);
+    const vazio = await publicar(a, { texto: '   ' });
+    expect(vazio.status).toBe(400);
+    expect(vazio.body.campos.texto).toBeDefined();
   });
 });

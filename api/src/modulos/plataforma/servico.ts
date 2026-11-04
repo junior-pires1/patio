@@ -152,6 +152,7 @@ export async function mudarAtivacao(
       },
     }),
   ]);
+  if (!ativa) ctx.notificar.desconectarFaculdade(id);
   return faculdade;
 }
 
@@ -175,4 +176,59 @@ export async function metricas(ctx: Contexto) {
     mensagensUltimos30Dias: mensagens,
     denunciasAbertas,
   };
+}
+
+/** A coordenação perdeu a senha: gera uma provisória nova e encerra as sessões dela. */
+export async function novaSenhaDaCoordenacao(
+  ctx: Contexto,
+  adminId: string,
+  instituicaoId: string,
+  email: string,
+) {
+  const conta = await ctx.prisma.usuario.findFirst({
+    where: { instituicaoId, email, papel: 'COORDENACAO' },
+    select: { id: true },
+  });
+  if (!conta) throw naoEncontrado('Conta da coordenação não encontrada.');
+  const senha = senhaProvisoria();
+  const senhaHash = await gerarHash(senha);
+  await ctx.prisma.$transaction([
+    ctx.prisma.usuario.update({ where: { id: conta.id }, data: { senhaHash } }),
+    ctx.prisma.sessao.updateMany({
+      where: { usuarioId: conta.id, revogadaEm: null },
+      data: { revogadaEm: new Date() },
+    }),
+    ctx.prisma.auditoria.create({
+      data: {
+        instituicaoId,
+        atorTipo: 'ADMIN_PLATAFORMA',
+        atorId: adminId,
+        acao: 'senha_da_coordenacao_redefinida',
+        alvoTipo: 'usuario',
+        alvoId: conta.id,
+      },
+    }),
+  ]);
+  ctx.notificar.desconectar([conta.id]);
+  return { email, senhaProvisoria: senha };
+}
+
+/** A equipe da plataforma troca a própria senha (confere a atual). */
+export async function trocarSenhaDoAdmin(
+  ctx: Contexto,
+  adminId: string,
+  senhaAtual: string,
+  novaSenha: string,
+) {
+  const admin = await ctx.prisma.administrador.findUnique({ where: { id: adminId } });
+  if (!admin) throw naoEncontrado();
+  if (!(await conferir(senhaAtual, admin.senhaHash))) {
+    throw new ErroApp(422, 'senha_atual_incorreta', 'A senha atual não confere.', {
+      senhaAtual: 'Senha atual incorreta',
+    });
+  }
+  await ctx.prisma.administrador.update({
+    where: { id: adminId },
+    data: { senhaHash: await gerarHash(novaSenha) },
+  });
 }

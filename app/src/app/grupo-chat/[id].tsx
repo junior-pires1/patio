@@ -15,10 +15,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { MensagemGrupo } from '@/api/tipos';
 import { Aviso, Carregando } from '@/componentes/Estados';
+import { Imagem } from '@/componentes/Imagem';
 import { useCorDaFaculdade, useSessao, useUsuario } from '@/sessao';
 import { cores, espaco, raio } from '@/tema';
 import { quando } from '@/utils/datas';
 import { alerta } from '@/utils/alerta';
+import { escolherImagem } from '@/utils/foto';
 
 type Pagina = { mensagens: MensagemGrupo[]; temMais: boolean };
 
@@ -36,8 +38,13 @@ export default function ChatDoGrupo() {
     queryFn: () => api.get<Pagina>(`/grupos/${id}/mensagens`),
   });
   const enviar = useMutation({
-    mutationFn: (t: string) =>
-      api.post<MensagemGrupo>(`/grupos/${id}/mensagens`, { texto: t }),
+    mutationFn: async ({ t, imagem }: { t: string; imagem?: Blob }) => {
+      const enviada = imagem ? await api.enviarImagem(imagem) : null;
+      return api.post<MensagemGrupo>(`/grupos/${id}/mensagens`, {
+        texto: t,
+        ...(enviada ? { imagemId: enviada.id } : {}),
+      });
+    },
     onSuccess: (nova) => {
       setTexto('');
       queryClient.setQueryData<Pagina>(['grupo-mensagens', id], (p) =>
@@ -48,6 +55,16 @@ export default function ChatDoGrupo() {
     },
     onError: (e) => alerta('Mensagem não enviada', e.message),
   });
+
+  // A imagem vai na hora, com o texto digitado (se houver) como legenda.
+  async function mandarImagem() {
+    try {
+      const escolhida = await escolherImagem();
+      if (escolhida) enviar.mutate({ t: texto.trim(), imagem: escolhida.blob });
+    } catch {
+      alerta('Imagem não enviada', 'Não foi possível abrir a imagem.');
+    }
+  }
 
   const titulo = <Stack.Screen options={{ title: nome ?? 'Chat do grupo' }} />;
   if (mensagens.isPending)
@@ -90,9 +107,14 @@ export default function ChatDoGrupo() {
                 {!minha ? (
                   <Text style={[estilos.autor, { color: cor }]}>{item.autor.apelido}</Text>
                 ) : null}
-                <Text style={[estilos.texto, minha && estilos.textoMinha]}>
-                  {item.texto}
-                </Text>
+                {item.imagemUrl ? (
+                  <Imagem url={item.imagemUrl} style={estilos.foto} />
+                ) : null}
+                {item.texto ? (
+                  <Text style={[estilos.texto, minha && estilos.textoMinha]}>
+                    {item.texto}
+                  </Text>
+                ) : null}
                 <Text style={[estilos.hora, minha && estilos.horaMinha]}>
                   {quando(item.criadoEm)}
                 </Text>
@@ -101,6 +123,16 @@ export default function ChatDoGrupo() {
           }}
         />
         <View style={estilos.barra}>
+          <Pressable
+            onPress={() => void mandarImagem()}
+            disabled={enviar.isPending}
+            style={estilos.anexo}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel="Enviar imagem"
+          >
+            <Ionicons name="image-outline" size={24} color={cores.textoSuave} />
+          </Pressable>
           <TextInput
             style={estilos.entrada}
             placeholder="Mensagem para o grupo"
@@ -112,7 +144,7 @@ export default function ChatDoGrupo() {
             accessibilityLabel="Mensagem"
           />
           <Pressable
-            onPress={() => texto.trim() && enviar.mutate(texto.trim())}
+            onPress={() => texto.trim() && enviar.mutate({ t: texto.trim() })}
             disabled={!texto.trim() || enviar.isPending}
             style={[
               estilos.enviar,
@@ -171,6 +203,8 @@ const estilos = StyleSheet.create({
     fontSize: 16,
     color: cores.texto,
   },
+  foto: { width: 220, height: 220, borderRadius: raio.p, marginBottom: 4 },
+  anexo: { height: 42, justifyContent: 'center' },
   enviar: {
     width: 42,
     height: 42,

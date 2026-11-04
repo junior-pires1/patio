@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import cors from 'cors';
 import express from 'express';
 import { ipKeyGenerator, rateLimit } from 'express-rate-limit';
@@ -13,6 +14,7 @@ import { rotasCoordenacao } from './modulos/coordenacao/rotas';
 import { rotasFeed } from './modulos/feed/rotas';
 import { rotasFotos } from './modulos/fotos/rotas';
 import { rotasGrupos } from './modulos/grupos/rotas';
+import { rotasImagens } from './modulos/imagens/rotas';
 import { rotasPerfil } from './modulos/perfil/rotas';
 import { rotasPlataforma } from './modulos/plataforma/rotas';
 import { rotasPush } from './modulos/push/rotas';
@@ -20,8 +22,11 @@ import { rotasProtecao } from './modulos/protecao/rotas';
 
 export type OpcoesApp = Contexto & {
   origensPermitidas: string[];
-  /** Requisições por minuto. Os testes usam valores maiores. */
-  limites?: { geral: number; credenciais: number };
+  /**
+   * Requisições por minuto: `geral` por pessoa logada (ou por IP, sem login),
+   * `porIp` por endereço e `credenciais` nas rotas de senha. Os testes usam valores maiores.
+   */
+  limites?: { geral: number; credenciais: number; porIp?: number };
 };
 
 const muitasRequisicoes = new ErroApp(
@@ -33,24 +38,36 @@ const muitasRequisicoes = new ErroApp(
 /** Monta a aplicação Express. As dependências entram por parâmetro, o que facilita os testes. */
 export function criarApp(opcoes: OpcoesApp) {
   const { origensPermitidas, limites = { geral: 300, credenciais: 10 }, ...ctx } = opcoes;
+  // Numa faculdade, dezenas de alunos saem pelo mesmo IP: o limite por IP é bem maior.
+  const limitePorIp = limites.porIp ?? limites.geral * 10;
   const app = express();
   app.set('trust proxy', 1); // a hospedagem (Render) fica atrás de um proxy
   app.use(helmet());
   app.use(cors({ origin: origensPermitidas }));
   app.use(express.json({ limit: '100kb' }));
 
-  const limitar = (limite: number, porEmail: boolean) =>
+  const limitar = (limite: number, chave: 'ip' | 'pessoa' | 'email') =>
     rateLimit({
       windowMs: 60_000,
       limit: limite,
       standardHeaders: 'draft-8',
       legacyHeaders: false,
-      // RNF: rotas de credenciais contam por IP + e-mail; as demais, por IP.
+      // RNF: rotas de credenciais contam por IP + e-mail; as demais, por pessoa
+      // logada (pelo token) e, sem login, por IP.
       keyGenerator: (req) => {
         const ip = ipKeyGenerator(req.ip ?? '');
-        const email: unknown = porEmail ? req.body?.email : undefined;
-        return typeof email === 'string' ? `${ip}|${email.trim().toLowerCase()}` : ip;
+        if (chave === 'email') {
+          const email: unknown = req.body?.email;
+          return typeof email === 'string' ? `${ip}|${email.trim().toLowerCase()}` : ip;
+        }
+        const token = req.headers.authorization;
+        if (chave === 'pessoa' && token) {
+          return `token:${createHash('sha256').update(token).digest('base64url')}`;
+        }
+        return ip;
       },
+      // Sem login (fotos, imagens, cadastro), vale só o limite por IP.
+      skip: (req) => chave === 'pessoa' && !req.headers.authorization,
       handler: (_req, _res, next) => next(muitasRequisicoes),
     });
 
@@ -64,8 +81,9 @@ export function criarApp(opcoes: OpcoesApp) {
     res.json({ status: 'ok', horario: new Date().toISOString() });
   });
 
-  app.use(limitar(limites.geral, false));
-  const limiteCredenciais = limitar(limites.credenciais, true);
+  app.use(limitar(limitePorIp, 'ip'));
+  app.use(limitar(limites.geral, 'pessoa'));
+  const limiteCredenciais = limitar(limites.credenciais, 'email');
   app.use('/auth', rotasAuth(ctx, limiteCredenciais));
   app.use(rotasPlataforma(ctx, limiteCredenciais));
 
@@ -79,6 +97,7 @@ export function criarApp(opcoes: OpcoesApp) {
   app.use(rotasCoordenacao(ctx));
   app.use(rotasFeed(ctx));
   app.use(rotasFotos(ctx));
+  app.use(rotasImagens(ctx));
   app.use(rotasPush(ctx));
   app.use(rotasGrupos(ctx));
 

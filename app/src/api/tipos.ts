@@ -54,6 +54,7 @@ export type Mensagem = {
   id: string;
   autorId: string;
   texto: string;
+  imagemUrl: string | null;
   criadoEm: string;
   lidaEm: string | null;
 };
@@ -147,6 +148,7 @@ export type GrupoDetalhe = Grupo & {
 export type MensagemGrupo = {
   id: string;
   texto: string;
+  imagemUrl: string | null;
   criadoEm: string;
   autor: { id: string; apelido: string };
 };

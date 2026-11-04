@@ -44,7 +44,12 @@ export function caixaDeEntrada() {
 }
 
 /** App completo ligado ao banco de testes. Chame `fechar()` no afterAll. */
-export function appDeTeste(limites = { geral: 10_000, credenciais: 10_000 }) {
+export function appDeTeste(
+  limites: { geral: number; credenciais: number; porIp?: number } = {
+    geral: 10_000,
+    credenciais: 10_000,
+  },
+) {
   const prisma = criarPrisma(urlTeste());
   const caixa = caixaDeEntrada();
   const eventos: { usuarioIds: string[]; evento: Evento; dados: unknown }[] = [];
@@ -53,10 +58,13 @@ export function appDeTeste(limites = { geral: 10_000, credenciais: 10_000 }) {
     evento: EventoFaculdade;
     dados: unknown;
   }[] = [];
+  const desconectados: string[] = [];
   const notificar: Notificador = {
     enviar: (usuarioIds, evento, dados) => void eventos.push({ usuarioIds, evento, dados }),
     enviarFaculdade: (instituicaoId, evento, dados) =>
       void eventosDaFaculdade.push({ instituicaoId, evento, dados }),
+    desconectar: (usuarioIds) => void desconectados.push(...usuarioIds),
+    desconectarFaculdade: (instituicaoId) => void desconectados.push(instituicaoId),
   };
   const app = criarApp({
     origensPermitidas: ['http://localhost:3000'],
@@ -96,6 +104,7 @@ export function appDeTeste(limites = { geral: 10_000, credenciais: 10_000 }) {
     caixa,
     eventos,
     eventosDaFaculdade,
+    desconectados,
     entrar,
     cadastrarNovo,
     fechar: () => prisma.$disconnect(),

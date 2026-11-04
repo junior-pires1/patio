@@ -187,3 +187,72 @@ describe('faculdades', () => {
     ).toBe(404);
   });
 });
+
+describe('senhas pela plataforma', () => {
+  test('gera nova senha provisória da coordenação e encerra as sessões dela', async () => {
+    const dados = novaFaculdade();
+    const criada = await request(t.app)
+      .post('/plataforma/faculdades')
+      .set(auth())
+      .send(dados);
+    const { id } = criada.body.faculdade as { id: string };
+    const antes = await t.entrar(
+      dados.coordenacao.email,
+      criada.body.coordenacao.senhaProvisoria,
+    );
+    t.desconectados.length = 0;
+
+    const r = await request(t.app)
+      .post(`/plataforma/faculdades/${id}/coordenacao/senha`)
+      .set(auth())
+      .send({ email: dados.coordenacao.email });
+    expect(r.status).toBe(200);
+    expect(r.body.senhaProvisoria).toMatch(/^[a-z]{4}\d{4}$/);
+    expect(t.desconectados).toEqual([antes.usuario.id]);
+    expect(
+      (
+        await request(t.app)
+          .post('/auth/renovar')
+          .send({ refreshToken: antes.refreshToken })
+      ).status,
+    ).toBe(401);
+    await t.entrar(dados.coordenacao.email, r.body.senhaProvisoria);
+
+    const deOutra = await request(t.app)
+      .post(`/plataforma/faculdades/${id}/coordenacao/senha`)
+      .set(auth())
+      .send({ email: 'ana.lima@aluno.horizonte.edu.br' });
+    expect(deOutra.status).toBe(404);
+  });
+
+  test('a equipe troca a própria senha conferindo a atual', async () => {
+    const errada = await request(t.app)
+      .put('/plataforma/senha')
+      .set(auth())
+      .send({ senhaAtual: 'naoEhEssa1', novaSenha: 'OutraSenha2026' });
+    expect(errada.status).toBe(422);
+    const troca = await request(t.app)
+      .put('/plataforma/senha')
+      .set(auth())
+      .send({ senhaAtual: SENHA_DEMONSTRACAO, novaSenha: 'OutraSenha2026' });
+    expect(troca.status).toBe(204);
+    const login = await request(t.app)
+      .post('/plataforma/login')
+      .send({ email: 'admin@patio.app', senha: 'OutraSenha2026' });
+    expect(login.status).toBe(200);
+    // Volta a senha dos dados de demonstração
+    await request(t.app)
+      .put('/plataforma/senha')
+      .set(auth())
+      .send({ senhaAtual: 'OutraSenha2026', novaSenha: SENHA_DEMONSTRACAO });
+  });
+
+  test('aluno ou coordenação não usam as rotas da plataforma', async () => {
+    const aluno = await t.cadastrarNovo();
+    const r = await request(t.app)
+      .put('/plataforma/senha')
+      .set({ Authorization: `Bearer ${aluno.acessoToken}` })
+      .send({ senhaAtual: 'senhaForte123', novaSenha: 'qualquer123' });
+    expect(r.status).toBe(401);
+  });
+});
