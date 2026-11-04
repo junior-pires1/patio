@@ -9,8 +9,18 @@ const ENDERECO_EXPO = 'https://exp.host/--/api/v2/push/send';
 /** RF27: guarda o token do aparelho (o mesmo token passa para a conta que entrou por último). */
 /** Texto da notificação: a mensagem ou, se for só imagem, um aviso de foto. */
 const resumo = (
-  m: { texto?: string; imagemUrl?: string | null; post?: unknown } | undefined,
-) => m?.texto || (m?.imagemUrl ? 'Foto' : m?.post ? 'Enviou uma publicação' : '');
+  m:
+    | { texto?: string; imagemUrl?: string | null; post?: unknown; audio?: unknown }
+    | undefined,
+) =>
+  m?.texto ||
+  (m?.audio
+    ? 'Mensagem de voz'
+    : m?.imagemUrl
+      ? 'Foto'
+      : m?.post
+        ? 'Enviou uma publicação'
+        : '');
 
 export function registrar(ctx: Contexto, eu: Autenticado, token: string) {
   return ctx.prisma.$transaction(async (tx) => {

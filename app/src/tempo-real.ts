@@ -195,8 +195,21 @@ export function useTempoReal() {
     socket.on('mensagens:lidas', (evento: { matchId: string }) =>
       atualizar(['mensagens', evento.matchId]),
     );
+    socket.on('mensagem:digitando', (evento: { matchId: string }) =>
+      queryClient.setQueryData(['digitando', evento.matchId], Date.now()),
+    );
+    socket.on('mensagem:atualizada', (evento: { matchId: string; mensagem: Mensagem }) => {
+      queryClient.setQueryData<Record<string, Mensagem>>(
+        ['mensagens-alteradas', evento.matchId],
+        (a) => ({ ...a, [evento.mensagem.id]: evento.mensagem }),
+      );
+      atualizar(['matches']);
+    });
     socket.on('mensagem:nova', (evento: { matchId: string; mensagem: Mensagem }) => {
       atualizar(['mensagens', evento.matchId], ['matches']);
+      // Quem estava digitando mandou: some o "digitando…".
+      if (evento.mensagem.autorId !== euId)
+        queryClient.setQueryData(['digitando', evento.matchId], 0);
       const naConversa = caminhoAtual.current === `/chat/${evento.matchId}`;
       if (evento.mensagem.autorId !== euId && !naConversa) {
         notificar({

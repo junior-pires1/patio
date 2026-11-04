@@ -51,6 +51,12 @@
             "backgroundColor": "#090C18"
           }
         }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "O Pátio usa o microfone para gravar mensagens de voz."
+        }
       ]
     ],
     "extra": {

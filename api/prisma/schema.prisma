@@ -148,6 +148,8 @@ model Instituicao {
   curtidasComentario CurtidaComentario[]
   postsSalvos        PostSalvo[]
   notificacoes       Notificacao[]
+  audios             Audio[]
+  reacoesMensagem    ReacaoMensagem[]
 
   @@map("instituicoes")
 }
@@ -292,6 +294,8 @@ model Usuario {
   postsSalvos         PostSalvo[]
   notificacoes        Notificacao[]       @relation("NotificacaoPara")
   notificacoesFeitas  Notificacao[]       @relation("NotificacaoDe")
+  audios              Audio[]
+  reacoesMensagem     ReacaoMensagem[]
 
   @@unique([instituicaoId, id], map: "usuarios_instituicao_id_key")
   @@index([instituicaoId, status], map: "usuarios_instituicao_idx")
@@ -409,6 +413,9 @@ model Mensagem {
   criadoEm      DateTime  @default(now()) @map("criado_em") @db.Timestamptz(6)
   lidaEm        DateTime? @map("lida_em") @db.Timestamptz(6)
   postId        String?   @map("post_id") @db.Uuid
+  respostaId    String?   @map("resposta_id") @db.Uuid
+  audioId       String?   @unique(map: "mensagens_audio_key") @map("audio_id") @db.Uuid
+  apagadaEm     DateTime? @map("apagada_em") @db.Timestamptz(6)
 
   instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
   match       Match       @relation(fields: [instituicaoId, matchId], references: [instituicaoId, id], onDelete: Cascade, map: "mensagens_match_fk")
@@ -417,6 +424,13 @@ model Mensagem {
   // No banco: ON DELETE SET NULL (imagem_id), só a coluna da imagem.
   imagem      Imagem?     @relation("ImagemDaMensagem", fields: [instituicaoId, imagemId], references: [instituicaoId, id], onDelete: NoAction, map: "mensagens_imagem_fk")
 
+  // No banco: ON DELETE SET NULL (resposta_id) e (audio_id), só a coluna.
+  resposta    Mensagem?        @relation("Respostas", fields: [instituicaoId, respostaId], references: [instituicaoId, id], onDelete: NoAction, map: "mensagens_resposta_fk")
+  respondidas Mensagem[]       @relation("Respostas")
+  audio       Audio?           @relation(fields: [instituicaoId, audioId], references: [instituicaoId, id], onDelete: NoAction, map: "mensagens_audio_fk")
+  reacoes     ReacaoMensagem[]
+
+  @@unique([instituicaoId, id], map: "mensagens_instituicao_id_key")
   @@index([matchId, criadoEm], map: "mensagens_match_idx")
   @@map("mensagens")
 }
@@ -830,4 +844,39 @@ model Notificacao {
 
   @@index([usuarioId, criadoEm(sort: Desc)], map: "notificacoes_usuario_idx")
   @@map("notificacoes")
+}
+
+// ───────────────────────── Chat (migração 9) ─────────────────────────
+
+model Audio {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  autorId       String   @map("autor_id") @db.Uuid
+  tipo          String   @db.VarChar(40)
+  dados         Bytes
+  duracaoMs     Int      @map("duracao_ms")
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  autor       Usuario     @relation(fields: [instituicaoId, autorId], references: [instituicaoId, id], onDelete: Cascade, map: "audios_autor_fk")
+  mensagens   Mensagem[]
+
+  @@unique([instituicaoId, id], map: "audios_instituicao_id_key")
+  @@index([autorId, criadoEm], map: "audios_autor_idx")
+  @@map("audios")
+}
+
+model ReacaoMensagem {
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  mensagemId    String   @map("mensagem_id") @db.Uuid
+  usuarioId     String   @map("usuario_id") @db.Uuid
+  reacao        String   @db.VarChar(12)
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  mensagem    Mensagem    @relation(fields: [instituicaoId, mensagemId], references: [instituicaoId, id], onDelete: Cascade, map: "reacoes_mensagem_mensagem_fk")
+  usuario     Usuario     @relation(fields: [instituicaoId, usuarioId], references: [instituicaoId, id], onDelete: Cascade, map: "reacoes_mensagem_usuario_fk")
+
+  @@id([mensagemId, usuarioId])
+  @@map("reacoes_mensagem")
 }

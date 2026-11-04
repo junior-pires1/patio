@@ -19,9 +19,15 @@ export const novaMensagemConversa = z
     texto: z.string().trim().max(1000, 'No máximo 1.000 caracteres').default(''),
     imagemId: z.uuid('Imagem inválida').optional(),
     postId: z.uuid('Publicação inválida').optional(),
+    audioId: z.uuid('Áudio inválido').optional(),
+    respostaId: z.uuid('Mensagem inválida').optional(),
   })
   .refine(
-    (m) => (typeof m.texto === 'string' && m.texto.length > 0) || m.imagemId || m.postId,
+    (m) =>
+      (typeof m.texto === 'string' && m.texto.length > 0) ||
+      m.imagemId ||
+      m.postId ||
+      m.audioId,
     {
       message: 'Escreva uma mensagem',
       path: ['texto'],

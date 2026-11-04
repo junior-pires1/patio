@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActionSheetIOS,
   FlatList,
@@ -13,12 +13,16 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { Conexao, Mensagem } from '@/api/tipos';
+import type { Conexao, Mensagem, Reacao } from '@/api/tipos';
 import { Avatar } from '@/componentes/Avatar';
 import { Aviso, Carregando } from '@/componentes/Estados';
 import { Imagem } from '@/componentes/Imagem';
 import { PostNaMensagem } from '@/componentes/PostNaMensagem';
-import { useCorDaFaculdade, useSessao, useUsuario } from '@/sessao';
+import { GravadorDeVoz } from '@/componentes/chat/GravadorDeVoz';
+import { MenuMensagem } from '@/componentes/chat/MenuMensagem';
+import { PlayerDeAudio } from '@/componentes/chat/PlayerDeAudio';
+import { reacaoDe } from '@/componentes/chat/reacoes';
+import { useSessao, useUsuario } from '@/sessao';
 import { espaco, fonte, raio } from '@/tema';
 import { criarEstilos, useTema } from '@/tema-provedor';
 import { quando } from '@/utils/datas';
@@ -35,9 +39,43 @@ export default function Chat() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { api } = useSessao();
   const eu = useUsuario();
-  const cor = useCorDaFaculdade();
   const queryClient = useQueryClient();
   const [texto, setTexto] = useState('');
+  const [respondendo, setRespondendo] = useState<Mensagem | null>(null);
+  const [menu, setMenu] = useState<Mensagem | null>(null);
+  const [gravando, setGravando] = useState(false);
+  // Mensagens que mudaram (reação, apagada) também nas páginas antigas.
+  const alteradas = useQuery({
+    queryKey: ['mensagens-alteradas', id],
+    queryFn: () => ({}) as Record<string, Mensagem>,
+    initialData: {} as Record<string, Mensagem>,
+    staleTime: Infinity,
+  });
+  // "Digitando…" da outra pessoa: hora do último aviso.
+  const digitandoEm = useQuery({
+    queryKey: ['digitando', id],
+    queryFn: () => 0,
+    initialData: 0,
+    staleTime: Infinity,
+  });
+  // O aviso vale por 4 segundos; depois disso o "digitando…" some.
+  const [expirado, setExpirado] = useState(0);
+  useEffect(() => {
+    const aviso = digitandoEm.data;
+    if (!aviso) return;
+    const t = setTimeout(() => setExpirado(aviso), 4000);
+    return () => clearTimeout(t);
+  }, [digitandoEm.data]);
+  const outroDigitando = digitandoEm.data > 0 && expirado !== digitandoEm.data;
+  const ultimoAviso = useRef(0);
+  function mudarTexto(t: string) {
+    setTexto(t);
+    // Avisa no máximo a cada 3 segundos enquanto digita.
+    if (t.trim() && Date.now() - ultimoAviso.current > 3000) {
+      ultimoAviso.current = Date.now();
+      api.post(`/matches/${id}/digitando`).catch(() => undefined);
+    }
+  }
 
   const conexao = useQuery({
     queryKey: ['matches'],
@@ -51,15 +89,29 @@ export default function Chat() {
   const antigas = useMensagensAntigas(`/matches/${id}/mensagens`, mensagens.data);
 
   const enviar = useMutation({
-    mutationFn: async ({ t, imagem }: { t: string; imagem?: Blob }) => {
+    mutationFn: async ({
+      t,
+      imagem,
+      audio,
+    }: {
+      t: string;
+      imagem?: Blob;
+      audio?: { uri: string; duracaoMs: number };
+    }) => {
       const enviada = imagem ? await api.enviarImagem(imagem) : null;
+      const gravado = audio
+        ? await api.enviarAudio(await (await fetch(audio.uri)).blob(), audio.duracaoMs)
+        : null;
       return api.post<Mensagem>(`/matches/${id}/mensagens`, {
         texto: t,
         ...(enviada ? { imagemId: enviada.id } : {}),
+        ...(gravado ? { audioId: gravado.id } : {}),
+        ...(respondendo ? { respostaId: respondendo.id } : {}),
       });
     },
     onSuccess: (nova) => {
       setTexto('');
+      setRespondendo(null);
       queryClient.setQueryData<Pagina>(['mensagens', id], (p) =>
         p && !p.mensagens.some((m) => m.id === nova.id)
           ? { ...p, mensagens: [...p.mensagens, nova] }
@@ -68,6 +120,46 @@ export default function Chat() {
       void queryClient.invalidateQueries({ queryKey: ['matches'] });
     },
     onError: (e) => alerta('Mensagem não enviada', e.message),
+  });
+
+  function trocarMensagem(m: Mensagem) {
+    queryClient.setQueryData<Record<string, Mensagem>>(
+      ['mensagens-alteradas', id],
+      (a) => ({
+        ...a,
+        [m.id]: m,
+      }),
+    );
+  }
+  const reagir = useMutation({
+    mutationFn: ({ m, r }: { m: Mensagem; r: Reacao | null }) =>
+      r
+        ? api.put<Mensagem>(`/mensagens/${m.id}/reacao`, { reacao: r })
+        : api.delete(`/mensagens/${m.id}/reacao`).then(() => null),
+    onMutate: ({ m, r }) =>
+      trocarMensagem({
+        ...m,
+        reacoes: [
+          ...m.reacoes.filter((x) => x.usuarioId !== eu.id),
+          ...(r ? [{ usuarioId: eu.id, reacao: r }] : []),
+        ],
+      }),
+    onError: (e) => alerta('Reação não enviada', e.message),
+  });
+  const apagar = useMutation({
+    mutationFn: (m: Mensagem) => api.delete(`/mensagens/${m.id}`),
+    onMutate: (m) =>
+      trocarMensagem({
+        ...m,
+        apagada: true,
+        texto: '',
+        imagemUrl: null,
+        audio: null,
+        post: null,
+        reacoes: [],
+      }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['matches'] }),
+    onError: (e) => alerta('Não foi possível apagar', e.message),
   });
 
   // A imagem vai na hora, com o texto digitado (se houver) como legenda.
@@ -193,6 +285,10 @@ export default function Chat() {
     contatos.instagram && `Instagram ${contatos.instagram}`,
     contatos.whatsapp && `WhatsApp ${contatos.whatsapp}`,
   ].filter(Boolean);
+  const lista = [...antigas.todas].reverse().map((m) => alteradas.data[m.id] ?? m);
+  const nomeDe = (autorId: string) =>
+    autorId === eu.id ? 'Você' : (pessoa?.apelido ?? '');
+  const temTexto = texto.trim().length > 0;
 
   return (
     <SafeAreaView style={estilos.fundo} edges={['bottom', 'left', 'right']}>
@@ -207,9 +303,18 @@ export default function Chat() {
         ) : null}
         <FlatList
           inverted
-          data={[...antigas.todas].reverse()}
+          data={lista}
           onEndReached={() => void antigas.carregar()}
           onEndReachedThreshold={0.3}
+          ListHeaderComponent={
+            outroDigitando ? (
+              <View style={[estilos.balao, estilos.dele, estilos.digitando]}>
+                <Text style={estilos.digitandoTexto}>
+                  {pessoa?.apelido ?? ''} está digitando…
+                </Text>
+              </View>
+            ) : undefined
+          }
           ListFooterComponent={
             antigas.carregando ? (
               <Text style={estilos.carregando}>Carregando…</Text>
@@ -220,64 +325,201 @@ export default function Chat() {
           ListEmptyComponent={<Text style={estilos.vazio}>Comece a conversa</Text>}
           renderItem={({ item }) => {
             const minha = item.autorId === eu.id;
+            const corTexto = minha ? c.sobreMarca : c.texto;
+            const contagem = new Map<Reacao, number>();
+            for (const r of item.reacoes)
+              contagem.set(r.reacao, (contagem.get(r.reacao) ?? 0) + 1);
             return (
-              <View
-                style={[
-                  estilos.balao,
-                  minha ? [estilos.minha, { backgroundColor: cor }] : estilos.dele,
-                ]}
-              >
-                {item.imagemUrl ? (
-                  <Imagem url={item.imagemUrl} style={estilos.foto} />
-                ) : null}
-                {item.post ? <PostNaMensagem post={item.post} /> : null}
-                {item.texto ? (
-                  <Text style={[estilos.texto, minha && estilos.textoMinha]}>
-                    {item.texto}
+              <View style={[estilos.linha, minha ? estilos.linhaMinha : null]}>
+                <Pressable
+                  onLongPress={() => !item.apagada && setMenu(item)}
+                  delayLongPress={300}
+                  accessibilityRole="button"
+                  accessibilityHint="Segure para reagir ou responder"
+                  accessibilityActions={[{ name: 'activate', label: 'Opções da mensagem' }]}
+                  onAccessibilityAction={() => !item.apagada && setMenu(item)}
+                  style={[
+                    estilos.balao,
+                    minha ? estilos.minha : estilos.dele,
+                    item.apagada && estilos.apagada,
+                  ]}
+                >
+                  {item.apagada ? (
+                    <View style={estilos.linhaApagada}>
+                      <Ionicons name="ban-outline" size={14} color={c.textoSuave} />
+                      <Text style={estilos.textoApagado}>Mensagem apagada</Text>
+                    </View>
+                  ) : (
+                    <>
+                      {item.resposta ? (
+                        <View
+                          style={[
+                            estilos.citacao,
+                            minha ? estilos.citacaoMinha : estilos.citacaoDele,
+                          ]}
+                        >
+                          <Text style={[estilos.citacaoNome, { color: corTexto }]}>
+                            {nomeDe(item.resposta.autorId)}
+                          </Text>
+                          <Text
+                            style={[estilos.citacaoTexto, { color: corTexto }]}
+                            numberOfLines={2}
+                          >
+                            {item.resposta.resumo}
+                          </Text>
+                        </View>
+                      ) : null}
+                      {item.imagemUrl ? (
+                        <Imagem url={item.imagemUrl} style={estilos.foto} />
+                      ) : null}
+                      {item.post ? <PostNaMensagem post={item.post} /> : null}
+                      {item.audio ? (
+                        <PlayerDeAudio
+                          url={item.audio.url}
+                          duracaoMs={item.audio.duracaoMs}
+                          cor={corTexto}
+                          corFraca={minha ? 'rgba(255,255,255,0.25)' : c.superficieAlta}
+                        />
+                      ) : null}
+                      {item.texto ? (
+                        <Text style={[estilos.texto, minha && estilos.textoMinha]}>
+                          {item.texto}
+                        </Text>
+                      ) : null}
+                    </>
+                  )}
+                  <Text style={[estilos.hora, minha && !item.apagada && estilos.horaMinha]}>
+                    {quando(item.criadoEm)}
+                    {minha && item.lidaEm ? ' · lida' : ''}
                   </Text>
+                </Pressable>
+                {contagem.size > 0 ? (
+                  <Pressable
+                    onPress={() => setMenu(item)}
+                    style={[estilos.reacoes, minha ? estilos.reacoesMinha : null]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Reações: ${[...contagem.entries()]
+                      .map(([r, n]) => `${reacaoDe(r).rotulo} ${n}`)
+                      .join(', ')}`}
+                  >
+                    {[...contagem.entries()].map(([r, n]) => (
+                      <View key={r} style={estilos.reacao}>
+                        <Ionicons
+                          name={reacaoDe(r).icone}
+                          size={13}
+                          color={reacaoDe(r).cor(c)}
+                        />
+                        {n > 1 ? <Text style={estilos.reacaoConta}>{n}</Text> : null}
+                      </View>
+                    ))}
+                  </Pressable>
                 ) : null}
-                <Text style={[estilos.hora, minha && estilos.horaMinha]}>
-                  {quando(item.criadoEm)}
-                  {minha && item.lidaEm ? ' · lida' : ''}
-                </Text>
               </View>
             );
           }}
         />
-        <View style={estilos.barra}>
-          <Pressable
-            onPress={() => void mandarImagem()}
-            disabled={enviar.isPending}
-            style={estilos.anexo}
-            hitSlop={6}
-            accessibilityRole="button"
-            accessibilityLabel="Enviar imagem"
-          >
-            <Ionicons name="image-outline" size={24} color={c.textoSuave} />
-          </Pressable>
-          <TextInput
-            style={estilos.entrada}
-            placeholder="Mensagem"
-            placeholderTextColor={c.textoFraco}
-            multiline
-            maxLength={1000}
-            value={texto}
-            onChangeText={setTexto}
-            accessibilityLabel="Mensagem"
+        {respondendo ? (
+          <View style={estilos.respondendo}>
+            <View style={estilos.respondendoBarra} />
+            <View style={estilos.flex}>
+              <Text style={estilos.respondendoNome}>
+                Respondendo{' '}
+                {respondendo.autorId === eu.id ? 'a você' : `a ${pessoa?.apelido ?? ''}`}
+              </Text>
+              <Text style={estilos.respondendoTexto} numberOfLines={1}>
+                {respondendo.texto ||
+                  (respondendo.audio
+                    ? 'Mensagem de voz'
+                    : respondendo.imagemUrl
+                      ? 'Foto'
+                      : 'Publicação')}
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => setRespondendo(null)}
+              hitSlop={10}
+              accessibilityLabel="Cancelar resposta"
+            >
+              <Ionicons name="close" size={20} color={c.textoSuave} />
+            </Pressable>
+          </View>
+        ) : null}
+        {gravando ? (
+          <GravadorDeVoz
+            aoCancelar={() => setGravando(false)}
+            aoEnviar={(audio) => {
+              setGravando(false);
+              enviar.mutate({ t: '', audio });
+            }}
           />
-          <Pressable
-            onPress={() => texto.trim() && enviar.mutate({ t: texto.trim() })}
-            disabled={!texto.trim() || enviar.isPending}
-            style={[
-              estilos.enviar,
-              { backgroundColor: cor, opacity: texto.trim() ? 1 : 0.5 },
-            ]}
-            accessibilityLabel="Enviar"
-          >
-            <Ionicons name="arrow-up" size={20} color={c.sobreMarca} />
-          </Pressable>
-        </View>
+        ) : (
+          <View style={estilos.barra}>
+            <Pressable
+              onPress={() => void mandarImagem()}
+              disabled={enviar.isPending}
+              style={estilos.anexo}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel="Enviar imagem"
+            >
+              <Ionicons name="image-outline" size={24} color={c.textoSuave} />
+            </Pressable>
+            <TextInput
+              style={estilos.entrada}
+              placeholder="Mensagem"
+              placeholderTextColor={c.textoFraco}
+              multiline
+              maxLength={1000}
+              value={texto}
+              onChangeText={mudarTexto}
+              accessibilityLabel="Mensagem"
+            />
+            {temTexto ? (
+              <Pressable
+                onPress={() => enviar.mutate({ t: texto.trim() })}
+                disabled={enviar.isPending}
+                style={[estilos.enviar, { opacity: enviar.isPending ? 0.5 : 1 }]}
+                accessibilityLabel="Enviar"
+              >
+                <Ionicons name="arrow-up" size={20} color={c.sobreMarca} />
+              </Pressable>
+            ) : (
+              <Pressable
+                onPress={() => setGravando(true)}
+                disabled={enviar.isPending}
+                style={[estilos.enviar, estilos.microfone]}
+                accessibilityRole="button"
+                accessibilityLabel="Gravar mensagem de voz"
+              >
+                <Ionicons name="mic" size={20} color={c.marca} />
+              </Pressable>
+            )}
+          </View>
+        )}
       </KeyboardAvoidingView>
+      <MenuMensagem
+        mensagem={menu}
+        minha={menu?.autorId === eu.id}
+        minhaReacao={menu?.reacoes.find((r) => r.usuarioId === eu.id)?.reacao ?? null}
+        aoFechar={() => setMenu(null)}
+        aoReagir={(r) => {
+          if (menu) reagir.mutate({ m: menu, r });
+          setMenu(null);
+        }}
+        aoResponder={() => {
+          setRespondendo(menu);
+          setMenu(null);
+        }}
+        aoApagar={() => {
+          const alvo = menu;
+          setMenu(null);
+          if (!alvo) return;
+          alerta('Apagar para todos?', 'A mensagem some para você e para a outra pessoa.', [
+            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Apagar', style: 'destructive', onPress: () => apagar.mutate(alvo) },
+          ]);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -312,7 +554,71 @@ const useEstilos = criarEstilos((c) => ({
     paddingHorizontal: 14,
     paddingVertical: 9,
   },
-  minha: { alignSelf: 'flex-end', borderBottomRightRadius: 6 },
+  minha: { alignSelf: 'flex-end', borderBottomRightRadius: 6, backgroundColor: c.marca },
+  linha: { alignItems: 'flex-start', marginBottom: 2 },
+  linhaMinha: { alignItems: 'flex-end' },
+  flex: { flex: 1 },
+  apagada: { backgroundColor: 'transparent', borderWidth: 1, borderColor: c.borda },
+  linhaApagada: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  textoApagado: {
+    fontFamily: fonte.medio,
+    fontStyle: 'italic',
+    fontSize: 14,
+    color: c.textoSuave,
+  },
+  citacao: {
+    borderLeftWidth: 3,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    marginBottom: 6,
+  },
+  citacaoMinha: {
+    borderLeftColor: c.sobreMarca,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
+  citacaoDele: { borderLeftColor: c.marca, backgroundColor: c.superficieAlta },
+  citacaoNome: { fontFamily: fonte.negrito, fontSize: 12 },
+  citacaoTexto: { fontFamily: fonte.regular, fontSize: 13, opacity: 0.85 },
+  reacoes: {
+    flexDirection: 'row',
+    gap: 4,
+    marginTop: -8,
+    marginLeft: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: raio.total,
+    backgroundColor: c.superficie,
+    borderWidth: 1,
+    borderColor: c.borda,
+  },
+  reacoesMinha: { marginLeft: 0, marginRight: 10 },
+  reacao: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  reacaoConta: { fontFamily: fonte.negrito, fontSize: 11, color: c.textoSuave },
+  digitando: { marginBottom: 4 },
+  digitandoTexto: {
+    fontFamily: fonte.medio,
+    fontStyle: 'italic',
+    fontSize: 13.5,
+    color: c.textoSuave,
+  },
+  respondendo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaco.m,
+    paddingHorizontal: espaco.g,
+    paddingVertical: 8,
+    backgroundColor: c.superficieAlta,
+  },
+  respondendoBarra: {
+    width: 3,
+    alignSelf: 'stretch',
+    borderRadius: 2,
+    backgroundColor: c.marca,
+  },
+  respondendoNome: { fontFamily: fonte.negrito, fontSize: 12.5, color: c.marca },
+  respondendoTexto: { fontFamily: fonte.regular, fontSize: 13.5, color: c.textoSuave },
+  microfone: { backgroundColor: c.marcaSuave },
   dele: {
     alignSelf: 'flex-start',
     backgroundColor: c.superficie,
@@ -358,5 +664,6 @@ const useEstilos = criarEstilos((c) => ({
     borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: c.marca,
   },
 }));

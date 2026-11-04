@@ -3,6 +3,7 @@ import { FACULDADES } from '../../prisma/seed';
 import { urlTeste } from '../apoio/banco';
 
 const TABELAS_DA_FACULDADE = [
+  'audios',
   'auditoria',
   'avisos',
   'bloqueios',
@@ -30,6 +31,7 @@ const TABELAS_DA_FACULDADE = [
   'posts',
   'posts_salvos',
   'presencas_evento',
+  'reacoes_mensagem',
   'recusas',
   'sessoes',
   'stories',
