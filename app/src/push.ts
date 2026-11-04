@@ -48,6 +48,15 @@ export function usePush() {
     let cancelado = false;
     void (async () => {
       try {
+        // Android 8+: as notificações precisam de um canal (som, vibração e destaque).
+        if (Platform.OS === 'android') {
+          await Notifications.setNotificationChannelAsync('default', {
+            name: 'Pátio',
+            importance: Notifications.AndroidImportance.HIGH,
+            vibrationPattern: [0, 200, 120, 200],
+            lightColor: '#2A44C4',
+          });
+        }
         let { status } = await Notifications.getPermissionsAsync();
         if (status !== 'granted')
           status = (await Notifications.requestPermissionsAsync()).status;
