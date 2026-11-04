@@ -8,8 +8,9 @@ const ENDERECO_EXPO = 'https://exp.host/--/api/v2/push/send';
 
 /** RF27: guarda o token do aparelho (o mesmo token passa para a conta que entrou por último). */
 /** Texto da notificação: a mensagem ou, se for só imagem, um aviso de foto. */
-const resumo = (m: { texto?: string; imagemUrl?: string | null } | undefined) =>
-  m?.texto || (m?.imagemUrl ? '📷 Foto' : '');
+const resumo = (
+  m: { texto?: string; imagemUrl?: string | null; post?: unknown } | undefined,
+) => m?.texto || (m?.imagemUrl ? 'Foto' : m?.post ? 'Enviou uma publicação' : '');
 
 export function registrar(ctx: Contexto, eu: Autenticado, token: string) {
   return ctx.prisma.$transaction(async (tx) => {
@@ -44,14 +45,14 @@ export function mensagemDoEvento(
   switch (evento) {
     case 'curtida:nova':
       return {
-        titulo: 'Alguém curtiu você 💙',
+        titulo: 'Alguém curtiu você',
         texto: 'Abra o Pátio para ver quem foi.',
         destino: usuarioIds,
         dados: { tipo: 'curtida' },
       };
     case 'match:novo':
       return {
-        titulo: 'Nova conexão! 🎉',
+        titulo: 'Nova conexão!',
         texto: 'Vocês se curtiram. Que tal dar um oi?',
         destino: usuarioIds,
         dados: { tipo: 'match', matchId: d.matchId },
@@ -81,6 +82,13 @@ export function mensagemDoEvento(
         dados: { tipo: 'grupo', grupoId: d.grupoId },
       };
     }
+    case 'notificacao:nova':
+      return {
+        titulo: String(d.titulo ?? 'Pátio'),
+        texto: String(d.texto || 'Toque para ver.'),
+        destino: usuarioIds,
+        dados: { tipo: 'notificacao' },
+      };
     default:
       return null;
   }

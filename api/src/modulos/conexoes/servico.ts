@@ -3,6 +3,7 @@ import type { Contexto } from '../../contexto';
 import { naoEncontrado } from '../../erros';
 import type { Prisma } from '../../generated/prisma/client';
 import type { Autenticado } from '../../seguranca/tokens';
+import { avisar, notificar } from '../notificacoes/servico';
 import { PERFIL_PUBLICO } from '../perfil/servico';
 import { calcularAfinidade } from './afinidade';
 import { urlDaImagem } from '../imagens/servico';
@@ -159,8 +160,12 @@ export async function curtir(ctx: Contexto, eu: Autenticado, paraId: string) {
     const match = await tx.match.create({
       data: { instituicaoId: eu.instituicaoId, usuarioAId, usuarioBId },
     });
-    return { match, novo: true };
+    const avisos = await notificar(tx, eu, [
+      { para: paraId, tipo: 'CONEXAO_NOVA', matchId: match.id },
+    ]);
+    return { match, novo: true, avisos };
   });
+  if ('avisos' in resultado && resultado.avisos) avisar(ctx, resultado.avisos);
 
   if (resultado.novo && resultado.match) {
     ctx.notificar.enviar([eu.id, paraId], 'match:novo', { matchId: resultado.match.id });

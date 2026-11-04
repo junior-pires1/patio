@@ -6,6 +6,7 @@ import { ErroApi } from '@/api/cliente';
 import type { CategoriaPost } from '@/api/tipos';
 import { Botao } from '@/componentes/Botao';
 import { Campo } from '@/componentes/Campo';
+import { SugestoesDeMencao } from '@/componentes/SugestoesDeMencao';
 import { Chip } from '@/componentes/Chip';
 import { MensagemDeErro } from '@/componentes/Estados';
 import { Tela } from '@/componentes/Tela';
@@ -15,6 +16,7 @@ import { criarEstilos, useBase, useTema } from '@/tema-provedor';
 import { dataHoraBrParaIso, mascaraData, mascaraHora } from '@/utils/datas';
 import { escolherImagem } from '@/utils/foto';
 import { CATEGORIAS } from '@/utils/opcoes';
+import { useMencoes } from '@/utils/mencoes';
 import { voltar } from '@/utils/navegacao';
 
 /** RF18: nova publicação. Evento pede data, hora e local. */
@@ -25,7 +27,7 @@ export default function Publicar() {
   const { api } = useSessao();
   const queryClient = useQueryClient();
   const [cat, setCat] = useState<CategoriaPost>('GERAL');
-  const [texto, setTexto] = useState('');
+  const { texto, setTexto, mencoes, sugestoes, escolher: escolherMencao } = useMencoes();
   const [data, setData] = useState('');
   const [hora, setHora] = useState('');
   const [local, setLocal] = useState('');
@@ -58,6 +60,7 @@ export default function Publicar() {
       await api.post('/posts', {
         categoria: cat,
         texto: texto.trim(),
+        mencoes,
         ...(enviada ? { imagemId: enviada.id } : {}),
         ...(evento ? { eventoInicio: inicio, eventoLocal: local.trim() || undefined } : {}),
       });
@@ -94,8 +97,9 @@ export default function Publicar() {
         value={texto}
         onChangeText={setTexto}
         erro={campos.texto}
-        ajuda={`${texto.length}/500`}
+        ajuda={`${texto.length}/500 · use @ para marcar colegas e # para hashtags`}
       />
+      <SugestoesDeMencao sugestoes={sugestoes} aoEscolher={escolherMencao} />
       {imagem ? (
         <View>
           <Image

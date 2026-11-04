@@ -8,7 +8,7 @@ const TONS = {
   claro: [
     ['#E7EBFC', '#2A44C4'],
     ['#FFF1C7', '#8A6400'],
-    ['#E2F5EC', '#13875A'],
+    ['#E2F5EC', '#0F7A50'],
     ['#FCE7F0', '#B4316B'],
     ['#EAE6FD', '#5B3CC4'],
     ['#E0F2FA', '#1F6E96'],

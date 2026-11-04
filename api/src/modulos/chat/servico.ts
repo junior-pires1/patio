@@ -1,8 +1,10 @@
 import { naFaculdade } from '../../banco/prisma';
 import type { Contexto } from '../../contexto';
+import { naoEncontrado } from '../../erros';
 import type { Autenticado } from '../../seguranca/tokens';
 import { exigirMatch } from '../conexoes/servico';
-import type { NovaMensagem } from '../imagens/esquemas';
+import { postCompartilhado, type PostCompartilhado } from '../feed/servico';
+import type { NovaMensagemConversa } from '../imagens/esquemas';
 import { exigirImagemPropria, urlDaImagem } from '../imagens/servico';
 
 const MENSAGEM = {
@@ -12,11 +14,17 @@ const MENSAGEM = {
   imagemId: true,
   criadoEm: true,
   lidaEm: true,
+  postId: true,
 } as const;
 
-const formatar = <M extends { imagemId: string | null }>({ imagemId, ...m }: M) => ({
+const formatar = <M extends { imagemId: string | null; postId: string | null }>(
+  { imagemId, postId, ...m }: M,
+  posts: Map<string, PostCompartilhado>,
+) => ({
   ...m,
   imagemUrl: urlDaImagem(imagemId),
+  // Publicação apagada ou de alguém bloqueado aparece como indisponível.
+  post: postId ? (posts.get(postId) ?? { id: postId, indisponivel: true as const }) : null,
 });
 
 export const MENSAGENS_POR_PAGINA = 50;
@@ -47,9 +55,14 @@ export async function listarMensagens(
         where: { matchId, autorId: { not: eu.id }, lidaEm: null },
         data: { lidaEm: new Date() },
       });
+      const posts = await postCompartilhado(
+        tx,
+        eu,
+        pagina.flatMap((m) => (m.postId ? [m.postId] : [])),
+      );
       return {
         resposta: {
-          mensagens: pagina.reverse().map(formatar),
+          mensagens: pagina.reverse().map((m) => formatar(m, posts)),
           temMais: pagina.length === MENSAGENS_POR_PAGINA,
         },
         outroId: match.outroId,
@@ -67,7 +80,7 @@ export async function enviarMensagem(
   ctx: Contexto,
   eu: Autenticado,
   matchId: string,
-  { texto, imagemId }: NovaMensagem,
+  { texto, imagemId, postId }: NovaMensagemConversa,
 ) {
   const { mensagem, outroId } = await naFaculdade(
     ctx.prisma,
@@ -75,11 +88,20 @@ export async function enviarMensagem(
     async (tx) => {
       const match = await exigirMatch(tx, eu, matchId);
       await exigirImagemPropria(tx, eu, imagemId);
+      const posts = await postCompartilhado(tx, eu, postId ? [postId] : []);
+      if (postId && !posts.has(postId)) throw naoEncontrado('Publicação não encontrada.');
       const criada = await tx.mensagem.create({
-        data: { instituicaoId: eu.instituicaoId, matchId, autorId: eu.id, texto, imagemId },
+        data: {
+          instituicaoId: eu.instituicaoId,
+          matchId,
+          autorId: eu.id,
+          texto,
+          imagemId,
+          postId,
+        },
         select: MENSAGEM,
       });
-      return { mensagem: formatar(criada), outroId: match.outroId };
+      return { mensagem: formatar(criada, posts), outroId: match.outroId };
     },
   );
   ctx.notificar.enviar([eu.id, outroId], 'mensagem:nova', { matchId, mensagem });

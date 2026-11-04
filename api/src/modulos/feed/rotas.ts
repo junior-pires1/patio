@@ -10,6 +10,10 @@ const filtro = z.object({
   categoria: z.enum(CATEGORIAS).optional(),
   antes: z.iso.datetime({ offset: true }).optional(),
 });
+const mencoes = z
+  .array(z.uuid('Pessoa inválida'))
+  .max(10, 'No máximo 10 pessoas marcadas')
+  .optional();
 const novoPost = z
   .object({
     categoria: z.enum(CATEGORIAS).default('GERAL'),
@@ -20,6 +24,7 @@ const novoPost = z
       .transform((t) => new Date(t))
       .optional(),
     eventoLocal: z.string().trim().max(120).optional(),
+    mencoes: mencoes,
   })
   .refine((p) => (typeof p.texto === 'string' && p.texto.length > 0) || p.imagemId, {
     message: 'Escreva alguma coisa ou escolha uma imagem',
@@ -39,13 +44,23 @@ const novoPost = z
       path: ['eventoInicio'],
     },
   );
-const texto = z.object({
+const novoComentario = z.object({
   texto: z
     .string()
     .trim()
     .min(1, 'Escreva um comentário')
     .max(300, 'No máximo 300 caracteres'),
+  paiId: z.uuid('Comentário inválido').optional(),
+  mencoes,
 });
+const hashtag = z.object({
+  tag: z
+    .string()
+    .trim()
+    .regex(/^[\p{L}\p{N}_]{2,40}$/u, 'Hashtag inválida')
+    .transform((t) => t.toLowerCase()),
+});
+const antes = z.object({ antes: z.iso.datetime({ offset: true }).optional() });
 
 /** Feed da faculdade: publicações, curtidas, comentários e presença em eventos. */
 export function rotasFeed(ctx: Contexto) {
@@ -93,10 +108,54 @@ export function rotasFeed(ctx: Contexto) {
     res.json(await servico.listarComentarios(ctx, quem(req), id.parse(req.params).id));
   });
   r.post('/posts/:id/comentarios', logado, async (req, res) => {
-    const { texto: t } = texto.parse(req.body);
     res
       .status(201)
-      .json(await servico.comentar(ctx, quem(req), id.parse(req.params).id, t));
+      .json(
+        await servico.comentar(
+          ctx,
+          quem(req),
+          id.parse(req.params).id,
+          novoComentario.parse(req.body),
+        ),
+      );
+  });
+  r.put('/comentarios/:id/curtida', logado, async (req, res) => {
+    res.json(await servico.curtirComentario(ctx, quem(req), id.parse(req.params).id, true));
+  });
+  r.delete('/comentarios/:id/curtida', logado, async (req, res) => {
+    res.json(
+      await servico.curtirComentario(ctx, quem(req), id.parse(req.params).id, false),
+    );
+  });
+
+  r.put('/posts/:id/salvo', logado, async (req, res) => {
+    res.json(await servico.salvarPost(ctx, quem(req), id.parse(req.params).id, true));
+  });
+  r.delete('/posts/:id/salvo', logado, async (req, res) => {
+    res.json(await servico.salvarPost(ctx, quem(req), id.parse(req.params).id, false));
+  });
+  r.get('/eu/salvos', logado, async (req, res) => {
+    const f = antes.parse(req.query);
+    const eu = quem(req);
+    res.json(
+      await servico.listarPosts(ctx, eu, {
+        salvoPor: eu.id,
+        antes: f.antes ? new Date(f.antes) : undefined,
+      }),
+    );
+  });
+
+  r.get('/hashtags/em-alta', logado, async (req, res) => {
+    res.json(await servico.hashtagsEmAlta(ctx, quem(req)));
+  });
+  r.get('/hashtags/:tag/posts', logado, async (req, res) => {
+    const f = antes.parse(req.query);
+    res.json(
+      await servico.listarPosts(ctx, quem(req), {
+        hashtag: hashtag.parse(req.params).tag,
+        antes: f.antes ? new Date(f.antes) : undefined,
+      }),
+    );
   });
   r.delete('/comentarios/:id', logado, async (req, res) => {
     await servico.apagarComentario(ctx, quem(req), id.parse(req.params).id);

@@ -1,16 +1,19 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import type { Post } from '@/api/tipos';
-import { useSessao } from '@/sessao';
+import { useSessao, useUsuario } from '@/sessao';
 import { espaco, fonte, raio, tipo } from '@/tema';
 import { criarEstilos, useTema } from '@/tema-provedor';
 import { dataDoEvento, quando } from '@/utils/datas';
 import { categoria } from '@/utils/opcoes';
 import { Avatar } from './Avatar';
+import { Compartilhar } from './Compartilhar';
 import { Imagem } from './Imagem';
 import { Info } from './Info';
+import { TextoRico } from './TextoRico';
 import { alerta } from '@/utils/alerta';
 
 type Props = { post: Post; detalhe?: boolean };
@@ -18,6 +21,7 @@ type Props = { post: Post; detalhe?: boolean };
 /** Publicação do feed: autor, texto, evento (com presença), curtidas e comentários. */
 export function CartaoPost({ post, detalhe = false }: Props) {
   const { api } = useSessao();
+  const eu = useUsuario();
   const { c } = useTema();
   const estilos = useEstilos();
   const queryClient = useQueryClient();
@@ -43,6 +47,16 @@ export function CartaoPost({ post, detalhe = false }: Props) {
     );
   };
 
+  const [compartilhando, setCompartilhando] = useState(false);
+  const salvar = useMutation({
+    mutationFn: () =>
+      post.salvo
+        ? api.delete(`/posts/${post.id}/salvo`)
+        : api.put(`/posts/${post.id}/salvo`, {}),
+    onMutate: () => aplicar({ salvo: !post.salvo }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['salvos'] }),
+    onError: () => aplicar({ salvo: post.salvo }),
+  });
   const curtir = useMutation({
     mutationFn: () =>
       post.curti
@@ -141,9 +155,22 @@ export function CartaoPost({ post, detalhe = false }: Props) {
       </View>
 
       {post.texto ? (
-        <Pressable onPress={abrir} disabled={detalhe}>
-          <Text style={[estilos.texto, detalhe && estilos.textoGrande]}>{post.texto}</Text>
-        </Pressable>
+        detalhe ? (
+          <TextoRico
+            texto={post.texto}
+            mencoes={post.mencoes}
+            estilo={[estilos.texto, estilos.textoGrande]}
+          />
+        ) : (
+          <Pressable onPress={abrir}>
+            <TextoRico
+              texto={post.texto}
+              mencoes={post.mencoes}
+              estilo={estilos.texto}
+              numberOfLines={8}
+            />
+          </Pressable>
+        )
       ) : null}
       {post.imagemUrl ? (
         <Imagem
@@ -211,7 +238,36 @@ export function CartaoPost({ post, detalhe = false }: Props) {
           <Ionicons name="chatbubble-outline" size={18} color={c.textoSuave} />
           <Text style={estilos.contagem}>{post.comentarios}</Text>
         </Pressable>
+        {eu.papel === 'ALUNO' ? (
+          <Pressable
+            onPress={() => setCompartilhando(true)}
+            style={({ pressed }) => [estilos.acao, pressed && { opacity: 0.7 }]}
+            accessibilityLabel="Enviar para uma conexão"
+          >
+            <Ionicons name="paper-plane-outline" size={18} color={c.textoSuave} />
+          </Pressable>
+        ) : null}
+        <View style={estilos.flex} />
+        <Pressable
+          onPress={() => salvar.mutate()}
+          style={({ pressed }) => [estilos.acao, pressed && { opacity: 0.7 }]}
+          accessibilityLabel={post.salvo ? 'Tirar dos salvos' : 'Salvar publicação'}
+          accessibilityState={{ checked: post.salvo }}
+        >
+          <Ionicons
+            name={post.salvo ? 'bookmark' : 'bookmark-outline'}
+            size={18}
+            color={post.salvo ? c.marca : c.textoSuave}
+          />
+        </Pressable>
       </View>
+      {compartilhando ? (
+        <Compartilhar
+          postId={post.id}
+          aberto={compartilhando}
+          aoFechar={() => setCompartilhando(false)}
+        />
+      ) : null}
     </View>
   );
 }
