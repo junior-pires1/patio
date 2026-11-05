@@ -12,7 +12,13 @@ export const senha = z
   .min(8, 'A senha precisa de pelo menos 8 caracteres')
   .max(72, 'A senha pode ter no máximo 72 caracteres')
   .regex(/[A-Za-z]/, 'A senha precisa ter letras')
-  .regex(/[0-9]/, 'A senha precisa ter números');
+  .regex(/[0-9]/, 'A senha precisa ter números')
+  // O bcrypt só usa os primeiros 72 bytes: com acentos e emojis (2 a 4 bytes
+  // cada), uma senha de 72 caracteres passaria disso e o final seria ignorado.
+  .refine(
+    (s) => new TextEncoder().encode(s).length <= 72,
+    'Senha longa demais: acentos e emojis ocupam mais espaço. Use até 72 letras sem acento.',
+  );
 
 /** Idade completa em anos na data de hoje. */
 export function idade(nascimento: Date, hoje = new Date()): number {

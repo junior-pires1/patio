@@ -10,21 +10,30 @@ type ComAutenticado = Request & { [CHAVE]?: Autenticado };
 /**
  * Exige `Authorization: Bearer <token de acesso>` e confere no banco se a
  * conta continua ativa e a faculdade também: suspensão (RN16) e faculdade
- * desativada (RN20) valem na hora, sem esperar o token vencer.
+ * desativada (RN20) valem na hora, sem esperar o token vencer. Troca de senha
+ * também: tokens emitidos antes dela deixam de valer.
  */
 export function autenticar(ctx: Pick<Contexto, 'segredoJwt' | 'prisma'>): RequestHandler {
   return async (req, _res, next) => {
     const [tipo, token] = (req.headers.authorization ?? '').split(' ');
     if (tipo !== 'Bearer' || !token) throw naoAutenticado();
-    const autenticado = verificarAcesso(token, ctx.segredoJwt);
+    const { emitidoEm, ...autenticado } = verificarAcesso(token, ctx.segredoJwt);
 
     const conta = await naFaculdade(ctx.prisma, autenticado.instituicaoId, (tx) =>
       tx.usuario.findUnique({
         where: { id: autenticado.id },
-        select: { status: true, instituicao: { select: { ativa: true } } },
+        select: {
+          status: true,
+          senhaAlteradaEm: true,
+          instituicao: { select: { ativa: true } },
+        },
       }),
     );
     if (!conta || conta.status === 'EXCLUIDA') throw naoAutenticado();
+    // Token emitido antes da última troca de senha (outro aparelho, por exemplo) não vale mais.
+    if (conta.senhaAlteradaEm && emitidoEm < conta.senhaAlteradaEm.getTime()) {
+      throw naoAutenticado('Sua senha foi trocada. Entre de novo.');
+    }
     if (conta.status === 'SUSPENSA') {
       throw new ErroApp(403, 'conta_suspensa', 'Sua conta está suspensa pela coordenação.');
     }

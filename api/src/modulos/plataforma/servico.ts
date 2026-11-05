@@ -255,7 +255,10 @@ export async function novaSenhaDaCoordenacao(
   const senha = senhaProvisoria();
   const senhaHash = await gerarHash(senha);
   await ctx.prisma.$transaction([
-    ctx.prisma.usuario.update({ where: { id: conta.id }, data: { senhaHash } }),
+    ctx.prisma.usuario.update({
+      where: { id: conta.id },
+      data: { senhaHash, senhaAlteradaEm: new Date() },
+    }),
     ctx.prisma.sessao.updateMany({
       where: { usuarioId: conta.id, revogadaEm: null },
       data: { revogadaEm: new Date() },
@@ -289,8 +292,15 @@ export async function trocarSenhaDoAdmin(
       senhaAtual: 'Senha atual incorreta',
     });
   }
-  await ctx.prisma.administrador.update({
-    where: { id: adminId },
+  const { count } = await ctx.prisma.administrador.updateMany({
+    where: { id: adminId, senhaHash: admin.senhaHash },
     data: { senhaHash: await gerarHash(novaSenha) },
   });
+  if (count === 0) {
+    throw new ErroApp(
+      409,
+      'senha_alterada',
+      'A senha acabou de ser trocada. Tente de novo.',
+    );
+  }
 }

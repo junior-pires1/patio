@@ -241,6 +241,7 @@ model Usuario {
   apelido           String       @db.VarChar(40)
   email             String       @unique(map: "usuarios_email_key") @db.VarChar(160)
   senhaHash         String       @map("senha_hash") @db.VarChar(100)
+  senhaAlteradaEm   DateTime?    @map("senha_alterada_em") @db.Timestamptz(6)
   dataNascimento    DateTime?    @map("data_nascimento") @db.Date
   semestre          Int?         @db.SmallInt
   turno             Turno?
@@ -352,6 +353,8 @@ model Sessao {
   criadoEm         DateTime  @default(now()) @map("criado_em") @db.Timestamptz(6)
   expiraEm         DateTime  @map("expira_em") @db.Timestamptz(6)
   revogadaEm       DateTime? @map("revogada_em") @db.Timestamptz(6)
+  /// Já foi trocada por outra na renovação: reusar este token indica roubo.
+  renovada         Boolean   @default(false)
 
   instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
   usuario     Usuario     @relation(fields: [instituicaoId, usuarioId], references: [instituicaoId, id], onDelete: Cascade, map: "sessoes_usuario_fk")

@@ -5,7 +5,7 @@ import { lerAmbiente } from './config/ambiente';
 import { notificadorPush } from './modulos/push/servico';
 import { emailNoTerminal, emailPeloBrevo } from './servicos/email';
 import { combinar } from './servicos/notificador';
-import { criarTempoReal } from './tempo-real';
+import { contaPodeConectar, criarTempoReal } from './tempo-real';
 
 const ambiente = lerAmbiente();
 const prisma = criarPrisma(ambiente.DATABASE_URL);
@@ -43,10 +43,7 @@ const tempoReal = criarTempoReal(servidor, {
   segredoJwt: ambiente.JWT_SEGREDO,
   origensPermitidas: ambiente.origensPermitidas,
   // Conta suspensa ou faculdade desativada não reconecta, mesmo com o token ainda válido.
-  contaAtiva: async (u) =>
-    (await prisma.usuario.count({
-      where: { id: u.id, status: 'ATIVA', instituicao: { ativa: true } },
-    })) > 0,
+  contaAtiva: (u) => contaPodeConectar(prisma, u),
 });
 ponte.tempoReal = tempoReal;
 

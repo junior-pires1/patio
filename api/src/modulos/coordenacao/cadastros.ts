@@ -162,7 +162,10 @@ export async function novaSenhaDoAluno(ctx: Contexto, eu: Autenticado, id: strin
       select: { id: true, email: true },
     });
     if (!aluno) throw naoEncontrado();
-    await tx.usuario.update({ where: { id }, data: { senhaHash } });
+    await tx.usuario.update({
+      where: { id },
+      data: { senhaHash, senhaAlteradaEm: new Date() },
+    });
     await tx.sessao.updateMany({
       where: { usuarioId: id, revogadaEm: null },
       data: { revogadaEm: new Date() },

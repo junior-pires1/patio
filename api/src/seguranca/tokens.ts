@@ -15,20 +15,36 @@ const conteudo = z.object({
   sub: z.uuid(),
   fac: z.uuid(),
   papel: z.enum(['ALUNO', 'COORDENACAO']),
+  iat: z.number(),
+  /** Emitido em (milissegundos): o `iat` tem só segundos. */
+  em: z.number().optional(),
 });
 
 export function assinarAcesso(usuario: Autenticado, segredo: string): string {
-  return jwt.sign({ fac: usuario.instituicaoId, papel: usuario.papel }, segredo, {
-    algorithm: 'HS256',
-    subject: usuario.id,
-    expiresIn: DURACAO_ACESSO_SEGUNDOS,
-  });
+  return jwt.sign(
+    { fac: usuario.instituicaoId, papel: usuario.papel, em: Date.now() },
+    segredo,
+    {
+      algorithm: 'HS256',
+      subject: usuario.id,
+      expiresIn: DURACAO_ACESSO_SEGUNDOS,
+    },
+  );
 }
 
-export function verificarAcesso(token: string, segredo: string): Autenticado {
+/** Confere o token de acesso. `emitidoEm` (ms) serve para recusar tokens anteriores a uma troca de senha. */
+export function verificarAcesso(
+  token: string,
+  segredo: string,
+): Autenticado & { emitidoEm: number } {
   try {
     const dados = conteudo.parse(jwt.verify(token, segredo, { algorithms: ['HS256'] }));
-    return { id: dados.sub, instituicaoId: dados.fac, papel: dados.papel };
+    return {
+      id: dados.sub,
+      instituicaoId: dados.fac,
+      papel: dados.papel,
+      emitidoEm: dados.em ?? dados.iat * 1000,
+    };
   } catch {
     throw naoAutenticado('Sessão expirada ou inválida. Faça login novamente.');
   }
