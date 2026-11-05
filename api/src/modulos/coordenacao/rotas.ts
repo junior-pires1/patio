@@ -19,7 +19,11 @@ const filtroAlunos = z.object({
   pagina,
 });
 
-const nome = z.string().trim().min(2, 'Informe o nome').max(120, 'Nome muito longo');
+const nome = z
+  .string()
+  .trim()
+  .min(2, 'Use pelo menos 2 letras')
+  .max(120, 'Nome muito longo');
 const novoCurso = z.object({ nome });
 const novaDisciplina = z.object({ nome, cursoId: z.uuid().nullable().optional() });
 const novoAluno = z.object({

@@ -7,14 +7,19 @@ import * as servico from './servico';
 const alvo = z.object({ paraId: z.uuid('Identificador inválido') });
 const curtida = alvo.extend({ super: z.boolean().optional().default(false) });
 const idMatch = z.object({ id: z.uuid('Identificador inválido') });
-const filtroDescobrir = z.object({
-  objetivo: z.enum(['GRUPO_ESTUDOS', 'MONITORIA', 'PROJETOS', 'AMIZADE']).optional(),
-  ajudaEm: z.uuid('Disciplina inválida').optional(),
-  cursoId: z.uuid('Curso inválido').optional(),
-  turno: z.enum(['MANHA', 'TARDE', 'NOITE', 'INTEGRAL']).optional(),
-  semestreMin: z.coerce.number().int().min(1).max(12).optional(),
-  semestreMax: z.coerce.number().int().min(1).max(12).optional(),
-});
+const filtroDescobrir = z
+  .object({
+    objetivo: z.enum(['GRUPO_ESTUDOS', 'MONITORIA', 'PROJETOS', 'AMIZADE']).optional(),
+    ajudaEm: z.uuid('Disciplina inválida').optional(),
+    cursoId: z.uuid('Curso inválido').optional(),
+    turno: z.enum(['MANHA', 'TARDE', 'NOITE', 'INTEGRAL']).optional(),
+    semestreMin: z.coerce.number().int().min(1).max(12).optional(),
+    semestreMax: z.coerce.number().int().min(1).max(12).optional(),
+  })
+  .refine((f) => !f.semestreMin || !f.semestreMax || f.semestreMin <= f.semestreMax, {
+    message: 'O semestre mínimo não pode ser maior que o máximo',
+    path: ['semestreMin'],
+  });
 
 /** Descoberta, curtidas, pulos e conexões (só alunos). */
 export function rotasConexoes(ctx: Contexto) {

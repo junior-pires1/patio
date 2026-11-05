@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { Botao, Cartao, Estado, Titulo } from '@/componentes/ui';
+import { ErroApi } from '@/lib/cliente';
 import { useSessao } from '@/lib/sessao';
 
 type Curso = { id: string; nome: string };
@@ -33,7 +34,13 @@ export default function PaginaCursos() {
     void queryClient.invalidateQueries({ queryKey: ['cursos'] });
     void queryClient.invalidateQueries({ queryKey: ['disciplinas'] });
   };
-  const mostrarErro = (e: Error) => setErro(e.message);
+  // Mostra o motivo do campo (ex.: "Use pelo menos 2 letras") em vez do genérico.
+  const mostrarErro = (e: Error) =>
+    setErro(
+      e instanceof ErroApi && e.status === 400
+        ? (Object.values(e.campos)[0] ?? e.message)
+        : e.message,
+    );
 
   const criarCurso = useMutation({
     mutationFn: (nome: string) => api.post('/coordenacao/cursos', { nome }),
