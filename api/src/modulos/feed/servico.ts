@@ -104,13 +104,15 @@ export type FiltroPosts = {
   salvoPor?: string;
   /** Só as que têm esta hashtag (sem o #). */
   hashtag?: string;
+  /** Só de quem esta pessoa segue (aba "Seguindo"). */
+  seguidosPor?: string;
 };
 
 /** RF18/RF21: feed da faculdade, do mais novo para o mais antigo. */
 export function listarFeed(
   ctx: Contexto,
   eu: Autenticado,
-  filtro: { categoria?: Categoria; antes?: Date },
+  filtro: { categoria?: Categoria; antes?: Date; seguidosPor?: string },
 ) {
   return listarPosts(ctx, eu, filtro);
 }
@@ -121,7 +123,14 @@ export function listarPosts(ctx: Contexto, eu: Autenticado, filtro: FiltroPosts)
     const posts = await tx.post.findMany({
       where: {
         removidoEm: null,
-        autor: autorVisivel(eu),
+        autor: filtro.seguidosPor
+          ? {
+              AND: [
+                autorVisivel(eu),
+                { seguidores: { some: { seguidorId: filtro.seguidosPor } } },
+              ],
+            }
+          : autorVisivel(eu),
         ...(filtro.categoria ? { categoria: filtro.categoria } : {}),
         ...(filtro.antes ? { criadoEm: { lt: filtro.antes } } : {}),
         ...(filtro.autorId ? { autorId: filtro.autorId } : {}),

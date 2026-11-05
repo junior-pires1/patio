@@ -10,7 +10,11 @@ export type TipoNotificacao =
   | 'COMENTARIO_CURTIDO'
   | 'MENCAO'
   | 'CONEXAO_NOVA'
-  | 'RECOMENDACAO';
+  | 'RECOMENDACAO'
+  | 'SUPER_CURTIDA'
+  | 'NOVO_SEGUIDOR'
+  | 'CANDIDATURA_NOVA'
+  | 'CANDIDATURA_ATUALIZADA';
 
 /** Frase da notificação (no app e no push). */
 const FRASES: Record<TipoNotificacao, string> = {
@@ -21,6 +25,10 @@ const FRASES: Record<TipoNotificacao, string> = {
   MENCAO: 'mencionou você',
   CONEXAO_NOVA: 'agora é sua conexão',
   RECOMENDACAO: 'recomendou uma habilidade sua',
+  SUPER_CURTIDA: 'deu uma super curtida em você',
+  NOVO_SEGUIDOR: 'começou a seguir você',
+  CANDIDATURA_NOVA: 'se candidatou à sua vaga',
+  CANDIDATURA_ATUALIZADA: 'atualizou sua candidatura',
 };
 
 // Curtidas repetidas (curtir, descurtir, curtir) não viram várias notificações.
@@ -32,6 +40,7 @@ export type NovaNotificacao = {
   postId?: string;
   comentarioId?: string;
   matchId?: string;
+  vagaId?: string;
   texto?: string | null;
 };
 
@@ -91,6 +100,7 @@ export async function notificar(
         postId: n.postId,
         comentarioId: n.comentarioId,
         matchId: n.matchId,
+        vagaId: n.vagaId,
         texto: n.texto ? n.texto.slice(0, 160) : null,
       },
     });
@@ -145,6 +155,7 @@ export function listar(ctx: Contexto, eu: Autenticado, antes?: Date) {
         criadoEm: true,
         lidaEm: true,
         matchId: true,
+        vagaId: true,
         comentarioId: true,
         ator: { select: { id: true, apelido: true, fotoUrl: true } },
         post: { select: { id: true, imagemId: true, removidoEm: true } },

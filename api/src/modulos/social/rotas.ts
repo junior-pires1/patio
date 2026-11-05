@@ -30,6 +30,12 @@ const experiencia = z
     inicio: data,
     fim: data.nullable().optional(),
     descricao: textoOpcional(500),
+    link: z
+      .url({ protocol: /^https?$/, message: 'Link inválido (comece com https://)' })
+      .max(300)
+      .nullable()
+      .optional()
+      .or(z.literal('').transform(() => null)),
   })
   // Se uma das datas já falhou no formato, as regras abaixo não rodam (senão viram erro 500).
   .refine((e) => !datasValidas(e) || !e.fim || e.fim >= e.inicio, {
@@ -122,6 +128,30 @@ export function rotasSocial(ctx: Contexto) {
   r.delete('/curtidas/:id', ...aluno, async (req, res) => {
     await servico.descurtirPessoa(ctx, quem(req), id.parse(req.params).id);
     res.status(204).end();
+  });
+
+  r.put('/usuarios/:id/seguir', ...aluno, async (req, res) => {
+    res.json(await servico.seguir(ctx, quem(req), id.parse(req.params).id, true));
+  });
+
+  r.delete('/usuarios/:id/seguir', ...aluno, async (req, res) => {
+    res.json(await servico.seguir(ctx, quem(req), id.parse(req.params).id, false));
+  });
+
+  r.get('/usuarios/:id/seguidores', logado, async (req, res) => {
+    res.json(
+      await servico.listarSeguidores(ctx, quem(req), id.parse(req.params).id, 'seguidores'),
+    );
+  });
+
+  r.get('/usuarios/:id/seguindo', logado, async (req, res) => {
+    res.json(
+      await servico.listarSeguidores(ctx, quem(req), id.parse(req.params).id, 'seguindo'),
+    );
+  });
+
+  r.get('/eu/visitas', ...aluno, async (req, res) => {
+    res.json(await servico.visitasAoPerfil(ctx, quem(req)));
   });
 
   r.get('/eu/posts-curtidos', logado, async (req, res) => {

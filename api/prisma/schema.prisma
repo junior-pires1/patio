@@ -150,6 +150,10 @@ model Instituicao {
   notificacoes       Notificacao[]
   audios             Audio[]
   reacoesMensagem    ReacaoMensagem[]
+  seguidores         Seguidor[]
+  visitasPerfil      VisitaPerfil[]
+  vagas              Vaga[]
+  candidaturas       Candidatura[]
 
   @@map("instituicoes")
 }
@@ -296,6 +300,12 @@ model Usuario {
   notificacoesFeitas  Notificacao[]       @relation("NotificacaoDe")
   audios              Audio[]
   reacoesMensagem     ReacaoMensagem[]
+  seguindo            Seguidor[]          @relation("Seguidor")
+  seguidores          Seguidor[]          @relation("Seguido")
+  visitasFeitas       VisitaPerfil[]      @relation("Visitante")
+  visitasRecebidas    VisitaPerfil[]      @relation("Visitado")
+  vagas               Vaga[]
+  candidaturas        Candidatura[]
 
   @@unique([instituicaoId, id], map: "usuarios_instituicao_id_key")
   @@index([instituicaoId, status], map: "usuarios_instituicao_idx")
@@ -358,6 +368,7 @@ model Curtida {
   deId          String   @map("de_id") @db.Uuid
   paraId        String   @map("para_id") @db.Uuid
   criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+  super         Boolean  @default(false)
 
   instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
   de          Usuario     @relation("CurtidaDe", fields: [instituicaoId, deId], references: [instituicaoId, id], onDelete: Cascade, map: "curtidas_de_fk")
@@ -687,6 +698,7 @@ model Experiencia {
   inicio        DateTime  @db.Date
   fim           DateTime? @db.Date
   descricao     String?   @db.VarChar(500)
+  link          String?   @db.VarChar(300)
   criadoEm      DateTime  @default(now()) @map("criado_em") @db.Timestamptz(6)
 
   instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
@@ -831,6 +843,7 @@ model Notificacao {
   postId        String?   @map("post_id") @db.Uuid
   comentarioId  String?   @map("comentario_id") @db.Uuid
   matchId       String?   @map("match_id") @db.Uuid
+  vagaId        String?   @map("vaga_id") @db.Uuid
   texto         String?   @db.VarChar(160)
   criadoEm      DateTime  @default(now()) @map("criado_em") @db.Timestamptz(6)
   lidaEm        DateTime? @map("lida_em") @db.Timestamptz(6)
@@ -840,6 +853,7 @@ model Notificacao {
   ator        Usuario?    @relation("NotificacaoDe", fields: [instituicaoId, atorId], references: [instituicaoId, id], onDelete: Cascade, map: "notificacoes_ator_fk")
   post        Post?       @relation(fields: [instituicaoId, postId], references: [instituicaoId, id], onDelete: Cascade, map: "notificacoes_post_fk")
   comentario  Comentario? @relation(fields: [instituicaoId, comentarioId], references: [instituicaoId, id], onDelete: Cascade, map: "notificacoes_comentario_fk")
+  vaga        Vaga?       @relation(fields: [instituicaoId, vagaId], references: [instituicaoId, id], onDelete: Cascade, map: "notificacoes_vaga_fk")
   match       Match?      @relation(fields: [instituicaoId, matchId], references: [instituicaoId, id], onDelete: Cascade, map: "notificacoes_match_fk")
 
   @@index([usuarioId, criadoEm(sort: Desc)], map: "notificacoes_usuario_idx")
@@ -879,4 +893,80 @@ model ReacaoMensagem {
 
   @@id([mensagemId, usuarioId])
   @@map("reacoes_mensagem")
+}
+
+// ───────────────────────── Match e carreira (migração 10) ─────────────────────────
+
+model Seguidor {
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  seguidorId    String   @map("seguidor_id") @db.Uuid
+  seguidoId     String   @map("seguido_id") @db.Uuid
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  seguidor    Usuario     @relation("Seguidor", fields: [instituicaoId, seguidorId], references: [instituicaoId, id], onDelete: Cascade, map: "seguidores_seguidor_fk")
+  seguido     Usuario     @relation("Seguido", fields: [instituicaoId, seguidoId], references: [instituicaoId, id], onDelete: Cascade, map: "seguidores_seguido_fk")
+
+  @@id([seguidorId, seguidoId])
+  @@index([seguidoId], map: "seguidores_seguido_idx")
+  @@map("seguidores")
+}
+
+model VisitaPerfil {
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  perfilId      String   @map("perfil_id") @db.Uuid
+  visitanteId   String   @map("visitante_id") @db.Uuid
+  dia           DateTime @default(dbgenerated("CURRENT_DATE")) @db.Date
+  ultimaEm      DateTime @default(now()) @map("ultima_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  perfil      Usuario     @relation("Visitado", fields: [instituicaoId, perfilId], references: [instituicaoId, id], onDelete: Cascade, map: "visitas_perfil_perfil_fk")
+  visitante   Usuario     @relation("Visitante", fields: [instituicaoId, visitanteId], references: [instituicaoId, id], onDelete: Cascade, map: "visitas_perfil_visitante_fk")
+
+  @@id([perfilId, visitanteId, dia])
+  @@index([perfilId, ultimaEm(sort: Desc)], map: "visitas_perfil_recentes_idx")
+  @@map("visitas_perfil")
+}
+
+model Vaga {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instituicaoId String    @map("instituicao_id") @db.Uuid
+  autorId       String    @map("autor_id") @db.Uuid
+  tipo          String    @db.VarChar(20)
+  titulo        String    @db.VarChar(100)
+  organizacao   String?   @db.VarChar(100)
+  descricao     String    @db.VarChar(1500)
+  local         String?   @db.VarChar(100)
+  modalidade    String    @default("PRESENCIAL") @db.VarChar(12)
+  link          String?   @db.VarChar(300)
+  prazo         DateTime? @db.Date
+  criadoEm      DateTime  @default(now()) @map("criado_em") @db.Timestamptz(6)
+  encerradaEm   DateTime? @map("encerrada_em") @db.Timestamptz(6)
+
+  instituicao  Instituicao   @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  autor        Usuario       @relation(fields: [instituicaoId, autorId], references: [instituicaoId, id], onDelete: Cascade, map: "vagas_autor_fk")
+  candidaturas Candidatura[]
+  notificacoes Notificacao[]
+
+  @@unique([instituicaoId, id], map: "vagas_instituicao_id_key")
+  @@index([instituicaoId, criadoEm(sort: Desc)], map: "vagas_recentes_idx")
+  @@map("vagas")
+}
+
+model Candidatura {
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  vagaId        String   @map("vaga_id") @db.Uuid
+  usuarioId     String   @map("usuario_id") @db.Uuid
+  mensagem      String?  @db.VarChar(500)
+  status        String   @default("ENVIADA") @db.VarChar(12)
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(6)
+  atualizadoEm  DateTime @default(now()) @map("atualizado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  vaga        Vaga        @relation(fields: [instituicaoId, vagaId], references: [instituicaoId, id], onDelete: Cascade, map: "candidaturas_vaga_fk")
+  usuario     Usuario     @relation(fields: [instituicaoId, usuarioId], references: [instituicaoId, id], onDelete: Cascade, map: "candidaturas_usuario_fk")
+
+  @@id([vagaId, usuarioId])
+  @@index([usuarioId, criadoEm(sort: Desc)], map: "candidaturas_usuario_idx")
+  @@map("candidaturas")
 }

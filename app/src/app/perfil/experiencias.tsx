@@ -23,6 +23,7 @@ const VAZIO = {
   inicio: '',
   fim: '',
   descricao: '',
+  link: '',
 };
 
 /** Experiências do perfil (estilo LinkedIn): estágios, projetos, monitorias... */
@@ -50,7 +51,7 @@ export default function Experiencias() {
   const salvar = useMutation({
     mutationFn: async () => {
       const inicio = mesAnoParaIso(form.inicio);
-      const fim = form.fim ? mesAnoParaIso(form.fim) : null;
+      const fim = form.fim && form.tipo !== 'CERTIFICADO' ? mesAnoParaIso(form.fim) : null;
       if (!inicio)
         throw new ErroApi(400, 'data', 'Confira as datas', { inicio: 'Use MM/AAAA' });
       if (form.fim && !fim)
@@ -62,6 +63,7 @@ export default function Experiencias() {
         inicio,
         fim,
         descricao: form.descricao.trim() || null,
+        link: form.link.trim() || null,
       };
       return editando
         ? api.put<Experiencia>(`/eu/experiencias/${editando}`, corpo)
@@ -95,10 +97,12 @@ export default function Experiencias() {
       inicio: isoParaMesAno(e.inicio),
       fim: e.fim ? isoParaMesAno(e.fim) : '',
       descricao: e.descricao ?? '',
+      link: e.link ?? '',
     });
   }
 
   if (perfil.isPending) return <Carregando />;
+  const certificado = form.tipo === 'CERTIFICADO';
 
   return (
     <Tela rolagem semTopo>
@@ -110,8 +114,15 @@ export default function Experiencias() {
               {[rotuloExperiencia(e.tipo), e.organizacao].filter(Boolean).join(' · ')}
             </Text>
             <Text style={estilos.meta}>
-              {mesAno(e.inicio)} – {e.fim ? mesAno(e.fim) : 'atual'}
+              {e.tipo === 'CERTIFICADO'
+                ? `Emitido em ${mesAno(e.inicio)}`
+                : `${mesAno(e.inicio)} – ${e.fim ? mesAno(e.fim) : 'atual'}`}
             </Text>
+            {e.link ? (
+              <Text style={estilos.link} numberOfLines={1}>
+                {e.link.replace(/^https?:\/\//, '')}
+              </Text>
+            ) : null}
           </View>
           <Pressable onPress={() => editar(e)} hitSlop={8} accessibilityLabel="Editar">
             <Ionicons name="create-outline" size={20} color={c.textoSuave} />
@@ -147,21 +158,27 @@ export default function Experiencias() {
         ))}
       </View>
       <Campo
-        rotulo="Título"
-        placeholder="Ex.: Estágio em desenvolvimento web"
+        rotulo={certificado ? 'Nome do certificado' : 'Título'}
+        placeholder={
+          certificado ? 'Ex.: Git e GitHub' : 'Ex.: Estágio em desenvolvimento web'
+        }
         value={form.titulo}
         onChangeText={(v) => muda('titulo', v)}
         erro={campos.titulo}
       />
       <Campo
-        rotulo="Empresa, laboratório ou organização (opcional)"
+        rotulo={
+          certificado
+            ? 'Quem emitiu (opcional)'
+            : 'Empresa, laboratório ou organização (opcional)'
+        }
         value={form.organizacao}
         onChangeText={(v) => muda('organizacao', v)}
       />
       <View style={estilos.linha}>
         <View style={estilos.flex}>
           <Campo
-            rotulo="Início"
+            rotulo={certificado ? 'Emitido em' : 'Início'}
             placeholder="MM/AAAA"
             keyboardType="number-pad"
             value={form.inicio}
@@ -169,17 +186,28 @@ export default function Experiencias() {
             erro={campos.inicio}
           />
         </View>
-        <View style={estilos.flex}>
-          <Campo
-            rotulo="Fim (vazio = atual)"
-            placeholder="MM/AAAA"
-            keyboardType="number-pad"
-            value={form.fim}
-            onChangeText={(v) => muda('fim', mascaraMesAno(v))}
-            erro={campos.fim}
-          />
-        </View>
+        {certificado ? null : (
+          <View style={estilos.flex}>
+            <Campo
+              rotulo="Fim (vazio = atual)"
+              placeholder="MM/AAAA"
+              keyboardType="number-pad"
+              value={form.fim}
+              onChangeText={(v) => muda('fim', mascaraMesAno(v))}
+              erro={campos.fim}
+            />
+          </View>
+        )}
       </View>
+      <Campo
+        rotulo={certificado ? 'Link de validação (opcional)' : 'Link (opcional)'}
+        placeholder="https://"
+        autoCapitalize="none"
+        keyboardType="url"
+        value={form.link}
+        onChangeText={(v) => muda('link', v)}
+        erro={campos.link}
+      />
       <Campo
         rotulo="O que você fez (opcional)"
         multiline
@@ -223,6 +251,7 @@ const useEstilos = criarEstilos((c) => ({
   },
   titulo: { fontSize: 15, fontFamily: fonte.negrito, color: c.texto },
   meta: { fontFamily: fonte.regular, fontSize: 13, color: c.textoSuave },
+  link: { fontFamily: fonte.semi, fontSize: 13, color: c.marca },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   linha: { flexDirection: 'row', gap: espaco.m },
   multilinha: { minHeight: 90, paddingTop: 12, textAlignVertical: 'top' },

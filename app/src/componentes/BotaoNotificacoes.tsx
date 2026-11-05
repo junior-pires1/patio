@@ -9,7 +9,7 @@ import { useTema } from '@/tema-provedor';
 /** Sininho do cabeçalho com o número de notificações não lidas. */
 export function BotaoNotificacoes() {
   const { api } = useSessao();
-  const { c } = useTema();
+  const { c, esquema } = useTema();
   const naoLidas = useQuery({
     queryKey: ['notificacoes-nao-lidas'],
     queryFn: () => api.get<{ total: number }>('/notificacoes/nao-lidas'),
@@ -53,7 +53,13 @@ export function BotaoNotificacoes() {
             borderColor: c.fundo,
           }}
         >
-          <Text style={{ color: '#fff', fontFamily: fonte.negrito, fontSize: 10 }}>
+          <Text
+            style={{
+              color: esquema === 'escuro' ? '#1A0A0A' : '#fff',
+              fontFamily: fonte.negrito,
+              fontSize: 10,
+            }}
+          >
             {total > 99 ? '99+' : total}
           </Text>
         </View>

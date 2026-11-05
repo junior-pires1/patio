@@ -1,20 +1,54 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { ActivityIndicator, Modal, Pressable, ScrollView, Text, View } from 'react-native';
-import type { Carta } from '@/api/tipos';
+import {
+  ActivityIndicator,
+  Animated,
+  Modal,
+  PanResponder,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import type { Carta, Curso, Turno } from '@/api/tipos';
 import { Avatar } from '@/componentes/Avatar';
 import { Botao } from '@/componentes/Botao';
 import { Chip } from '@/componentes/Chip';
 import { Aviso, Carregando } from '@/componentes/Estados';
 import { Info } from '@/componentes/Info';
+import { useNotificar } from '@/componentes/Notificacoes';
 import { useSessao, useUsuario } from '@/sessao';
 import { elevacao, espaco, fonte, raio, tipo } from '@/tema';
 import { criarEstilos, useBase, useTema } from '@/tema-provedor';
-import { OBJETIVOS, RELACOES, resumo } from '@/utils/opcoes';
+import { alerta } from '@/utils/alerta';
+import { OBJETIVOS, RELACOES, resumo, TURNOS } from '@/utils/opcoes';
 
-/** Descobrir: uma carta por vez, da maior para a menor afinidade. */
+type Filtro = {
+  objetivo?: string;
+  ajudaEm?: string;
+  cursoId?: string;
+  turno?: Turno;
+  semestre?: [number, number];
+};
+const FAIXAS: [number, number, string][] = [
+  [1, 2, '1º–2º'],
+  [3, 4, '3º–4º'],
+  [5, 6, '5º–6º'],
+  [7, 12, '7º ou mais'],
+];
+const LIMITE_GESTO = 110;
+const nativo = Platform.OS !== 'web';
+
+/**
+ * Descobrir (estilo Tinder): uma carta por vez, da maior para a menor afinidade.
+ * Arraste para a direita para curtir e para a esquerda para pular; estrela é
+ * super curtida (3 por dia) e a seta desfaz o último pulo.
+ */
 export default function Descobrir() {
   const estilos = useEstilos();
   const { c, esquema } = useTema();
@@ -22,11 +56,19 @@ export default function Descobrir() {
   const { api } = useSessao();
   const eu = useUsuario();
   const queryClient = useQueryClient();
+  const notificar = useNotificar();
+  const { width } = useWindowDimensions();
   const [indice, setIndice] = useState(0);
+  const [ultimaAcao, setUltimaAcao] = useState<'pulo' | 'curtida' | null>(null);
   const [match, setMatch] = useState<{ id: string; apelido: string } | null>(null);
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
+  const [posicao] = useState(() => new Animated.ValueXY());
+  // Na web, soltar o mouse depois de arrastar também dispara o toque em "Ver perfil".
+  // Onde o toque começou: soltar depois de arrastar não abre o perfil.
+  const inicioToque = useRef({ x: 0, y: 0 });
 
-  // RF09: filtros por objetivo e por quem pode ajudar numa disciplina em que preciso de ajuda
-  const [filtro, setFiltro] = useState<{ objetivo?: string; ajudaEm?: string }>({});
+  // RF09: filtros por objetivo, por quem pode ajudar, curso, turno e semestre
+  const [filtro, setFiltro] = useState<Filtro>({});
   const precisoDeAjuda = eu.disciplinas.filter((d) => d.relacao === 'PRECISO_AJUDA');
   const cartas = useQuery({
     queryKey: ['descobrir', filtro],
@@ -34,26 +76,80 @@ export default function Descobrir() {
       const q = new URLSearchParams();
       if (filtro.objetivo) q.set('objetivo', filtro.objetivo);
       if (filtro.ajudaEm) q.set('ajudaEm', filtro.ajudaEm);
+      if (filtro.cursoId) q.set('cursoId', filtro.cursoId);
+      if (filtro.turno) q.set('turno', filtro.turno);
+      if (filtro.semestre) {
+        q.set('semestreMin', String(filtro.semestre[0]));
+        q.set('semestreMax', String(filtro.semestre[1]));
+      }
       return api.get<Carta[]>(`/descobrir?${q.toString()}`);
     },
   });
-  const mudarFiltro = (novo: typeof filtro) => {
+  const supers = useQuery({
+    queryKey: ['super-curtidas'],
+    queryFn: () => api.get<{ restantes: number; porDia: number }>('/eu/super-curtidas'),
+  });
+  const cursos = useQuery({
+    queryKey: ['cursos'],
+    queryFn: () => api.get<Curso[]>('/cursos'),
+    enabled: filtrosAbertos,
+  });
+  const mudarFiltro = (novo: Filtro) => {
     setIndice(0);
+    setUltimaAcao(null);
     setFiltro(novo);
   };
+  const filtrosExtras = [filtro.cursoId, filtro.turno, filtro.semestre].filter(
+    Boolean,
+  ).length;
 
-  const proxima = () => setIndice((i) => i + 1);
+  const voltarAoCentro = () =>
+    Animated.spring(posicao, {
+      toValue: { x: 0, y: 0 },
+      friction: 6,
+      useNativeDriver: nativo,
+    }).start();
+  const proxima = (acao: 'pulo' | 'curtida') => {
+    posicao.setValue({ x: 0, y: 0 });
+    setUltimaAcao(acao);
+    setIndice((i) => i + 1);
+  };
+  const aoCurtir = (r: { match: { id: string } | null }, c: Carta) => {
+    if (r.match) {
+      setMatch({ id: r.match.id, apelido: c.apelido });
+      void queryClient.invalidateQueries({ queryKey: ['matches'] });
+    }
+    if (c.curtiuVoce)
+      void queryClient.invalidateQueries({ queryKey: ['curtidas-recebidas'] });
+    proxima('curtida');
+  };
   const curtir = useMutation({
     mutationFn: (c: Carta) =>
       api.post<{ match: { id: string } | null }>('/curtidas', { paraId: c.id }),
+    onSuccess: aoCurtir,
+    onError: (e) => {
+      voltarAoCentro();
+      alerta('Não foi possível curtir', e.message);
+    },
+  });
+  const superCurtir = useMutation({
+    mutationFn: (c: Carta) =>
+      api.post<{ match: { id: string } | null }>('/curtidas', {
+        paraId: c.id,
+        super: true,
+      }),
     onSuccess: (r, c) => {
-      if (r.match) {
-        setMatch({ id: r.match.id, apelido: c.apelido });
-        void queryClient.invalidateQueries({ queryKey: ['matches'] });
-      }
-      if (c.curtiuVoce)
-        void queryClient.invalidateQueries({ queryKey: ['curtidas-recebidas'] });
-      proxima();
+      void queryClient.invalidateQueries({ queryKey: ['super-curtidas'] });
+      if (!r.match)
+        notificar({
+          titulo: 'Super curtida enviada!',
+          texto: `${c.apelido} vai ser avisado.`,
+        });
+      aoCurtir(r, c);
+    },
+    onError: (e) => {
+      voltarAoCentro();
+      alerta('Super curtida', e.message);
     },
   });
   const pular = useMutation({
@@ -61,14 +157,75 @@ export default function Descobrir() {
     onSuccess: (_r, c) => {
       if (c.curtiuVoce)
         void queryClient.invalidateQueries({ queryKey: ['curtidas-recebidas'] });
-      proxima();
+      proxima('pulo');
     },
+    onError: (e) => {
+      voltarAoCentro();
+      alerta('Não foi possível pular', e.message);
+    },
+  });
+  const desfazer = useMutation({
+    mutationFn: () => api.delete('/pulos/ultimo'),
+    onSuccess: () => {
+      setUltimaAcao(null);
+      setIndice((i) => Math.max(0, i - 1));
+    },
+    onError: (e) => alerta('Não deu para desfazer', e.message),
   });
 
   function recarregar() {
     setIndice(0);
+    setUltimaAcao(null);
     void cartas.refetch();
   }
+
+  const carta = cartas.data?.[indice];
+  const ocupado =
+    curtir.isPending || pular.isPending || superCurtir.isPending || desfazer.isPending;
+
+  /** Joga a carta para um lado (animação) e depois registra a ação. */
+  function lancar(direcao: 'direita' | 'esquerda' | 'cima') {
+    if (!carta || ocupado) return;
+    const destino =
+      direcao === 'cima'
+        ? { x: 0, y: -900 }
+        : { x: (direcao === 'direita' ? 1 : -1) * (width + 200), y: 40 };
+    Animated.timing(posicao, {
+      toValue: destino,
+      duration: 230,
+      useNativeDriver: nativo,
+    }).start();
+    if (direcao === 'direita') curtir.mutate(carta);
+    else if (direcao === 'esquerda') pular.mutate(carta);
+    else superCurtir.mutate(carta);
+  }
+
+  const gesto = PanResponder.create({
+    // Só captura arrasto mais horizontal que vertical: a rolagem da carta continua funcionando.
+    onMoveShouldSetPanResponder: (_e, g) =>
+      !ocupado && Math.abs(g.dx) > 10 && Math.abs(g.dx) > Math.abs(g.dy) * 1.4,
+    onPanResponderMove: (_e, g) => posicao.setValue({ x: g.dx, y: g.dy * 0.25 }),
+    onPanResponderRelease: (_e, g) => {
+      if (g.dx > LIMITE_GESTO || g.vx > 0.9) lancar('direita');
+      else if (g.dx < -LIMITE_GESTO || g.vx < -0.9) lancar('esquerda');
+      else voltarAoCentro();
+    },
+    onPanResponderTerminate: voltarAoCentro,
+  });
+  const giro = posicao.x.interpolate({
+    inputRange: [-300, 0, 300],
+    outputRange: ['-11deg', '0deg', '11deg'],
+  });
+  const opCurtir = posicao.x.interpolate({
+    inputRange: [20, LIMITE_GESTO],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+  const opPular = posicao.x.interpolate({
+    inputRange: [-LIMITE_GESTO, -20],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
 
   if (cartas.isPending) return <Carregando />;
   if (cartas.isError) {
@@ -81,9 +238,9 @@ export default function Descobrir() {
     );
   }
 
-  const carta = cartas.data[indice];
   const perfilIncompleto = eu.disciplinas.length === 0;
-  const ocupado = curtir.isPending || pular.isPending;
+  const restantes = supers.data?.restantes ?? 0;
+  const algumFiltro = Boolean(filtro.objetivo || filtro.ajudaEm || filtrosExtras);
 
   return (
     <View style={estilos.fundo}>
@@ -93,11 +250,26 @@ export default function Descobrir() {
         style={estilos.barraFiltros}
         contentContainerStyle={estilos.filtros}
       >
-        <Chip
-          texto="Todos"
-          ativo={!filtro.objetivo && !filtro.ajudaEm}
-          aoTocar={() => mudarFiltro({})}
-        />
+        <Pressable
+          onPress={() => setFiltrosAbertos(true)}
+          style={[estilos.botaoFiltros, filtrosExtras > 0 && estilos.botaoFiltrosAtivo]}
+          accessibilityRole="button"
+          accessibilityLabel={
+            filtrosExtras > 0 ? `Filtros, ${filtrosExtras} ativos` : 'Filtros'
+          }
+        >
+          <Ionicons
+            name="options-outline"
+            size={17}
+            color={filtrosExtras > 0 ? c.fundo : c.texto}
+          />
+          <Text
+            style={[estilos.botaoFiltrosTexto, filtrosExtras > 0 && { color: c.fundo }]}
+          >
+            Filtros{filtrosExtras > 0 ? ` · ${filtrosExtras}` : ''}
+          </Text>
+        </Pressable>
+        <Chip texto="Todos" ativo={!algumFiltro} aoTocar={() => mudarFiltro({})} />
         {OBJETIVOS.map((o) => (
           <Chip
             key={o.valor}
@@ -146,38 +318,90 @@ export default function Descobrir() {
       ) : null}
 
       {!carta ? (
-        <Aviso
-          icone="albums-outline"
-          titulo="Por enquanto é só"
-          texto={
-            filtro.objetivo || filtro.ajudaEm
-              ? 'Ninguém com esse filtro por enquanto. Tente outro filtro ou "Todos".'
-              : 'Você já viu todos os colegas sugeridos. Volte mais tarde: chegam pessoas novas toda semana.'
-          }
-          acao={{ titulo: 'Procurar de novo', aoTocar: recarregar }}
-        />
+        <>
+          <Aviso
+            icone="albums-outline"
+            titulo="Por enquanto é só"
+            texto={
+              algumFiltro
+                ? 'Ninguém com esse filtro por enquanto. Tente outro filtro ou "Todos".'
+                : 'Você já viu todos os colegas sugeridos. Volte mais tarde: chegam pessoas novas toda semana.'
+            }
+            acao={{ titulo: 'Procurar de novo', aoTocar: recarregar }}
+          />
+          {ultimaAcao === 'pulo' ? (
+            <View style={estilos.acoes}>
+              <BotaoRedondo
+                rotulo="Desfazer último pulo"
+                icone="arrow-undo"
+                tamanho={48}
+                aoTocar={() => desfazer.mutate()}
+                carregando={desfazer.isPending}
+              />
+            </View>
+          ) : null}
+        </>
       ) : (
         <>
-          <View style={[estilos.carta, esquema === 'claro' ? elevacao(c, 2) : null]}>
+          <Animated.View
+            {...gesto.panHandlers}
+            style={[
+              estilos.carta,
+              esquema === 'claro' ? elevacao(c, 2) : null,
+              {
+                transform: [
+                  { translateX: posicao.x },
+                  { translateY: posicao.y },
+                  { rotate: giro },
+                ],
+              },
+            ]}
+          >
             <ScrollView contentContainerStyle={estilos.cartaConteudo}>
               <View style={estilos.capa}>
                 <View style={estilos.faisca1} />
                 <View style={estilos.faisca2} />
                 <View style={estilos.faisca3} />
-                {carta.curtiuVoce ? (
+                <View
+                  style={estilos.percentual}
+                  accessibilityLabel={`${carta.afinidade.percentual}% de afinidade`}
+                >
+                  <Text style={estilos.percentualValor}>{carta.afinidade.percentual}%</Text>
+                  <Text style={estilos.percentualRotulo}>afinidade</Text>
+                </View>
+                {carta.superCurtiuVoce ? (
+                  <View style={estilos.curtiu}>
+                    <Ionicons name="star" size={13} color={c.sobreDestaque} />
+                    <Text style={estilos.curtiuTexto}>Super curtiu você</Text>
+                  </View>
+                ) : carta.curtiuVoce ? (
                   <View style={estilos.curtiu}>
                     <Ionicons name="heart" size={13} color={c.sobreDestaque} />
                     <Text style={estilos.curtiuTexto}>Curtiu você</Text>
                   </View>
                 ) : null}
               </View>
-              <View style={estilos.identidade}>
+              <Pressable
+                style={estilos.identidade}
+                onPressIn={(e) => {
+                  inicioToque.current = { x: e.nativeEvent.pageX, y: e.nativeEvent.pageY };
+                }}
+                onPress={(e) => {
+                  const dx = e.nativeEvent.pageX - inicioToque.current.x;
+                  const dy = e.nativeEvent.pageY - inicioToque.current.y;
+                  if (Math.hypot(dx, dy) < 12)
+                    router.push({ pathname: '/usuario/[id]', params: { id: carta.id } });
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`Ver perfil de ${carta.apelido}`}
+              >
                 <View style={estilos.anelAvatar}>
                   <Avatar nome={carta.apelido} fotoUrl={carta.fotoUrl} tamanho={96} />
                 </View>
                 <Text style={estilos.nome}>{carta.apelido}</Text>
                 <Text style={estilos.resumo}>{resumo(carta)}</Text>
-              </View>
+                <Text style={estilos.verPerfil}>Ver perfil completo</Text>
+              </Pressable>
 
               <View style={estilos.corpo}>
                 {carta.frase ? <Text style={estilos.frase}>“{carta.frase}”</Text> : null}
@@ -224,37 +448,150 @@ export default function Descobrir() {
                 {carta.sobre ? <Text style={b.subtitulo}>{carta.sobre}</Text> : null}
               </View>
             </ScrollView>
-          </View>
+            <Animated.View
+              pointerEvents="none"
+              style={[estilos.carimbo, estilos.carimboCurtir, { opacity: opCurtir }]}
+            >
+              <Text style={[estilos.carimboTexto, { color: c.sucesso }]}>CURTIR</Text>
+            </Animated.View>
+            <Animated.View
+              pointerEvents="none"
+              style={[estilos.carimbo, estilos.carimboPular, { opacity: opPular }]}
+            >
+              <Text style={[estilos.carimboTexto, { color: c.erro }]}>PULAR</Text>
+            </Animated.View>
+          </Animated.View>
 
           <View style={estilos.acoes}>
             <BotaoRedondo
+              rotulo="Desfazer último pulo"
+              icone="arrow-undo"
+              tamanho={46}
+              aoTocar={() => desfazer.mutate()}
+              carregando={desfazer.isPending}
+              desabilitado={ultimaAcao !== 'pulo' || ocupado}
+            />
+            <BotaoRedondo
               rotulo="Pular"
               icone="close"
-              tamanho={60}
-              aoTocar={() => pular.mutate(carta)}
+              tamanho={62}
+              aoTocar={() => lancar('esquerda')}
               carregando={pular.isPending}
               desabilitado={ocupado}
             />
             <BotaoRedondo
-              rotulo="Ver perfil"
-              icone="person-outline"
-              tamanho={48}
+              rotulo={`Super curtida, ${restantes} restantes hoje`}
+              icone="star"
+              tamanho={50}
+              contador={restantes}
               aoTocar={() =>
-                router.push({ pathname: '/usuario/[id]', params: { id: carta.id } })
+                restantes > 0
+                  ? lancar('cima')
+                  : alerta(
+                      'Acabaram as super curtidas',
+                      'Você tem 3 por dia. Amanhã chegam mais.',
+                    )
               }
+              carregando={superCurtir.isPending}
+              desabilitado={ocupado}
             />
             <BotaoRedondo
               rotulo="Curtir"
               icone="heart"
-              tamanho={68}
+              tamanho={70}
               cheio
-              aoTocar={() => curtir.mutate(carta)}
+              aoTocar={() => lancar('direita')}
               carregando={curtir.isPending}
               desabilitado={ocupado}
             />
           </View>
         </>
       )}
+
+      <Modal
+        visible={filtrosAbertos}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setFiltrosAbertos(false)}
+      >
+        <View style={estilos.folhaFundo}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setFiltrosAbertos(false)}
+            accessibilityLabel="Fechar filtros"
+          />
+          <View style={estilos.folha}>
+            <Text style={estilos.folhaTitulo}>Filtros</Text>
+            <ScrollView contentContainerStyle={estilos.folhaConteudo}>
+              <Text style={b.rotulo}>Curso</Text>
+              <View style={estilos.chips}>
+                <Chip
+                  texto="Qualquer curso"
+                  ativo={!filtro.cursoId}
+                  aoTocar={() => mudarFiltro({ ...filtro, cursoId: undefined })}
+                />
+                {(cursos.data ?? []).map((cu) => (
+                  <Chip
+                    key={cu.id}
+                    texto={cu.nome}
+                    ativo={filtro.cursoId === cu.id}
+                    aoTocar={() => mudarFiltro({ ...filtro, cursoId: cu.id })}
+                  />
+                ))}
+              </View>
+              <Text style={b.rotulo}>Turno</Text>
+              <View style={estilos.chips}>
+                <Chip
+                  texto="Qualquer turno"
+                  ativo={!filtro.turno}
+                  aoTocar={() => mudarFiltro({ ...filtro, turno: undefined })}
+                />
+                {TURNOS.map((t) => (
+                  <Chip
+                    key={t.valor}
+                    texto={t.rotulo}
+                    ativo={filtro.turno === t.valor}
+                    aoTocar={() => mudarFiltro({ ...filtro, turno: t.valor })}
+                  />
+                ))}
+              </View>
+              <Text style={b.rotulo}>Semestre</Text>
+              <View style={estilos.chips}>
+                <Chip
+                  texto="Qualquer semestre"
+                  ativo={!filtro.semestre}
+                  aoTocar={() => mudarFiltro({ ...filtro, semestre: undefined })}
+                />
+                {FAIXAS.map(([min, max, rotulo]) => (
+                  <Chip
+                    key={rotulo}
+                    texto={rotulo}
+                    ativo={filtro.semestre?.[0] === min}
+                    aoTocar={() => mudarFiltro({ ...filtro, semestre: [min, max] })}
+                  />
+                ))}
+              </View>
+            </ScrollView>
+            <View style={estilos.folhaAcoes}>
+              <View style={estilos.flex}>
+                <Botao
+                  titulo="Limpar"
+                  variante="contorno"
+                  aoTocar={() =>
+                    mudarFiltro({ objetivo: filtro.objetivo, ajudaEm: filtro.ajudaEm })
+                  }
+                />
+              </View>
+              <View style={estilos.flex}>
+                <Botao
+                  titulo={`Ver ${cartas.data.length} ${cartas.data.length === 1 ? 'pessoa' : 'pessoas'}`}
+                  aoTocar={() => setFiltrosAbertos(false)}
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={match !== null}
@@ -300,21 +637,29 @@ function BotaoRedondo({
   icone,
   tamanho,
   cheio = false,
+  contador,
   aoTocar,
   carregando,
   desabilitado,
 }: {
   rotulo: string;
-  icone: 'close' | 'heart' | 'person-outline';
+  icone: 'close' | 'heart' | 'star' | 'arrow-undo';
   tamanho: number;
   cheio?: boolean;
+  contador?: number;
   aoTocar: () => void;
   carregando?: boolean;
   desabilitado?: boolean;
 }) {
   const { c, esquema } = useTema();
   const estilos = useEstilos();
-  const corIcone = cheio ? c.sobreMarca : icone === 'close' ? c.erro : c.textoSuave;
+  const corIcone = cheio
+    ? c.sobreMarca
+    : icone === 'close'
+      ? c.erro
+      : icone === 'star'
+        ? c.marca
+        : c.textoSuave;
   return (
     <Pressable
       onPress={aoTocar}
@@ -336,6 +681,11 @@ function BotaoRedondo({
       ) : (
         <Ionicons name={icone} size={tamanho * 0.42} color={corIcone} />
       )}
+      {contador !== undefined ? (
+        <View style={estilos.contador}>
+          <Text style={estilos.contadorTexto}>{contador}</Text>
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -417,8 +767,8 @@ const useEstilos = criarEstilos((c) => ({
   },
   curtiu: {
     position: 'absolute',
-    right: 14,
-    bottom: 14,
+    right: 12,
+    top: 12,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
@@ -428,6 +778,77 @@ const useEstilos = criarEstilos((c) => ({
     paddingVertical: 5,
   },
   curtiuTexto: { color: c.sobreDestaque, fontFamily: fonte.negrito, fontSize: 12.5 },
+  percentual: {
+    position: 'absolute',
+    left: 14,
+    bottom: 12,
+    alignItems: 'flex-start',
+  },
+  percentualValor: {
+    fontFamily: fonte.extra,
+    fontSize: 26,
+    lineHeight: 28,
+    color: c.sobreMarca,
+    letterSpacing: -0.8,
+  },
+  percentualRotulo: { fontFamily: fonte.semi, fontSize: 12, color: c.sobreMarca },
+  verPerfil: { fontFamily: fonte.semi, fontSize: 13, color: c.marca, marginTop: 2 },
+  carimbo: {
+    position: 'absolute',
+    top: 28,
+    borderWidth: 4,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    backgroundColor: c.superficie,
+  },
+  carimboCurtir: { left: 22, borderColor: c.sucesso, transform: [{ rotate: '-14deg' }] },
+  carimboPular: { right: 22, borderColor: c.erro, transform: [{ rotate: '14deg' }] },
+  carimboTexto: { fontFamily: fonte.extra, fontSize: 30, letterSpacing: 1 },
+  botaoFiltros: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: raio.total,
+    borderWidth: 1,
+    borderColor: c.borda,
+    backgroundColor: c.superficie,
+  },
+  botaoFiltrosAtivo: { backgroundColor: c.texto, borderColor: c.texto },
+  botaoFiltrosTexto: { fontFamily: fonte.semi, fontSize: 13.5, color: c.texto },
+  contador: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    backgroundColor: c.marca,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: c.fundo,
+  },
+  contadorTexto: { fontFamily: fonte.negrito, fontSize: 11, color: c.sobreMarca },
+  folhaFundo: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(6,8,20,0.5)' },
+  folha: {
+    backgroundColor: c.superficie,
+    borderTopLeftRadius: raio.gg,
+    borderTopRightRadius: raio.gg,
+    padding: espaco.g,
+    paddingBottom: espaco.gg,
+    maxHeight: '85%',
+    width: '100%',
+    maxWidth: 640,
+    alignSelf: 'center',
+    gap: espaco.m,
+  },
+  folhaTitulo: { ...tipo.secao, color: c.texto },
+  folhaConteudo: { gap: 6 },
+  folhaAcoes: { flexDirection: 'row', gap: espaco.m },
   identidade: { alignItems: 'center', marginTop: -52, paddingHorizontal: espaco.g, gap: 4 },
   anelAvatar: {
     borderRadius: 60,
@@ -458,7 +879,7 @@ const useEstilos = criarEstilos((c) => ({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   acoes: {
     flexDirection: 'row',
-    gap: espaco.gg,
+    gap: espaco.g,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 2,

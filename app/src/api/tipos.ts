@@ -56,7 +56,8 @@ export type Sessao = {
 
 export type Carta = PerfilPublico & {
   curtiuVoce: boolean;
-  afinidade: { pontos: number; motivos: string[] };
+  superCurtiuVoce: boolean;
+  afinidade: { pontos: number; motivos: string[]; percentual: number };
 };
 
 export type Mensagem = {
@@ -94,7 +95,11 @@ export type TipoNotificacao =
   | 'COMENTARIO_CURTIDO'
   | 'MENCAO'
   | 'CONEXAO_NOVA'
-  | 'RECOMENDACAO';
+  | 'RECOMENDACAO'
+  | 'SUPER_CURTIDA'
+  | 'NOVO_SEGUIDOR'
+  | 'CANDIDATURA_NOVA'
+  | 'CANDIDATURA_ATUALIZADA';
 
 export type Notificacao = {
   id: string;
@@ -105,6 +110,7 @@ export type Notificacao = {
   lida: boolean;
   matchId: string | null;
   comentarioId: string | null;
+  vagaId: string | null;
   ator: { id: string; apelido: string; fotoUrl: string | null } | null;
   post: { id: string; imagemUrl: string | null } | null;
 };
@@ -213,7 +219,14 @@ export type MensagemGrupo = {
 // ───────────── Perfil social ─────────────
 
 export type TipoExperiencia =
-  'ESTAGIO' | 'EMPREGO' | 'PROJETO' | 'MONITORIA' | 'PESQUISA' | 'VOLUNTARIADO' | 'CURSO';
+  | 'ESTAGIO'
+  | 'EMPREGO'
+  | 'PROJETO'
+  | 'MONITORIA'
+  | 'PESQUISA'
+  | 'VOLUNTARIADO'
+  | 'CURSO'
+  | 'CERTIFICADO';
 
 export type Experiencia = {
   id: string;
@@ -223,6 +236,7 @@ export type Experiencia = {
   inicio: string;
   fim: string | null;
   descricao: string | null;
+  link: string | null;
 };
 
 export type HabilidadeRecomendada = {
@@ -234,12 +248,19 @@ export type HabilidadeRecomendada = {
 export type PerfilCompleto = PerfilPublico & {
   experiencias: Experiencia[];
   habilidadesRecomendadas: HabilidadeRecomendada[];
-  contadores: { publicacoes: number; conexoes: number; recomendacoes: number };
+  contadores: {
+    publicacoes: number;
+    conexoes: number;
+    recomendacoes: number;
+    seguidores: number;
+    seguindo: number;
+  };
   relacao: {
     souEu: boolean;
     conexaoId: string | null;
     euCurti: boolean;
     meCurtiu: boolean;
+    euSigo: boolean;
   };
 };
 
@@ -298,4 +319,52 @@ export type ResultadoBusca = {
 };
 
 export type CurtidaFeita = { pessoa: PessoaResumo; curtidoEm: string; conexao: boolean };
-export type CurtidaRecebida = { pessoa: PessoaResumo; curtidoEm: string };
+export type CurtidaRecebida = { pessoa: PessoaResumo; curtidoEm: string; super: boolean };
+
+// ───────────── Carreira (vagas, seguir, visitas) ─────────────
+
+export type Visitas = {
+  total: number;
+  pessoasDiferentes: number;
+  porDia: { dia: string; total: number }[];
+  visitantes: { pessoa: PessoaResumo; em: string; vezes: number }[];
+};
+
+export type TipoVaga =
+  'ESTAGIO' | 'MONITORIA' | 'PESQUISA' | 'PROJETO' | 'EMPREGO' | 'VOLUNTARIADO';
+export type Modalidade = 'PRESENCIAL' | 'REMOTO' | 'HIBRIDO';
+export type StatusCandidatura = 'ENVIADA' | 'EM_ANALISE' | 'APROVADA' | 'RECUSADA';
+
+export type Vaga = {
+  id: string;
+  tipo: TipoVaga;
+  titulo: string;
+  organizacao: string | null;
+  descricao: string;
+  local: string | null;
+  modalidade: Modalidade;
+  link: string | null;
+  prazo: string | null;
+  criadoEm: string;
+  encerradaEm: string | null;
+  aberta: boolean;
+  minha: boolean;
+  podeGerenciar: boolean;
+  candidatos: number | null;
+  minhaCandidatura: { status: StatusCandidatura; criadoEm: string } | null;
+  autor: {
+    id: string;
+    apelido: string;
+    fotoUrl: string | null;
+    papel: 'ALUNO' | 'COORDENACAO';
+    curso: { nome: string } | null;
+  };
+};
+
+export type Candidato = {
+  mensagem: string | null;
+  status: StatusCandidatura;
+  criadoEm: string;
+  atualizadoEm: string;
+  usuario: PessoaResumo;
+};

@@ -27,9 +27,13 @@ const SELOS: Record<
   MENCAO: { icone: 'at', cor: 'marca' },
   CONEXAO_NOVA: { icone: 'sparkles', cor: 'destaque' },
   RECOMENDACAO: { icone: 'ribbon', cor: 'sucesso' },
+  SUPER_CURTIDA: { icone: 'star', cor: 'destaque' },
+  NOVO_SEGUIDOR: { icone: 'person-add', cor: 'marca' },
+  CANDIDATURA_NOVA: { icone: 'briefcase', cor: 'sucesso' },
+  CANDIDATURA_ATUALIZADA: { icone: 'briefcase', cor: 'marca' },
 };
 
-/** Central de notificações: curtidas, comentários, respostas, menções e conexões. */
+/** Central de notificações: curtidas, comentários, menções, conexões, seguidores e vagas. */
 export default function Notificacoes() {
   const s = useEstilos();
   const { c, esquema } = useTema();
@@ -62,6 +66,8 @@ export default function Notificacoes() {
   function abrir(n: Notificacao) {
     if (n.tipo === 'CONEXAO_NOVA' && n.matchId)
       router.push({ pathname: '/chat/[id]', params: { id: n.matchId } });
+    else if (n.vagaId) router.push({ pathname: '/vagas/[id]', params: { id: n.vagaId } });
+    else if (n.tipo === 'SUPER_CURTIDA') router.push('/curtiram');
     else if (n.post) router.push({ pathname: '/post/[id]', params: { id: n.post.id } });
     else if (n.ator) router.push({ pathname: '/usuario/[id]', params: { id: n.ator.id } });
   }

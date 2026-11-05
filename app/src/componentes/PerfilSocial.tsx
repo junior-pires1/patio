@@ -24,6 +24,7 @@ import type {
   PerfilCompleto,
   Post,
   StoriesDaPessoa,
+  Visitas,
 } from '@/api/tipos';
 import { useCorDaFaculdade, useSessao } from '@/sessao';
 import { espaco, fonte, raio, tipo } from '@/tema';
@@ -100,6 +101,12 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
     queryFn: () => api.get<StoriesDaPessoa[]>('/stories'),
   });
 
+  const visitas = useQuery({
+    queryKey: ['visitas'],
+    queryFn: () => api.get<Visitas>('/eu/visitas'),
+    enabled: perfil.data?.relacao.souEu === true,
+  });
+
   const atualizarPerfil = () =>
     void queryClient.invalidateQueries({ queryKey: ['perfil', usuarioId] });
 
@@ -123,6 +130,27 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
       void queryClient.invalidateQueries({ queryKey: ['descobrir'] });
     },
     onError: (e) => alerta('Não foi possível desfazer', e.message),
+  });
+  const seguir = useMutation({
+    mutationFn: async (agora: boolean) => {
+      type R = { euSigo: boolean; seguidores: number };
+      const url = `/usuarios/${usuarioId}/seguir`;
+      // O DELETE também devolve o novo total (o cliente tipa DELETE como vazio).
+      return agora ? api.put<R>(url, {}) : ((await api.delete(url)) as unknown as R);
+    },
+    onSuccess: (r) => {
+      queryClient.setQueryData<PerfilCompleto>(['perfil', usuarioId], (v) =>
+        v
+          ? {
+              ...v,
+              contadores: { ...v.contadores, seguidores: r.seguidores },
+              relacao: { ...v.relacao, euSigo: r.euSigo },
+            }
+          : v,
+      );
+      void queryClient.invalidateQueries({ queryKey: ['feed'] });
+    },
+    onError: (e) => alerta('Não foi possível seguir', e.message),
   });
   const recomendar = useMutation({
     mutationFn: (h: HabilidadeRecomendada) =>
@@ -216,17 +244,31 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
       <View style={estilos.numeros}>
         {(
           [
-            ['Publicações', p.contadores.publicacoes],
-            ['Conexões', p.contadores.conexoes],
-            ['Recomendações', p.contadores.recomendacoes],
+            ['Publicações', p.contadores.publicacoes, null],
+            ['Seguidores', p.contadores.seguidores, 'seguidores'],
+            ['Seguindo', p.contadores.seguindo, 'seguindo'],
+            ['Conexões', p.contadores.conexoes, null],
           ] as const
-        ).map(([rotulo, valor]) => (
-          <View key={rotulo} style={estilos.numero}>
+        ).map(([rotulo, valor, lado]) => (
+          <Pressable
+            key={rotulo}
+            style={({ pressed }) => [estilos.numero, pressed && lado && { opacity: 0.6 }]}
+            disabled={!lado}
+            onPress={() =>
+              lado &&
+              router.push({
+                pathname: '/seguidores/[id]',
+                params: { id: usuarioId, lado, nome: p.apelido },
+              })
+            }
+            accessibilityRole={lado ? 'button' : 'text'}
+            accessibilityLabel={`${valor} ${rotulo}`}
+          >
             <Text style={estilos.valor}>{valor}</Text>
             <Text style={estilos.rotuloNumero} numberOfLines={1} adjustsFontSizeToFit>
               {rotulo}
             </Text>
-          </View>
+          </Pressable>
         ))}
       </View>
 
@@ -289,6 +331,18 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
           </View>
         )}
         {!souEu ? (
+          <View style={estilos.flex}>
+            <Botao
+              titulo={p.relacao.euSigo ? 'Seguindo' : 'Seguir'}
+              variante={p.relacao.euSigo ? 'contorno' : 'suave'}
+              icone={p.relacao.euSigo ? 'checkmark' : 'person-add-outline'}
+              compacto
+              carregando={seguir.isPending}
+              aoTocar={() => seguir.mutate(!p.relacao.euSigo)}
+            />
+          </View>
+        ) : null}
+        {!souEu ? (
           <Pressable
             onPress={() =>
               router.push({ pathname: '/denunciar/[usuarioId]', params: { usuarioId } })
@@ -301,6 +355,29 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
           </Pressable>
         ) : null}
       </View>
+      {souEu ? (
+        <Pressable
+          onPress={() => router.push('/visitas')}
+          style={({ pressed }) => [estilos.painel, pressed && { opacity: 0.8 }]}
+          accessibilityRole="button"
+          accessibilityLabel="Quem viu seu perfil"
+        >
+          <View style={estilos.painelIcone}>
+            <Ionicons name="eye" size={18} color={c.sobreMarca} />
+          </View>
+          <View style={estilos.flex}>
+            <Text style={estilos.painelTitulo}>
+              {visitas.data
+                ? `${visitas.data.total} ${visitas.data.total === 1 ? 'visita' : 'visitas'} ao seu perfil`
+                : 'Quem viu seu perfil'}
+            </Text>
+            <Text style={estilos.painelTexto}>
+              Últimos 30 dias · toque para ver quem foi
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={c.textoSuave} />
+        </Pressable>
+      ) : null}
       {!souEu && p.relacao.meCurtiu && !p.relacao.conexaoId ? (
         <View style={estilos.dica}>
           <Ionicons name="heart" size={14} color={c.sobreDestaque} />
@@ -504,7 +581,11 @@ function Sobre({
           p.experiencias.map((e) => (
             <View key={e.id} style={estilos.experiencia}>
               <View style={estilos.marcador}>
-                <Ionicons name="briefcase-outline" size={18} color={cor} />
+                <Ionicons
+                  name={e.tipo === 'CERTIFICADO' ? 'ribbon-outline' : 'briefcase-outline'}
+                  size={18}
+                  color={cor}
+                />
               </View>
               <View style={estilos.flex}>
                 <Text style={estilos.tituloExperiencia}>{e.titulo}</Text>
@@ -512,9 +593,23 @@ function Sobre({
                   {[rotuloExperiencia(e.tipo), e.organizacao].filter(Boolean).join(' · ')}
                 </Text>
                 <Text style={estilos.meta}>
-                  {mesAno(e.inicio)} – {e.fim ? mesAno(e.fim) : 'atual'}
+                  {e.tipo === 'CERTIFICADO'
+                    ? `Emitido em ${mesAno(e.inicio)}`
+                    : `${mesAno(e.inicio)} – ${e.fim ? mesAno(e.fim) : 'atual'}`}
                 </Text>
                 {e.descricao ? <Text style={estilos.paragrafo}>{e.descricao}</Text> : null}
+                {e.link ? (
+                  <Pressable
+                    onPress={() => void Linking.openURL(e.link!)}
+                    accessibilityRole="link"
+                    style={estilos.credencial}
+                  >
+                    <Ionicons name="open-outline" size={14} color={c.marca} />
+                    <Text style={estilos.credencialTexto}>
+                      {e.tipo === 'CERTIFICADO' ? 'Ver credencial' : 'Abrir link'}
+                    </Text>
+                  </Pressable>
+                ) : null}
               </View>
             </View>
           ))
@@ -685,6 +780,27 @@ const useEstilos = criarEstilos((c) => ({
     backgroundColor: c.destaqueSuave,
   },
   dicaTexto: { fontSize: 13, fontFamily: fonte.semi, color: c.texto, flex: 1 },
+  painel: {
+    marginHorizontal: espaco.g,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaco.m,
+    padding: espaco.m,
+    borderRadius: raio.g,
+    backgroundColor: c.marcaSuave,
+  },
+  painelIcone: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: c.marca,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  painelTitulo: { ...tipo.nome, color: c.texto },
+  painelTexto: { ...tipo.apoio, color: c.textoSuave },
+  credencial: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
+  credencialTexto: { fontFamily: fonte.semi, fontSize: 13, color: c.marca },
   destaques: { paddingHorizontal: espaco.g, gap: espaco.m, paddingVertical: 4 },
   destaque: { alignItems: 'center', width: 70, gap: 6 },
   capaDestaque: {

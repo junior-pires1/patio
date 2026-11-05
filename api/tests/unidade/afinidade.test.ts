@@ -1,5 +1,6 @@
 import {
   calcularAfinidade,
+  percentualDe,
   PESOS,
   type PerfilAfinidade,
 } from '../../src/modulos/conexoes/afinidade';
@@ -17,7 +18,11 @@ const bd = { id: 'd2', nome: 'Banco de Dados' };
 
 describe('calcularAfinidade', () => {
   test('perfis sem nada em comum têm zero pontos', () => {
-    expect(calcularAfinidade(vazio, vazio)).toEqual({ pontos: 0, motivos: [] });
+    expect(calcularAfinidade(vazio, vazio)).toEqual({
+      pontos: 0,
+      motivos: [],
+      percentual: 0,
+    });
   });
 
   test('quem pode ajudar no que eu preciso vale mais que tudo', () => {
@@ -31,7 +36,12 @@ describe('calcularAfinidade', () => {
     };
     const colega = { ...vazio, cursoId: 'c1', turno: 'NOITE' };
     const r = calcularAfinidade(eu, ajuda);
-    expect(r).toEqual({ pontos: PESOS.meAjuda, motivos: ['Pode te ajudar em Cálculo I'] });
+    expect(r).toMatchObject({
+      pontos: PESOS.meAjuda,
+      motivos: ['Pode te ajudar em Cálculo I'],
+    });
+    expect(r.percentual).toBeGreaterThan(0);
+    expect(r.percentual).toBeLessThan(100);
     expect(r.pontos).toBeGreaterThan(
       calcularAfinidade({ ...eu, cursoId: 'c1', turno: 'NOITE' }, colega).pontos,
     );
@@ -79,5 +89,11 @@ describe('calcularAfinidade', () => {
       'Curte xadrez',
       '1 horário(s) livre(s) em comum',
     ]);
+  });
+
+  test('o percentual cresce com os pontos e nunca chega a 100', () => {
+    expect(percentualDe(0)).toBe(0);
+    expect(percentualDe(3)).toBeLessThan(percentualDe(10));
+    expect(percentualDe(1000)).toBe(99);
   });
 });

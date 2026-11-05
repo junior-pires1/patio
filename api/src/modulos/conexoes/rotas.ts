@@ -5,10 +5,15 @@ import { autenticar, exigirPapel, quem } from '../../seguranca/autenticar';
 import * as servico from './servico';
 
 const alvo = z.object({ paraId: z.uuid('Identificador inválido') });
+const curtida = alvo.extend({ super: z.boolean().optional().default(false) });
 const idMatch = z.object({ id: z.uuid('Identificador inválido') });
 const filtroDescobrir = z.object({
   objetivo: z.enum(['GRUPO_ESTUDOS', 'MONITORIA', 'PROJETOS', 'AMIZADE']).optional(),
   ajudaEm: z.uuid('Disciplina inválida').optional(),
+  cursoId: z.uuid('Curso inválido').optional(),
+  turno: z.enum(['MANHA', 'TARDE', 'NOITE', 'INTEGRAL']).optional(),
+  semestreMin: z.coerce.number().int().min(1).max(12).optional(),
+  semestreMax: z.coerce.number().int().min(1).max(12).optional(),
 });
 
 /** Descoberta, curtidas, pulos e conexões (só alunos). */
@@ -21,8 +26,8 @@ export function rotasConexoes(ctx: Contexto) {
   });
 
   r.post('/curtidas', ...aluno, async (req, res) => {
-    const { paraId } = alvo.parse(req.body);
-    res.status(201).json(await servico.curtir(ctx, quem(req), paraId));
+    const { paraId, super: superCurtida } = curtida.parse(req.body);
+    res.status(201).json(await servico.curtir(ctx, quem(req), paraId, superCurtida));
   });
 
   r.get('/curtidas/recebidas', ...aluno, async (req, res) => {
@@ -33,6 +38,14 @@ export function rotasConexoes(ctx: Contexto) {
     const { paraId } = alvo.parse(req.body);
     await servico.pular(ctx, quem(req), paraId);
     res.status(204).end();
+  });
+
+  r.get('/eu/super-curtidas', ...aluno, async (req, res) => {
+    res.json(await servico.superCurtidasRestantes(ctx, quem(req)));
+  });
+
+  r.delete('/pulos/ultimo', ...aluno, async (req, res) => {
+    res.json(await servico.desfazerPulo(ctx, quem(req)));
   });
 
   r.get('/matches', ...aluno, async (req, res) => {

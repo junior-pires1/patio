@@ -1,6 +1,6 @@
 import { naFaculdade, type Transacao } from '../../banco/prisma';
 import type { Contexto } from '../../contexto';
-import { naoEncontrado } from '../../erros';
+import { ErroApp, naoEncontrado } from '../../erros';
 import type { Prisma } from '../../generated/prisma/client';
 import type { Autenticado } from '../../seguranca/tokens';
 import { avisar, notificar } from '../notificacoes/servico';
@@ -36,7 +36,17 @@ export const emOrdem = (x: string, y: string): [string, string] =>
  * curtida recebida vira match logo), depois da maior para a menor afinidade.
  * Ficam de fora quem já foi curtido ou pulado, quem já é conexão e bloqueios.
  */
-export type FiltroDescobrir = { objetivo?: string; ajudaEm?: string };
+export type FiltroDescobrir = {
+  objetivo?: string;
+  ajudaEm?: string;
+  cursoId?: string;
+  turno?: 'MANHA' | 'TARDE' | 'NOITE' | 'INTEGRAL';
+  semestreMin?: number;
+  semestreMax?: number;
+};
+
+/** Super curtidas por pessoa a cada 24 horas. */
+export const SUPER_POR_DIA = 3;
 
 export function descobrir(ctx: Contexto, eu: Autenticado, filtro: FiltroDescobrir = {}) {
   return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
@@ -60,11 +70,21 @@ export function descobrir(ctx: Contexto, eu: Autenticado, filtro: FiltroDescobri
               },
             }
           : {}),
+        ...(filtro.cursoId ? { cursoId: filtro.cursoId } : {}),
+        ...(filtro.turno ? { turno: filtro.turno } : {}),
+        ...(filtro.semestreMin || filtro.semestreMax
+          ? {
+              semestre: {
+                ...(filtro.semestreMin ? { gte: filtro.semestreMin } : {}),
+                ...(filtro.semestreMax ? { lte: filtro.semestreMax } : {}),
+              },
+            }
+          : {}),
       },
       select: {
         ...PERFIL_AFINIDADE,
         criadoEm: true,
-        curtidasFeitas: { where: { paraId: eu.id }, select: { id: true } },
+        curtidasFeitas: { where: { paraId: eu.id }, select: { id: true, super: true } },
       },
       orderBy: { criadoEm: 'desc' },
       take: CANDIDATOS_ANALISADOS,
@@ -74,10 +94,12 @@ export function descobrir(ctx: Contexto, eu: Autenticado, filtro: FiltroDescobri
       .map(({ cursoId, criadoEm: _criado, curtidasFeitas, ...perfil }) => ({
         ...perfil,
         curtiuVoce: curtidasFeitas.length > 0,
+        superCurtiuVoce: curtidasFeitas.some((c) => c.super),
         afinidade: calcularAfinidade(meu, { ...perfil, cursoId }),
       }))
       .sort(
         (a, b) =>
+          Number(b.superCurtiuVoce) - Number(a.superCurtiuVoce) ||
           Number(b.curtiuVoce) - Number(a.curtiuVoce) ||
           b.afinidade.pontos - a.afinidade.pontos,
       )
@@ -127,15 +149,53 @@ export function contarCurtidasRecebidas(ctx: Contexto, eu: Autenticado) {
  * abrir as cartas). Se ela já tinha curtido, nasce o match e os dois
  * recebem `match:novo` em tempo real.
  */
-export async function curtir(ctx: Contexto, eu: Autenticado, paraId: string) {
+export async function curtir(
+  ctx: Contexto,
+  eu: Autenticado,
+  paraId: string,
+  superCurtida = false,
+) {
   const resultado = await naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
     await exigirColega(tx, eu, paraId);
     await travarPar(tx, eu.id, paraId);
 
-    const { count: nova } = await tx.curtida.createMany({
-      data: [{ instituicaoId: eu.instituicaoId, deId: eu.id, paraId }],
-      skipDuplicates: true,
-    });
+    let avisosSuper: Awaited<ReturnType<typeof notificar>> = [];
+    if (superCurtida) {
+      const existente = await tx.curtida.findUnique({
+        where: { deId_paraId: { deId: eu.id, paraId } },
+        select: { super: true },
+      });
+      if (!existente?.super) {
+        const usadas = await tx.curtida.count({
+          where: {
+            deId: eu.id,
+            super: true,
+            criadoEm: { gte: new Date(Date.now() - 86_400_000) },
+          },
+        });
+        if (usadas >= SUPER_POR_DIA) {
+          throw new ErroApp(
+            429,
+            'limite_super',
+            `Você já usou as ${SUPER_POR_DIA} super curtidas de hoje. Amanhã tem mais.`,
+          );
+        }
+        // Super curtida conta a partir de agora (e vale também como curtida comum).
+        await tx.curtida.upsert({
+          where: { deId_paraId: { deId: eu.id, paraId } },
+          create: { instituicaoId: eu.instituicaoId, deId: eu.id, paraId, super: true },
+          update: { super: true, criadoEm: new Date() },
+        });
+        // Na super curtida a pessoa fica sabendo na hora quem foi.
+        avisosSuper = await notificar(tx, eu, [{ para: paraId, tipo: 'SUPER_CURTIDA' }]);
+      }
+    }
+    const { count: nova } = superCurtida
+      ? { count: avisosSuper.length > 0 ? 1 : 0 }
+      : await tx.curtida.createMany({
+          data: [{ instituicaoId: eu.instituicaoId, deId: eu.id, paraId }],
+          skipDuplicates: true,
+        });
     await tx.recusa.deleteMany({ where: { deId: eu.id, paraId } });
 
     const reciproca = await tx.curtida.findUnique({
@@ -143,11 +203,11 @@ export async function curtir(ctx: Contexto, eu: Autenticado, paraId: string) {
       select: { id: true },
     });
     if (!reciproca) {
-      if (nova === 0) return { match: null, novo: false };
+      if (nova === 0) return { match: null, novo: false, avisos: avisosSuper };
       const pendentes = await tx.curtida.count({
         where: curtidasPendentes({ ...eu, id: paraId }),
       });
-      return { match: null, novo: false, pendentesDoAlvo: pendentes };
+      return { match: null, novo: false, pendentesDoAlvo: pendentes, avisos: avisosSuper };
     }
 
     const [usuarioAId, usuarioBId] = emOrdem(eu.id, paraId);
@@ -155,7 +215,12 @@ export async function curtir(ctx: Contexto, eu: Autenticado, paraId: string) {
       where: { usuarioAId_usuarioBId: { usuarioAId, usuarioBId } },
     });
     // Match desfeito não volta sozinho: alguém escolheu encerrar a conexão.
-    if (existente) return { match: existente.desfeitoEm ? null : existente, novo: false };
+    if (existente)
+      return {
+        match: existente.desfeitoEm ? null : existente,
+        novo: false,
+        avisos: avisosSuper,
+      };
 
     const match = await tx.match.create({
       data: { instituicaoId: eu.instituicaoId, usuarioAId, usuarioBId },
@@ -163,7 +228,7 @@ export async function curtir(ctx: Contexto, eu: Autenticado, paraId: string) {
     const avisos = await notificar(tx, eu, [
       { para: paraId, tipo: 'CONEXAO_NOVA', matchId: match.id },
     ]);
-    return { match, novo: true, avisos };
+    return { match, novo: true, avisos: [...avisosSuper, ...avisos] };
   });
   if ('avisos' in resultado && resultado.avisos) avisar(ctx, resultado.avisos);
 
@@ -174,6 +239,38 @@ export async function curtir(ctx: Contexto, eu: Autenticado, paraId: string) {
     ctx.notificar.enviar([paraId], 'curtida:nova', { total: resultado.pendentesDoAlvo });
   }
   return { match: resultado.match ? { id: resultado.match.id } : null };
+}
+
+/** Quantas super curtidas ainda dá para usar nas últimas 24 horas. */
+export function superCurtidasRestantes(ctx: Contexto, eu: Autenticado) {
+  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
+    const usadas = await tx.curtida.count({
+      where: {
+        deId: eu.id,
+        super: true,
+        criadoEm: { gte: new Date(Date.now() - 86_400_000) },
+      },
+    });
+    return { restantes: Math.max(0, SUPER_POR_DIA - usadas), porDia: SUPER_POR_DIA };
+  });
+}
+
+/**
+ * Desfaz o último "pular" (das últimas 24 horas): a carta volta para a pilha.
+ * Devolve quem voltou para o app mostrar de novo.
+ */
+export function desfazerPulo(ctx: Contexto, eu: Autenticado) {
+  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
+    const ultima = await tx.recusa.findFirst({
+      where: { deId: eu.id, criadoEm: { gte: new Date(Date.now() - 86_400_000) } },
+      orderBy: { criadoEm: 'desc' },
+      select: { id: true, paraId: true },
+    });
+    if (!ultima)
+      throw new ErroApp(404, 'nada_para_desfazer', 'Não há nenhum pulo para desfazer.');
+    await tx.recusa.delete({ where: { id: ultima.id } });
+    return { paraId: ultima.paraId };
+  });
 }
 
 /** RF: pular (recusar) um perfil. A carta não aparece de novo. */

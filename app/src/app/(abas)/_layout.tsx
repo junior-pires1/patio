@@ -1,8 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import Tabs from 'expo-router/js-tabs';
 import { Platform, Text, View, type ColorValue } from 'react-native';
 import type { Conexao } from '@/api/tipos';
+import { BotaoCabecalho } from '@/componentes/BotaoCabecalho';
 import { BotaoNotificacoes } from '@/componentes/BotaoNotificacoes';
 import { Marca } from '@/componentes/Marca';
 import { useCorDaInstituicao, useSessao, useUsuario } from '@/sessao';
@@ -50,7 +52,7 @@ function SeloFaculdade() {
 }
 
 export default function LayoutAbas() {
-  const { c } = useTema();
+  const { c, esquema } = useTema();
   const { api } = useSessao();
   // Mesma consulta da aba Conexões: o número de não lidas aparece no ícone.
   const conexoes = useQuery({
@@ -80,7 +82,7 @@ export default function LayoutAbas() {
         tabBarLabelStyle: { fontFamily: fonte.semi, fontSize: 11 },
         tabBarBadgeStyle: {
           backgroundColor: c.erro,
-          color: '#fff',
+          color: esquema === 'escuro' ? '#1A0A0A' : '#fff',
           fontFamily: fonte.negrito,
           fontSize: 11,
         },
@@ -98,6 +100,12 @@ export default function LayoutAbas() {
           headerRight: () => (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <SeloFaculdade />
+              <BotaoCabecalho
+                icone="heart-circle-outline"
+                rotulo="Quem curtiu você"
+                contador={pendentes}
+                aoTocar={() => router.push('/curtiram')}
+              />
               <BotaoNotificacoes />
             </View>
           ),
@@ -109,7 +117,16 @@ export default function LayoutAbas() {
         name="feed"
         options={{
           title: 'Feed',
-          headerRight: () => <BotaoNotificacoes />,
+          headerRight: () => (
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <BotaoCabecalho
+                icone="briefcase-outline"
+                rotulo="Vagas e oportunidades"
+                aoTocar={() => router.push('/vagas')}
+              />
+              <BotaoNotificacoes />
+            </View>
+          ),
           tabBarIcon: icone('home-outline', 'home'),
         }}
       />
