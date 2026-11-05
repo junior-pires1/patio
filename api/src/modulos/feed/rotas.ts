@@ -9,6 +9,7 @@ const id = z.object({ id: z.uuid('Identificador inválido') });
 const filtro = z.object({
   categoria: z.enum(CATEGORIAS).optional(),
   antes: z.iso.datetime({ offset: true }).optional(),
+  aba: z.enum(['todos', 'seguindo']).default('todos'),
 });
 const mencoes = z
   .array(z.uuid('Pessoa inválida'))
@@ -73,6 +74,7 @@ export function rotasFeed(ctx: Contexto) {
       await servico.listarFeed(ctx, quem(req), {
         categoria: f.categoria,
         antes: f.antes ? new Date(f.antes) : undefined,
+        seguidosPor: f.aba === 'seguindo' ? quem(req).id : undefined,
       }),
     );
   });

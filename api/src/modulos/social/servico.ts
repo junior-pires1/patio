@@ -19,6 +19,7 @@ export const TIPOS_DE_EXPERIENCIA = [
   'PESQUISA',
   'VOLUNTARIADO',
   'CURSO',
+  'CERTIFICADO',
 ] as const;
 
 const EXPERIENCIA = {
@@ -29,6 +30,7 @@ const EXPERIENCIA = {
   inicio: true,
   fim: true,
   descricao: true,
+  link: true,
 } satisfies Prisma.ExperienciaSelect;
 
 /** Resumo de uma pessoa em listas (busca, curtidas, quem viu o story). */
@@ -85,24 +87,42 @@ export function perfilCompleto(ctx: Contexto, eu: Autenticado, id: string) {
     });
     if (!perfil) throw naoEncontrado('Perfil não encontrado.');
 
-    const [publicacoes, conexoes, endossos, conexao, euCurti, meCurtiu] = await Promise.all(
-      [
-        tx.post.count({ where: { autorId: id, removidoEm: null } }),
-        tx.match.count({
-          where: {
-            desfeitoEm: null,
-            OR: [{ usuarioAId: id }, { usuarioBId: id }],
-          },
-        }),
-        tx.endosso.findMany({
-          where: { usuarioId: id, autor: { status: 'ATIVA' } },
-          select: { habilidade: true, autorId: true },
-        }),
-        conexaoEntre(tx, eu.id, id),
-        tx.curtida.count({ where: { deId: eu.id, paraId: id } }),
-        tx.curtida.count({ where: { deId: id, paraId: eu.id } }),
-      ],
-    );
+    const [
+      publicacoes,
+      conexoes,
+      endossos,
+      conexao,
+      euCurti,
+      meCurtiu,
+      seguidores,
+      seguindo,
+      euSigo,
+    ] = await Promise.all([
+      tx.post.count({ where: { autorId: id, removidoEm: null } }),
+      tx.match.count({
+        where: {
+          desfeitoEm: null,
+          OR: [{ usuarioAId: id }, { usuarioBId: id }],
+        },
+      }),
+      tx.endosso.findMany({
+        where: { usuarioId: id, autor: { status: 'ATIVA' } },
+        select: { habilidade: true, autorId: true },
+      }),
+      conexaoEntre(tx, eu.id, id),
+      tx.curtida.count({ where: { deId: eu.id, paraId: id } }),
+      tx.curtida.count({ where: { deId: id, paraId: eu.id } }),
+      tx.seguidor.count({ where: { seguidoId: id, seguidor: { status: 'ATIVA' } } }),
+      tx.seguidor.count({ where: { seguidorId: id, seguido: { status: 'ATIVA' } } }),
+      tx.seguidor.count({ where: { seguidorId: eu.id, seguidoId: id } }),
+    ]);
+    // Visita ao perfil (estilo LinkedIn): uma por pessoa por dia; a própria e a coordenação não contam.
+    if (id !== eu.id && eu.papel === 'ALUNO') {
+      await tx.$executeRaw`
+        INSERT INTO visitas_perfil (instituicao_id, perfil_id, visitante_id)
+        VALUES (${eu.instituicaoId}::uuid, ${id}::uuid, ${eu.id}::uuid)
+        ON CONFLICT (perfil_id, visitante_id, dia) DO UPDATE SET ultima_em = now()`;
+    }
 
     const habilidades = perfil.habilidades.map((habilidade) => {
       const deste = endossos.filter((e) => e.habilidade === habilidade);
@@ -119,12 +139,15 @@ export function perfilCompleto(ctx: Contexto, eu: Autenticado, id: string) {
         publicacoes,
         conexoes,
         recomendacoes: endossos.length,
+        seguidores,
+        seguindo,
       },
       relacao: {
         souEu: id === eu.id,
         conexaoId: conexao?.id ?? null,
         euCurti: euCurti > 0,
         meCurtiu: meCurtiu > 0,
+        euSigo: euSigo > 0,
       },
     };
   });
@@ -153,6 +176,7 @@ export type DadosExperiencia = {
   inicio: Date;
   fim?: Date | null;
   descricao?: string | null;
+  link?: string | null;
 };
 
 export function criarExperiencia(ctx: Contexto, eu: Autenticado, dados: DadosExperiencia) {
@@ -365,11 +389,11 @@ export function curtidasRecebidas(ctx: Contexto, eu: Autenticado) {
           curtidasRecebidas: { none: { deId: eu.id } },
         },
       },
-      select: { criadoEm: true, de: { select: PESSOA } },
-      orderBy: { criadoEm: 'desc' },
+      select: { criadoEm: true, super: true, de: { select: PESSOA } },
+      orderBy: [{ super: 'desc' }, { criadoEm: 'desc' }],
       take: 200,
     });
-    return curtidas.map((c) => ({ pessoa: c.de, curtidoEm: c.criadoEm }));
+    return curtidas.map((c) => ({ pessoa: c.de, curtidoEm: c.criadoEm, super: c.super }));
   });
 }
 
@@ -406,4 +430,107 @@ export async function descurtirPessoa(ctx: Contexto, eu: Autenticado, paraId: st
 /** Publicações que curti. */
 export function postsCurtidos(ctx: Contexto, eu: Autenticado, antes?: Date) {
   return listarPosts(ctx, eu, { curtidoPor: eu.id, antes });
+}
+
+// ───────────── Seguir (sem precisar de match) ─────────────
+
+/** Seguir ou deixar de seguir alguém da faculdade. */
+export async function seguir(
+  ctx: Contexto,
+  eu: Autenticado,
+  id: string,
+  seguirAgora: boolean,
+) {
+  const { resposta, avisos } = await naFaculdade(
+    ctx.prisma,
+    eu.instituicaoId,
+    async (tx) => {
+      if (id === eu.id)
+        throw new ErroApp(422, 'seguir_a_si', 'Você não pode seguir a si mesmo.');
+      const alvo = await tx.usuario.count({
+        where: { AND: [{ id }, colegasVisiveis(eu.id)] },
+      });
+      if (!alvo) throw naoEncontrado('Perfil não encontrado.');
+      let avisos: Aviso[] = [];
+      if (seguirAgora) {
+        const { count } = await tx.seguidor.createMany({
+          data: [{ instituicaoId: eu.instituicaoId, seguidorId: eu.id, seguidoId: id }],
+          skipDuplicates: true,
+        });
+        if (count > 0)
+          avisos = await notificar(tx, eu, [{ para: id, tipo: 'NOVO_SEGUIDOR' }]);
+      } else {
+        await tx.seguidor.deleteMany({ where: { seguidorId: eu.id, seguidoId: id } });
+      }
+      const seguidores = await tx.seguidor.count({
+        where: { seguidoId: id, seguidor: { status: 'ATIVA' } },
+      });
+      return { resposta: { euSigo: seguirAgora, seguidores }, avisos };
+    },
+  );
+  avisar(ctx, avisos);
+  return resposta;
+}
+
+/** Seguidores ou quem a pessoa segue (só quem pergunta pode ver). */
+export function listarSeguidores(
+  ctx: Contexto,
+  eu: Autenticado,
+  id: string,
+  lado: 'seguidores' | 'seguindo',
+) {
+  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
+    const visivel = await tx.usuario.count({ where: { AND: [{ id }, visivelPara(eu)] } });
+    if (!visivel) throw naoEncontrado('Perfil não encontrado.');
+    const lista = await tx.seguidor.findMany({
+      where:
+        lado === 'seguidores'
+          ? { seguidoId: id, seguidor: visivelPara(eu) }
+          : { seguidorId: id, seguido: visivelPara(eu) },
+      orderBy: { criadoEm: 'desc' },
+      take: 300,
+      select: { seguidor: { select: PESSOA }, seguido: { select: PESSOA } },
+    });
+    return lista.map((s) => (lado === 'seguidores' ? s.seguidor : s.seguido));
+  });
+}
+
+// ───────────── Quem viu seu perfil ─────────────
+
+/** Visitas dos últimos 30 dias: total, por dia e quem foi (estilo LinkedIn). */
+export function visitasAoPerfil(ctx: Contexto, eu: Autenticado) {
+  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
+    const desde = new Date(Date.now() - 30 * 86_400_000);
+    const visitas = await tx.visitaPerfil.findMany({
+      where: {
+        perfilId: eu.id,
+        ultimaEm: { gte: desde },
+        visitante: colegasVisiveis(eu.id),
+      },
+      orderBy: { ultimaEm: 'desc' },
+      take: 500,
+      select: { dia: true, ultimaEm: true, visitante: { select: PESSOA } },
+    });
+    const porDia = new Map<string, number>();
+    for (const v of visitas) {
+      const dia = v.dia.toISOString().slice(0, 10);
+      porDia.set(dia, (porDia.get(dia) ?? 0) + 1);
+    }
+    // Uma linha por pessoa, com a visita mais recente.
+    const pessoas = new Map<
+      string,
+      { pessoa: (typeof visitas)[number]['visitante']; em: Date; vezes: number }
+    >();
+    for (const v of visitas) {
+      const atual = pessoas.get(v.visitante.id);
+      if (atual) atual.vezes += 1;
+      else pessoas.set(v.visitante.id, { pessoa: v.visitante, em: v.ultimaEm, vezes: 1 });
+    }
+    return {
+      total: visitas.length,
+      pessoasDiferentes: pessoas.size,
+      porDia: [...porDia.entries()].map(([dia, total]) => ({ dia, total })),
+      visitantes: [...pessoas.values()].slice(0, 50),
+    };
+  });
 }

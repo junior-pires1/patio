@@ -96,5 +96,14 @@ export function calcularAfinidade(eu: PerfilAfinidade, outro: PerfilAfinidade) {
   pontos += horarios.length * PESOS.horario;
   if (horarios.length > 0) motivos.push(`${horarios.length} horário(s) livre(s) em comum`);
 
-  return { pontos, motivos };
+  return { pontos, motivos, percentual: percentualDe(pontos) };
+}
+
+/**
+ * Compatibilidade em % para mostrar na carta. Cresce rápido nos primeiros
+ * pontos e se aproxima de 99% (7 pontos ≈ 63%, 14 ≈ 86%).
+ */
+export function percentualDe(pontos: number) {
+  if (pontos <= 0) return 0;
+  return Math.min(99, Math.round(100 * (1 - Math.exp(-pontos / 7))));
 }

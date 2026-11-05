@@ -7,6 +7,7 @@ const TABELAS_DA_FACULDADE = [
   'auditoria',
   'avisos',
   'bloqueios',
+  'candidaturas',
   'codigos_verificacao',
   'comentarios',
   'cursos',
@@ -33,11 +34,14 @@ const TABELAS_DA_FACULDADE = [
   'presencas_evento',
   'reacoes_mensagem',
   'recusas',
+  'seguidores',
   'sessoes',
   'stories',
   'story_visualizacoes',
   'usuario_disciplinas',
   'usuarios',
+  'vagas',
+  'visitas_perfil',
 ];
 const TABELAS_DA_PLATAFORMA = ['administradores', 'dominios_email', 'instituicoes'];
 
