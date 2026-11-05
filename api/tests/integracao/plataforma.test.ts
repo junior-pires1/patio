@@ -231,6 +231,12 @@ describe('senhas pela plataforma', () => {
       .set(auth())
       .send({ senhaAtual: 'naoEhEssa1', novaSenha: 'OutraSenha2026' });
     expect(errada.status).toBe(422);
+    const igual = await request(t.app)
+      .put('/plataforma/senha')
+      .set(auth())
+      .send({ senhaAtual: SENHA_DEMONSTRACAO, novaSenha: SENHA_DEMONSTRACAO });
+    expect(igual.status).toBe(400);
+    expect(igual.body.campos.novaSenha).toMatch(/diferente da atual/);
     const troca = await request(t.app)
       .put('/plataforma/senha')
       .set(auth())

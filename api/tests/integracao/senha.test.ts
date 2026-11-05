@@ -111,8 +111,9 @@ describe('trocar a senha logado', () => {
       .put('/auth/senha')
       .set(auth)
       .send({ senhaAtual: 'senhaForte123', novaSenha: 'senhaForte123' });
-    // Repetir a senha atual (ou a de outra conta) é permitido.
-    expect(igual.status).toBe(200);
+    // A nova senha precisa ser diferente da atual.
+    expect(igual.status).toBe(400);
+    expect(igual.body.campos.novaSenha).toMatch(/diferente da atual/);
 
     const r = await request(t.app)
       .put('/auth/senha')

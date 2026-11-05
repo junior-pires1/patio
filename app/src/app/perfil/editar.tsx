@@ -175,7 +175,8 @@ export default function EditarPerfil() {
     } catch (e) {
       setErrosSenha(
         e instanceof ErroApi
-          ? { ...e.campos, _: e.message }
+          ? // Com o motivo no próprio campo, o aviso genérico embaixo sobra.
+            { ...e.campos, ...(Object.keys(e.campos).length ? {} : { _: e.message }) }
           : { _: 'Não foi possível trocar.' },
       );
     } finally {

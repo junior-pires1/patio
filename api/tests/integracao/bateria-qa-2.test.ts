@@ -120,3 +120,26 @@ describe('filtros do descobrir', () => {
     expect(r.status).toBe(400);
   });
 });
+
+describe('trocar a senha logado', () => {
+  test('a nova senha precisa ser diferente da atual (aluno e coordenação)', async () => {
+    const aluno = await t.cadastrarNovo();
+    const coord = await t.entrar('coordenacao@horizonte.edu.br');
+    for (const [s, atual] of [
+      [aluno, 'senhaForte123'],
+      [coord, 'Patio2026'],
+    ] as const) {
+      const r = await request(t.app)
+        .put('/auth/senha')
+        .set(auth(s))
+        .send({ senhaAtual: atual, novaSenha: atual });
+      expect(r.status).toBe(400);
+      expect(r.body.campos.novaSenha).toBe('A nova senha precisa ser diferente da atual');
+    }
+    // A senha continua a mesma (nada foi trocado).
+    const login = await request(t.app)
+      .post('/auth/login')
+      .send({ email: aluno.email, senha: 'senhaForte123' });
+    expect(login.status).toBe(200);
+  });
+});
