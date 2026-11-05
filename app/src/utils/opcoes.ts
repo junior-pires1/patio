@@ -1,8 +1,11 @@
 import type {
   CategoriaPost,
+  Modalidade,
   MotivoDenuncia,
   Relacao,
+  StatusCandidatura,
   TipoExperiencia,
+  TipoVaga,
   Turno,
 } from '@/api/tipos';
 
@@ -86,6 +89,38 @@ export const TIPOS_EXPERIENCIA: { valor: TipoExperiencia; rotulo: string }[] = [
   { valor: 'PESQUISA', rotulo: 'Pesquisa' },
   { valor: 'VOLUNTARIADO', rotulo: 'Voluntariado' },
   { valor: 'CURSO', rotulo: 'Curso' },
+  { valor: 'CERTIFICADO', rotulo: 'Certificado' },
 ];
 export const rotuloExperiencia = (t: TipoExperiencia) =>
   TIPOS_EXPERIENCIA.find((x) => x.valor === t)?.rotulo ?? t;
+
+// ───────────── Vagas ─────────────
+
+export const TIPOS_VAGA: {
+  valor: TipoVaga;
+  rotulo: string;
+  icone: 'briefcase' | 'school' | 'flask' | 'construct' | 'business' | 'heart-circle';
+}[] = [
+  { valor: 'ESTAGIO', rotulo: 'Estágio', icone: 'briefcase' },
+  { valor: 'MONITORIA', rotulo: 'Monitoria', icone: 'school' },
+  { valor: 'PESQUISA', rotulo: 'Iniciação científica', icone: 'flask' },
+  { valor: 'PROJETO', rotulo: 'Projeto', icone: 'construct' },
+  { valor: 'EMPREGO', rotulo: 'Emprego', icone: 'business' },
+  { valor: 'VOLUNTARIADO', rotulo: 'Voluntariado', icone: 'heart-circle' },
+];
+export const tipoVaga = (t: TipoVaga) => TIPOS_VAGA.find((x) => x.valor === t)!;
+
+export const MODALIDADES: { valor: Modalidade; rotulo: string }[] = [
+  { valor: 'PRESENCIAL', rotulo: 'Presencial' },
+  { valor: 'HIBRIDO', rotulo: 'Híbrido' },
+  { valor: 'REMOTO', rotulo: 'Remoto' },
+];
+export const rotuloModalidade = (m: Modalidade) =>
+  MODALIDADES.find((x) => x.valor === m)?.rotulo ?? m;
+
+export const STATUS_CANDIDATURA: Record<StatusCandidatura, string> = {
+  ENVIADA: 'Enviada',
+  EM_ANALISE: 'Em análise',
+  APROVADA: 'Aprovada',
+  RECUSADA: 'Não seguiu',
+};

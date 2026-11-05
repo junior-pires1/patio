@@ -147,6 +147,24 @@ function Navegacao() {
           options={{ headerShown: true, title: 'Notificações' }}
         />
         <Stack.Screen
+          name="curtiram"
+          options={{ headerShown: true, title: 'Curtiram você' }}
+        />
+        <Stack.Screen
+          name="seguidores/[id]"
+          options={{ headerShown: true, title: 'Seguidores' }}
+        />
+        <Stack.Screen
+          name="visitas"
+          options={{ headerShown: true, title: 'Quem viu seu perfil' }}
+        />
+        <Stack.Screen name="vagas/index" options={{ headerShown: true, title: 'Vagas' }} />
+        <Stack.Screen
+          name="vagas/nova"
+          options={{ headerShown: true, title: 'Nova vaga', presentation: 'modal' }}
+        />
+        <Stack.Screen name="vagas/[id]" options={{ headerShown: true, title: 'Vaga' }} />
+        <Stack.Screen
           name="hashtag/[tag]"
           options={{ headerShown: true, title: 'Hashtag' }}
         />

@@ -23,14 +23,16 @@ export default function Feed() {
   const { c } = useTema();
   const { api } = useSessao();
   const eu = useUsuario();
-  const [filtro, setFiltro] = useState<CategoriaPost | null>(null);
+  // "SEGUINDO" mostra só quem a pessoa segue; as outras são categorias.
+  const [filtro, setFiltro] = useState<CategoriaPost | 'SEGUINDO' | null>(null);
 
   const feed = useInfiniteQuery({
     queryKey: ['feed', filtro],
     initialPageParam: null as string | null,
     queryFn: ({ pageParam }) => {
       const q = new URLSearchParams();
-      if (filtro) q.set('categoria', filtro);
+      if (filtro === 'SEGUINDO') q.set('aba', 'seguindo');
+      else if (filtro) q.set('categoria', filtro);
       if (pageParam) q.set('antes', pageParam);
       return api.get<Pagina>(`/feed?${q.toString()}`);
     },
@@ -67,6 +69,11 @@ export default function Feed() {
         contentContainerStyle={estilos.chips}
       >
         <Chip texto="Tudo" ativo={filtro === null} aoTocar={() => setFiltro(null)} />
+        <Chip
+          texto="Seguindo"
+          ativo={filtro === 'SEGUINDO'}
+          aoTocar={() => setFiltro('SEGUINDO')}
+        />
         {CATEGORIAS.map((c) => (
           <Chip
             key={c.valor}
@@ -100,7 +107,11 @@ export default function Feed() {
           <Aviso
             icone="newspaper-outline"
             titulo="Nada por aqui ainda"
-            texto="Seja a primeira pessoa a publicar."
+            texto={
+              filtro === 'SEGUINDO'
+                ? 'Siga colegas pelo perfil deles para ver as publicações aqui.'
+                : 'Seja a primeira pessoa a publicar.'
+            }
           />
         )
       }
