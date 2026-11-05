@@ -20,6 +20,7 @@
     "expo-splash-screen": "~58.0.13",
     "expo-status-bar": "~58.0.4",
     "expo-system-ui": "~58.0.7",
+    "expo-updates": "~58.0.21",
     "react": "19.3.0",
     "react-dom": "^19.3.0",
     "react-native": "0.88.1",
@@ -40,7 +41,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "tipos": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "atualizar": "node scripts/publicar-atualizacao.mjs"
   },
   "private": true,
   "description": "Aplicativo do aluno do Pátio (React Native + Expo)"

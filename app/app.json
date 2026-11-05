@@ -70,6 +70,14 @@
       }
     },
     "owner": "juniorpiresz",
-    "backgroundColor": "#F4F5FA"
+    "backgroundColor": "#F4F5FA",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/d1a52ae2-1477-4ed0-b469-4f34d45e1c1a",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    }
   }
 }

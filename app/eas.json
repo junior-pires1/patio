@@ -11,7 +11,8 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://patio-api-llzk.onrender.com"
-      }
+      },
+      "channel": "preview"
     }
   }
 }
