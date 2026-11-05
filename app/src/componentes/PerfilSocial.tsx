@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useAmpliarFoto } from './FotoAmpliada';
 import {
   useInfiniteQuery,
   useMutation,
@@ -67,6 +68,7 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
   const queryClient = useQueryClient();
   const notificar = useNotificar();
   const [aba, setAba] = useState<Aba>('posts');
+  const ampliar = useAmpliarFoto();
 
   const perfil = useQuery({
     queryKey: ['perfil', usuarioId],
@@ -202,6 +204,7 @@ export function PerfilSocial({ usuarioId }: { usuarioId: string }) {
       <View style={estilos.topo}>
         <Pressable
           onPress={abrirStories}
+          {...ampliar(p.apelido, p.fotoUrl)}
           accessibilityRole="button"
           accessibilityLabel={storiesDela ? 'Ver stories' : 'Foto de perfil'}
           style={[

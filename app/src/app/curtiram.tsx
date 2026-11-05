@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useAmpliarFoto } from '@/componentes/FotoAmpliada';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -25,6 +26,7 @@ export default function Curtiram() {
   const notificar = useNotificar();
   const { width } = useWindowDimensions();
   const colunas = width > 700 ? 3 : 2;
+  const ampliar = useAmpliarFoto();
   const [respondidas, setRespondidas] = useState<Set<string>>(new Set());
 
   const lista = useQuery({
@@ -91,6 +93,7 @@ export default function Curtiram() {
             onPress={() =>
               router.push({ pathname: '/usuario/[id]', params: { id: item.pessoa.id } })
             }
+            {...ampliar(item.pessoa.apelido, item.pessoa.fotoUrl)}
             style={s.capa}
             accessibilityRole="button"
             accessibilityLabel={`Perfil de ${item.pessoa.apelido}`}
