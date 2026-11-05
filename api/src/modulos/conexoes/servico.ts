@@ -166,6 +166,8 @@ export async function curtir(
         select: { super: true },
       });
       if (!existente?.super) {
+        // Trava as super curtidas da pessoa: cliques simultâneos não passam do limite.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`super:${eu.id}`}, 0))`;
         const usadas = await tx.curtida.count({
           where: {
             deId: eu.id,

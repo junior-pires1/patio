@@ -1,3 +1,4 @@
+import { semCuringas } from '../../banco/busca';
 import { naFaculdade, type Transacao } from '../../banco/prisma';
 import type { Contexto } from '../../contexto';
 import { ErroApp, naoEncontrado } from '../../erros';
@@ -115,20 +116,21 @@ export type FiltroVagas = {
 /** Lista de vagas: abertas (padrão), as que publiquei ou as que me candidatei. */
 export function listarVagas(ctx: Contexto, eu: Autenticado, filtro: FiltroVagas) {
   return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
+    // AND: a busca e "aberta agora" usam OR; num objeto só, um apagaria o outro.
     const where: Prisma.VagaWhereInput = {
+      AND: [filtro.lado === 'abertas' ? abertaAgora() : {}],
       autor: autorVisivel(eu),
       ...(filtro.tipo ? { tipo: filtro.tipo } : {}),
       ...(filtro.modalidade ? { modalidade: filtro.modalidade } : {}),
       ...(filtro.q
         ? {
             OR: [
-              { titulo: { contains: filtro.q, mode: 'insensitive' } },
-              { organizacao: { contains: filtro.q, mode: 'insensitive' } },
-              { descricao: { contains: filtro.q, mode: 'insensitive' } },
+              { titulo: { contains: semCuringas(filtro.q), mode: 'insensitive' } },
+              { organizacao: { contains: semCuringas(filtro.q), mode: 'insensitive' } },
+              { descricao: { contains: semCuringas(filtro.q), mode: 'insensitive' } },
             ],
           }
         : {}),
-      ...(filtro.lado === 'abertas' ? abertaAgora() : {}),
       ...(filtro.lado === 'minhas' ? { autorId: eu.id } : {}),
       ...(filtro.lado === 'candidaturas'
         ? { candidaturas: { some: { usuarioId: eu.id } } }
@@ -201,7 +203,9 @@ async function vagaQueGerencio(tx: Transacao, eu: Autenticado, id: string) {
 /** Encerra a vaga (quem publicou ou a coordenação). */
 export function encerrarVaga(ctx: Contexto, eu: Autenticado, id: string) {
   return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
-    await vagaQueGerencio(tx, eu, id);
+    const atual = await vagaQueGerencio(tx, eu, id);
+    // Encerrar de novo não muda a data em que ela foi encerrada.
+    if (atual.encerradaEm) return formatar(atual, eu);
     const v = await tx.vaga.update({
       where: { id },
       data: { encerradaEm: new Date() },

@@ -1,3 +1,4 @@
+import { semCuringas } from '../../banco/busca';
 import { naFaculdade, type Transacao } from '../../banco/prisma';
 import type { Contexto } from '../../contexto';
 import { ErroApp, naoEncontrado } from '../../erros';
@@ -331,9 +332,11 @@ export async function buscar(
       ? await tx.grupoEstudo.findMany({
           where: {
             OR: [
-              { nome: { contains: termo, mode: 'insensitive' } },
-              { descricao: { contains: termo, mode: 'insensitive' } },
-              { disciplina: { nome: { contains: termo, mode: 'insensitive' } } },
+              { nome: { contains: semCuringas(termo), mode: 'insensitive' } },
+              { descricao: { contains: semCuringas(termo), mode: 'insensitive' } },
+              {
+                disciplina: { nome: { contains: semCuringas(termo), mode: 'insensitive' } },
+              },
             ],
           },
           select: {

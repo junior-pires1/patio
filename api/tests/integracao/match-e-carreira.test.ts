@@ -266,13 +266,14 @@ describe('vagas e candidaturas', () => {
 
   test('coordenação publica e gerencia; outra faculdade não vê; validações', async () => {
     const coord = await t.entrar('coordenacao@horizonte.edu.br');
+    const prazo = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
     const deFora = await t.cadastrarNovo('aluno.atlantica.edu.br');
     const criada = await request(t.app)
       .post('/vagas')
       .set(auth(coord))
-      .send({ ...vaga, tipo: 'MONITORIA', prazo: '2099-12-31' });
+      .send({ ...vaga, tipo: 'MONITORIA', prazo });
     expect(criada.status).toBe(201);
-    expect(criada.body.prazo).toBe('2099-12-31');
+    expect(criada.body.prazo).toBe(prazo);
     expect(
       (await request(t.app).get(`/vagas/${criada.body.id}`).set(auth(deFora))).status,
     ).toBe(404);

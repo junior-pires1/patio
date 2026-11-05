@@ -1,3 +1,4 @@
+import { semCuringas } from '../../banco/busca';
 import { naFaculdade, type Transacao } from '../../banco/prisma';
 import type { Contexto } from '../../contexto';
 import { ErroApp, naoEncontrado } from '../../erros';
@@ -197,7 +198,10 @@ export function listarAlunos(
       ...(filtro.busca
         ? {
             OR: (['nome', 'apelido', 'email'] as const).map((campo) => ({
-              [campo]: { contains: filtro.busca, mode: 'insensitive' as const },
+              [campo]: {
+                contains: semCuringas(filtro.busca!),
+                mode: 'insensitive' as const,
+              },
             })),
           }
         : {}),

@@ -37,6 +37,15 @@ async function bloquearNaTransacao(tx: Transacao, eu: Autenticado, usuarioId: st
     where: { usuarioAId, usuarioBId, desfeitoEm: null },
     data: { desfeitoEm: new Date() },
   });
+  // ...e o "seguir" nos dois sentidos.
+  await tx.seguidor.deleteMany({
+    where: {
+      OR: [
+        { seguidorId: eu.id, seguidoId: usuarioId },
+        { seguidorId: usuarioId, seguidoId: eu.id },
+      ],
+    },
+  });
 }
 
 /** RF: bloquear. A outra pessoa deixa de ver o perfil e não é avisada. */

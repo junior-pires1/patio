@@ -1,3 +1,4 @@
+import { semCuringas } from '../../banco/busca';
 import { naFaculdade, type Transacao } from '../../banco/prisma';
 import type { Contexto } from '../../contexto';
 import { ErroApp, naoEncontrado } from '../../erros';
@@ -134,13 +135,15 @@ export function listarPosts(ctx: Contexto, eu: Autenticado, filtro: FiltroPosts)
         ...(filtro.categoria ? { categoria: filtro.categoria } : {}),
         ...(filtro.antes ? { criadoEm: { lt: filtro.antes } } : {}),
         ...(filtro.autorId ? { autorId: filtro.autorId } : {}),
-        ...(filtro.texto ? { texto: { contains: filtro.texto, mode: 'insensitive' } } : {}),
+        ...(filtro.texto
+          ? { texto: { contains: semCuringas(filtro.texto), mode: 'insensitive' } }
+          : {}),
         ...(filtro.curtidoPor
           ? { curtidas: { some: { usuarioId: filtro.curtidoPor } } }
           : {}),
         ...(filtro.salvoPor ? { salvos: { some: { usuarioId: filtro.salvoPor } } } : {}),
         ...(filtro.hashtag
-          ? { texto: { contains: `#${filtro.hashtag}`, mode: 'insensitive' } }
+          ? { texto: { contains: `#${semCuringas(filtro.hashtag)}`, mode: 'insensitive' } }
           : {}),
       },
       orderBy: { criadoEm: 'desc' },

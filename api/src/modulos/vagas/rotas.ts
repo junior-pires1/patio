@@ -9,6 +9,7 @@ const candidato = z.object({
   id: z.uuid('Identificador inválido'),
   usuarioId: z.uuid('Identificador inválido'),
 });
+const hojeUtc = () => Date.parse(new Date().toISOString().slice(0, 10) + 'T00:00:00Z');
 const textoOpcional = (max: number) =>
   z
     .string()
@@ -34,6 +35,9 @@ const novaVaga = z.object({
   prazo: z.iso
     .date('Use o formato AAAA-MM-DD')
     .transform((t) => new Date(`${t}T00:00:00Z`))
+    // Prazo de hoje até 2 anos à frente (vaga com prazo vencido nasceria encerrada).
+    .refine((d) => d.getTime() >= hojeUtc(), 'O prazo não pode estar no passado')
+    .refine((d) => d.getTime() <= hojeUtc() + 731 * 86_400_000, 'Prazo de até 2 anos')
     .nullable()
     .optional(),
 });
