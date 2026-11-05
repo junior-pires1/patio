@@ -1,7 +1,27 @@
 import type { Server as ServidorHttp } from 'node:http';
 import { Server } from 'socket.io';
 import { verificarAcesso, type Autenticado } from './seguranca/tokens';
+import type { PrismaClient } from './generated/prisma/client';
 import type { Notificador } from './servicos/notificador';
+
+/**
+ * Pode conectar no tempo real? Conta ativa, faculdade ativa e token emitido
+ * depois da última troca de senha (o token vale 15 min).
+ */
+export async function contaPodeConectar(
+  prisma: PrismaClient,
+  u: Autenticado & { emitidoEm: number },
+) {
+  const total = await prisma.usuario.count({
+    where: {
+      id: u.id,
+      status: 'ATIVA',
+      instituicao: { ativa: true },
+      OR: [{ senhaAlteradaEm: null }, { senhaAlteradaEm: { lte: new Date(u.emitidoEm) } }],
+    },
+  });
+  return total > 0;
+}
 
 /**
  * Tempo real com Socket.IO. O aplicativo conecta com o token de acesso
@@ -15,7 +35,7 @@ export function criarTempoReal(
     segredoJwt: string;
     origensPermitidas: string[];
     /** Confere no banco se a conta e a faculdade continuam ativas (o token vale 15 min). */
-    contaAtiva?: (usuario: Autenticado) => Promise<boolean>;
+    contaAtiva?: (usuario: Autenticado & { emitidoEm: number }) => Promise<boolean>;
   },
 ): Notificador & { fechar: () => Promise<void> } {
   const io = new Server(http, { cors: { origin: opcoes.origensPermitidas } });

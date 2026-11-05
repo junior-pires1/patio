@@ -194,7 +194,10 @@ export async function redefinirSenha(
     if (!conta || conta.status !== 'ATIVA') return invalido;
     const falha = await usarCodigo(tx, dados.email, dados.codigo);
     if (falha) return falha;
-    await tx.usuario.update({ where: { id: conta.id }, data: { senhaHash } });
+    await tx.usuario.update({
+      where: { id: conta.id },
+      data: { senhaHash, senhaAlteradaEm: new Date() },
+    });
     await tx.sessao.updateMany({
       where: { usuarioId: conta.id, revogadaEm: null },
       data: { revogadaEm: new Date() },
@@ -202,6 +205,7 @@ export async function redefinirSenha(
     return abrirSessao(ctx, tx, conta.id, dados.dispositivo);
   });
   if (resultado instanceof ErroApp) throw resultado;
+  ctx.notificar.desconectar([resultado.usuario.id]);
   return resultado;
 }
 
@@ -225,14 +229,30 @@ export async function trocarSenha(
     });
   }
   const senhaHash = await gerarHash(dados.novaSenha);
-  return naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
-    await tx.usuario.update({ where: { id: eu.id }, data: { senhaHash } });
+  const sessao = await naFaculdade(ctx.prisma, eu.instituicaoId, async (tx) => {
+    // Só troca se a senha ainda for a que foi conferida: duas trocas ao mesmo
+    // tempo com a mesma senha atual não podem as duas "dar certo".
+    const { count } = await tx.usuario.updateMany({
+      where: { id: eu.id, senhaHash: conta.senhaHash },
+      data: { senhaHash, senhaAlteradaEm: new Date() },
+    });
+    if (count === 0) {
+      throw new ErroApp(
+        409,
+        'senha_alterada',
+        'A senha acabou de ser trocada. Tente de novo.',
+      );
+    }
     await tx.sessao.updateMany({
       where: { usuarioId: eu.id, revogadaEm: null },
       data: { revogadaEm: new Date() },
     });
     return abrirSessao(ctx, tx, eu.id);
   });
+  // Derruba o tempo real dos outros aparelhos: eles só voltam com um token novo
+  // (este aparelho reconecta sozinho com o token que acabou de receber).
+  ctx.notificar.desconectar([eu.id]);
+  return sessao;
 }
 
 /**
@@ -368,16 +388,24 @@ export async function renovar(ctx: Contexto, refreshToken: string): Promise<Sess
 
     const agora = new Date();
     if (sessao.revogadaEm) {
-      await tx.sessao.updateMany({
-        where: { usuarioId: sessao.usuarioId, revogadaEm: null },
-        data: { revogadaEm: agora },
-      });
+      // Reusar um token que já foi renovado indica roubo: derruba todas as
+      // sessões. Se a sessão foi encerrada por troca de senha ou "sair" (o
+      // outro aparelho abrindo o app depois), só recusa.
+      if (sessao.renovada) {
+        await tx.sessao.updateMany({
+          where: { usuarioId: sessao.usuarioId, revogadaEm: null },
+          data: { revogadaEm: agora },
+        });
+      }
       return sessaoInvalida();
     }
     if (sessao.expiraEm < agora || sessao.usuario.status !== 'ATIVA')
       return sessaoInvalida();
 
-    await tx.sessao.update({ where: { id: sessao.id }, data: { revogadaEm: agora } });
+    await tx.sessao.update({
+      where: { id: sessao.id },
+      data: { revogadaEm: agora, renovada: true },
+    });
     return abrirSessao(ctx, tx, sessao.usuarioId, sessao.dispositivo ?? undefined);
   });
 
