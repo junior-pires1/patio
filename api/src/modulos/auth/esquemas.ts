@@ -61,8 +61,15 @@ export const redefinirSenha = z.object({
   dispositivo,
 });
 
-// A nova senha pode ser igual à atual (ou à de outra conta): quem escolhe é a pessoa.
-export const trocarSenha = z.object({
-  senhaAtual: z.string().min(1, 'Informe a senha atual').max(72),
-  novaSenha: senha,
-});
+// Trocar a senha logado: a nova tem de ser diferente da atual (vale para aluno,
+// coordenação e equipe da plataforma). Na redefinição por código, quem esqueceu
+// a senha pode voltar a usar a mesma.
+export const trocarSenha = z
+  .object({
+    senhaAtual: z.string().min(1, 'Informe a senha atual').max(72),
+    novaSenha: senha,
+  })
+  .refine((d) => d.novaSenha !== d.senhaAtual, {
+    message: 'A nova senha precisa ser diferente da atual',
+    path: ['novaSenha'],
+  });
