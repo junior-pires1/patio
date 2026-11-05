@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ProvedorDeFotoAmpliada } from '@/componentes/FotoAmpliada';
 import {
   PlusJakartaSans_400Regular,
   PlusJakartaSans_500Medium,
@@ -34,9 +35,11 @@ export default function Raiz() {
       <ProvedorDeTema>
         <ProvedorDeSessao>
           <ProvedorDeNotificacoes>
-            <TemaDaNavegacao>
-              {fontesProntas ? <Navegacao /> : <Carregando />}
-            </TemaDaNavegacao>
+            <ProvedorDeFotoAmpliada>
+              <TemaDaNavegacao>
+                {fontesProntas ? <Navegacao /> : <Carregando />}
+              </TemaDaNavegacao>
+            </ProvedorDeFotoAmpliada>
           </ProvedorDeNotificacoes>
         </ProvedorDeSessao>
       </ProvedorDeTema>

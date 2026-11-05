@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAmpliarFoto } from '@/componentes/FotoAmpliada';
 import { router } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   ActivityIndicator,
@@ -66,6 +67,15 @@ export default function Descobrir() {
   // Na web, soltar o mouse depois de arrastar também dispara o toque em "Ver perfil".
   // Onde o toque começou: soltar depois de arrastar não abre o perfil.
   const inicioToque = useRef({ x: 0, y: 0 });
+  const ampliar = useAmpliarFoto();
+  // Quanto a carta está deslocada agora: arrastando, segurar não amplia a foto.
+  const deslocamento = useRef(0);
+  useEffect(() => {
+    const id = posicao.x.addListener(({ value }) => {
+      deslocamento.current = value;
+    });
+    return () => posicao.x.removeListener(id);
+  }, [posicao]);
 
   // RF09: filtros por objetivo, por quem pode ajudar, curso, turno e semestre
   const [filtro, setFiltro] = useState<Filtro>({});
@@ -383,6 +393,18 @@ export default function Descobrir() {
               </View>
               <Pressable
                 style={estilos.identidade}
+                {...(() => {
+                  const props = ampliar(carta.apelido, carta.fotoUrl);
+                  const abrirFoto = props.onLongPress;
+                  return abrirFoto
+                    ? {
+                        ...props,
+                        onLongPress: () => {
+                          if (Math.abs(deslocamento.current) < 8) abrirFoto();
+                        },
+                      }
+                    : props;
+                })()}
                 onPressIn={(e) => {
                   inicioToque.current = { x: e.nativeEvent.pageX, y: e.nativeEvent.pageY };
                 }}

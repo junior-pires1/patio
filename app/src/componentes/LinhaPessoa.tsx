@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { useAmpliarFoto } from './FotoAmpliada';
 import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import type { PessoaResumo } from '@/api/tipos';
@@ -22,6 +23,7 @@ export function LinhaPessoa({
       .filter(Boolean)
       .join(' · ');
   const estilos = useEstilos();
+  const ampliar = useAmpliarFoto();
   return (
     <View style={estilos.linha}>
       <Pressable
@@ -29,6 +31,7 @@ export function LinhaPessoa({
         onPress={() =>
           router.push({ pathname: '/usuario/[id]', params: { id: pessoa.id } })
         }
+        {...ampliar(pessoa.apelido, pessoa.fotoUrl)}
         accessibilityRole="button"
         accessibilityLabel={`Perfil de ${pessoa.apelido}`}
       >

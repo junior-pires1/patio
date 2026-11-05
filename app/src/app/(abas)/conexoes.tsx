@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useAmpliarFoto } from '@/componentes/FotoAmpliada';
 import { router } from 'expo-router';
 import { FlatList, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import type { Conexao } from '@/api/tipos';
@@ -14,6 +15,7 @@ export default function Conexoes() {
   const { c } = useTema();
   const { api } = useSessao();
   const eu = useUsuario();
+  const ampliar = useAmpliarFoto();
   const conexoes = useQuery({
     queryKey: ['matches'],
     queryFn: () => api.get<Conexao[]>('/matches'),
@@ -48,6 +50,7 @@ export default function Conexoes() {
             <Pressable
               key={n.id}
               onPress={() => abrir(n.id)}
+              {...ampliar(n.pessoa.apelido, n.pessoa.fotoUrl)}
               style={({ pressed }) => [estilos.nova, pressed && { opacity: 0.7 }]}
               accessibilityRole="button"
               accessibilityLabel={`Conversa com ${n.pessoa.apelido}`}
@@ -103,6 +106,7 @@ export default function Conexoes() {
           <Pressable
             style={({ pressed }) => [estilos.item, pressed && { opacity: 0.7 }]}
             onPress={() => abrir(item.id)}
+            {...ampliar(item.pessoa.apelido, item.pessoa.fotoUrl)}
             accessibilityRole="button"
             accessibilityLabel={`Conversa com ${item.pessoa.apelido}`}
           >

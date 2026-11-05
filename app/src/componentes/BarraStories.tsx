@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useAmpliarFoto } from './FotoAmpliada';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { FlatList, Pressable, Text, View } from 'react-native';
@@ -14,6 +15,7 @@ export function BarraStories() {
   const eu = useUsuario();
   const { c } = useTema();
   const estilos = useEstilos();
+  const ampliar = useAmpliarFoto();
   const stories = useQuery({
     queryKey: ['stories'],
     queryFn: () => api.get<StoriesDaPessoa[]>('/stories'),
@@ -62,6 +64,7 @@ export function BarraStories() {
         <Pressable
           style={estilos.item}
           onPress={() => abrir(item.autor.id)}
+          {...ampliar(item.autor.apelido, item.autor.fotoUrl)}
           accessibilityRole="button"
           accessibilityLabel={`Stories de ${item.autor.apelido}`}
         >

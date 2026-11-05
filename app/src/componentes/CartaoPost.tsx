@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useAmpliarFoto } from './FotoAmpliada';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -24,6 +25,7 @@ export function CartaoPost({ post, detalhe = false }: Props) {
   const eu = useUsuario();
   const { c } = useTema();
   const estilos = useEstilos();
+  const ampliar = useAmpliarFoto();
   const queryClient = useQueryClient();
   const cat = categoria(post.categoria);
 
@@ -107,6 +109,7 @@ export function CartaoPost({ post, detalhe = false }: Props) {
       <View style={estilos.topo}>
         <Pressable
           onPress={abrirAutor}
+          {...ampliar(post.autor.apelido, post.autor.fotoUrl)}
           style={estilos.autorToque}
           accessibilityRole="button"
           accessibilityLabel={`Perfil de ${post.autor.apelido}`}
