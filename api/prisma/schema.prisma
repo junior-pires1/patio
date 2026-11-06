@@ -154,6 +154,7 @@ model Instituicao {
   visitasPerfil      VisitaPerfil[]
   vagas              Vaga[]
   candidaturas       Candidatura[]
+  termos             Termo[]
 
   @@map("instituicoes")
 }
@@ -242,6 +243,9 @@ model Usuario {
   email             String       @unique(map: "usuarios_email_key") @db.VarChar(160)
   senhaHash         String       @map("senha_hash") @db.VarChar(100)
   senhaAlteradaEm   DateTime?    @map("senha_alterada_em") @db.Timestamptz(6)
+  termoVersao       Int?         @map("termo_versao")
+  termoAceitoEm     DateTime?    @map("termo_aceito_em") @db.Timestamptz(6)
+  termoPendente     Boolean      @default(false) @map("termo_pendente")
   dataNascimento    DateTime?    @map("data_nascimento") @db.Date
   semestre          Int?         @db.SmallInt
   turno             Turno?
@@ -307,6 +311,7 @@ model Usuario {
   visitasRecebidas    VisitaPerfil[]      @relation("Visitado")
   vagas               Vaga[]
   candidaturas        Candidatura[]
+  termosPublicados    Termo[]
 
   @@unique([instituicaoId, id], map: "usuarios_instituicao_id_key")
   @@index([instituicaoId, status], map: "usuarios_instituicao_idx")
@@ -972,4 +977,19 @@ model Candidatura {
   @@id([vagaId, usuarioId])
   @@index([usuarioId, criadoEm(sort: Desc)], map: "candidaturas_usuario_idx")
   @@map("candidaturas")
+}
+
+/// Termo de uso e privacidade (LGPD) da faculdade, em versões (a 1 é o modelo padrão, fora do banco).
+model Termo {
+  instituicaoId String   @map("instituicao_id") @db.Uuid
+  versao        Int
+  texto         String   @db.VarChar(20000)
+  autorId       String?  @map("autor_id") @db.Uuid
+  publicadoEm   DateTime @default(now()) @map("publicado_em") @db.Timestamptz(6)
+
+  instituicao Instituicao @relation(fields: [instituicaoId], references: [id], onDelete: Cascade)
+  autor       Usuario?    @relation(fields: [instituicaoId, autorId], references: [instituicaoId, id], map: "termos_autor_fk")
+
+  @@id([instituicaoId, versao])
+  @@map("termos")
 }

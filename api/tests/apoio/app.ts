@@ -23,6 +23,7 @@ export function dadosDeCadastro(email: string, codigo: string) {
     apelido: 'Teste',
     senha: 'senhaForte123',
     dataNascimento: '2000-01-15',
+    termo: { aceito: true, versao: 1 },
   };
 }
 
@@ -88,9 +89,15 @@ export function appDeTeste(
     const pedido = await request(app).post('/auth/codigo').send({ email });
     if (pedido.status !== 202)
       throw new Error(`Código falhou: ${JSON.stringify(pedido.body)}`);
+    // Aceita a versão atual do termo da faculdade (LGPD).
+    const termo = await request(app).get(`/termos/${pedido.body.faculdade.id}`);
     const r = await request(app)
       .post('/auth/cadastro')
-      .send({ ...dadosDeCadastro(email, caixa.codigo(email) ?? ''), ...extra });
+      .send({
+        ...dadosDeCadastro(email, caixa.codigo(email) ?? ''),
+        termo: { aceito: true, versao: termo.body.versao ?? 1 },
+        ...extra,
+      });
     if (r.status !== 201) throw new Error(`Cadastro falhou: ${JSON.stringify(r.body)}`);
     return {
       email,

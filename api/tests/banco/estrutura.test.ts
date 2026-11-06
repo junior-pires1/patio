@@ -38,6 +38,7 @@ const TABELAS_DA_FACULDADE = [
   'sessoes',
   'stories',
   'story_visualizacoes',
+  'termos',
   'usuario_disciplinas',
   'usuarios',
   'vagas',

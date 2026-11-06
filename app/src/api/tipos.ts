@@ -45,6 +45,17 @@ export type MeuPerfil = PerfilPublico & {
   contatos: Contatos;
   status: string;
   instituicao: Faculdade;
+  /** Conta criada pela coordenação que ainda não aceitou o termo (LGPD). */
+  termoPendente?: boolean;
+};
+
+/** Termo de uso e privacidade (LGPD) da faculdade. */
+export type Termo = {
+  versao: number;
+  texto: string;
+  publicadoEm: string | null;
+  padrao: boolean;
+  faculdade: { nome: string; sigla: string };
 };
 
 export type Sessao = {

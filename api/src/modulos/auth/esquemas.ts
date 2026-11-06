@@ -49,6 +49,14 @@ export const cadastro = z.object({
   senha,
   dataNascimento,
   cursoId: z.uuid().optional(),
+  // LGPD: o aceite do termo da faculdade é obrigatório (e precisa ser da versão atual).
+  termo: z.object(
+    {
+      aceito: z.literal(true, 'Aceite o termo de uso e privacidade para continuar'),
+      versao: z.number().int().min(1),
+    },
+    'Aceite o termo de uso e privacidade para continuar',
+  ),
   dispositivo,
 });
 

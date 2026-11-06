@@ -5,6 +5,16 @@ import { ErroApp, naoAutenticado } from '../erros';
 import { type Autenticado, type Papel, verificarAcesso } from './tokens';
 
 const CHAVE = Symbol('autenticado');
+
+/** Rotas que funcionam antes de aceitar o termo (o resto responde 403 termo_pendente). */
+const LIBERADO_SEM_TERMO = new Set([
+  'GET /eu',
+  'GET /eu/termo',
+  'POST /eu/termo/aceite',
+  'PUT /auth/senha',
+  'PUT /eu/push',
+  'DELETE /eu/push',
+]);
 type ComAutenticado = Request & { [CHAVE]?: Autenticado };
 
 /**
@@ -25,6 +35,7 @@ export function autenticar(ctx: Pick<Contexto, 'segredoJwt' | 'prisma'>): Reques
         select: {
           status: true,
           senhaAlteradaEm: true,
+          termoPendente: true,
           instituicao: { select: { ativa: true } },
         },
       }),
@@ -36,6 +47,18 @@ export function autenticar(ctx: Pick<Contexto, 'segredoJwt' | 'prisma'>): Reques
     }
     if (conta.status === 'SUSPENSA') {
       throw new ErroApp(403, 'conta_suspensa', 'Sua conta está suspensa pela coordenação.');
+    }
+    // LGPD: quem ainda não aceitou o termo só pode ler e aceitar o termo (e o
+    // básico para o app abrir: o próprio perfil, trocar a senha provisória e sair).
+    if (
+      conta.termoPendente &&
+      !LIBERADO_SEM_TERMO.has(`${req.method} ${req.baseUrl}${req.path}`)
+    ) {
+      throw new ErroApp(
+        403,
+        'termo_pendente',
+        'Aceite o termo de uso e privacidade da sua faculdade para continuar.',
+      );
     }
     if (!conta.instituicao.ativa) {
       throw new ErroApp(403, 'faculdade_inativa', 'Sua faculdade não está ativa no Pátio.');

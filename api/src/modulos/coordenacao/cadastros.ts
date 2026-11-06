@@ -144,6 +144,8 @@ export async function criarAluno(
         senhaHash,
         dataNascimento: dados.dataNascimento,
         emailVerificadoEm: new Date(),
+        // Conta criada pela coordenação: o aluno aceita o termo no primeiro acesso.
+        termoPendente: true,
       },
       select: { id: true, nome: true, email: true },
     });

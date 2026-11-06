@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AceitePendente } from '@/componentes/AceitePendente';
 import { ProvedorDeFotoAmpliada } from '@/componentes/FotoAmpliada';
 import {
   PlusJakartaSans_400Regular,
@@ -88,6 +89,8 @@ function Navegacao() {
   usePush();
   if (estado.tipo === 'carregando') return <Carregando />;
   const logado = estado.tipo === 'logado';
+  // LGPD: conta que ainda não aceitou o termo da faculdade não entra no app.
+  if (logado && estado.usuario.termoPendente) return <AceitePendente />;
 
   return (
     <Stack
@@ -148,6 +151,10 @@ function Navegacao() {
         <Stack.Screen
           name="notificacoes"
           options={{ headerShown: true, title: 'Notificações' }}
+        />
+        <Stack.Screen
+          name="termo"
+          options={{ headerShown: true, title: 'Termo de uso e privacidade' }}
         />
         <Stack.Screen
           name="curtiram"

@@ -1,11 +1,13 @@
+import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { ErroApi } from '@/api/cliente';
-import type { Faculdade } from '@/api/tipos';
+import type { Faculdade, Termo } from '@/api/tipos';
 import { Botao } from '@/componentes/Botao';
 import { Campo } from '@/componentes/Campo';
 import { MensagemDeErro } from '@/componentes/Estados';
 import { TelaPublica } from '@/componentes/TelaPublica';
+import { AceiteDoTermo } from '@/componentes/TermoLgpd';
 import { useSessao } from '@/sessao';
 import { fonte, suave } from '@/tema';
 import { criarEstilos } from '@/tema-provedor';
@@ -28,6 +30,13 @@ export default function Cadastro() {
   const [erro, setErro] = useState<string | null>(null);
   const [campos, setCampos] = useState<Record<string, string>>({});
   const [enviando, setEnviando] = useState(false);
+  // LGPD: o aceite do termo da faculdade é obrigatório para criar a conta.
+  const [aceitouTermo, setAceitouTermo] = useState(false);
+  const termo = useQuery({
+    queryKey: ['termo', faculdade?.id],
+    queryFn: () => api.get<Termo>(`/termos/${faculdade!.id}`),
+    enabled: !!faculdade,
+  });
 
   const mudar = (campo: keyof typeof dados) => (valor: string) =>
     setDados((d) => ({
@@ -45,6 +54,11 @@ export default function Cadastro() {
       if (e instanceof ErroApi) {
         setErro(e.message);
         setCampos(e.campos);
+        // A coordenação publicou outra versão enquanto a pessoa preenchia: mostra a nova.
+        if (e.codigo === 'termo_desatualizado') {
+          setAceitouTermo(false);
+          void termo.refetch();
+        }
       } else {
         setErro('Algo deu errado. Tente novamente.');
       }
@@ -75,6 +89,7 @@ export default function Cadastro() {
         apelido: dados.apelido.trim(),
         senha: dados.senha,
         dataNascimento,
+        termo: { aceito: aceitouTermo, versao: termo.data?.versao ?? 1 },
       });
       // A sessão muda e a navegação leva para as abas sozinha.
     });
@@ -170,12 +185,20 @@ export default function Cadastro() {
         onChangeText={mudar('senha')}
         erro={campos.senha}
       />
+      <AceiteDoTermo
+        termo={termo.data}
+        aceito={aceitouTermo}
+        aoMudar={setAceitouTermo}
+        erro={campos.termo ?? campos['termo.aceito']}
+      />
       <MensagemDeErro texto={erro} />
       <Botao
         titulo="Criar conta"
         aoTocar={criarConta}
         carregando={enviando}
-        desabilitado={dados.codigo.length !== 6 || !dados.senha}
+        desabilitado={
+          dados.codigo.length !== 6 || !dados.senha || !aceitouTermo || !termo.data
+        }
       />
       <Botao
         titulo="Trocar e-mail"

@@ -426,6 +426,12 @@ export default function EditarPerfil() {
         desabilitado={!senhas.atual || !senhas.nova}
       />
 
+      <Botao
+        titulo="Termo de uso e privacidade"
+        variante="contorno"
+        icone="document-text-outline"
+        aoTocar={() => router.push('/termo')}
+      />
       <Botao titulo="Sair da conta" variante="perigo" aoTocar={confirmarSaida} />
     </Tela>
   );
