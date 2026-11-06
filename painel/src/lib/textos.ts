@@ -23,6 +23,7 @@ export const ACOES_AUDITORIA: Record<string, string> = {
   aviso_publicado: 'Publicou aviso',
   aviso_removido: 'Removeu aviso',
   post_removido: 'Removeu publicação do feed',
+  termo_publicado: 'Publicou nova versão do termo LGPD',
 };
 
 /** 29/10/2026 14:05 */

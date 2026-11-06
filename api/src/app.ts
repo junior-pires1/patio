@@ -24,6 +24,7 @@ import { rotasAudios } from './modulos/audios/rotas';
 import { rotasNotificacoes } from './modulos/notificacoes/rotas';
 import { rotasSocial } from './modulos/social/rotas';
 import { rotasStories } from './modulos/stories/rotas';
+import { rotasTermos } from './modulos/termos/rotas';
 import { rotasVagas } from './modulos/vagas/rotas';
 
 export type OpcoesApp = Contexto & {
@@ -114,6 +115,7 @@ export function criarApp(opcoes: OpcoesApp) {
   app.use(rotasAudios(ctx));
   app.use(rotasStories(ctx));
   app.use(rotasVagas(ctx));
+  app.use(rotasTermos(ctx));
 
   app.use((_req, res) => {
     res.status(404).json({ erro: 'rota_inexistente', mensagem: 'Rota não encontrada.' });

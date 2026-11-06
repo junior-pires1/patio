@@ -225,6 +225,7 @@ export type NomeIcone =
   | 'cursos'
   | 'publicacoes'
   | 'avisos'
+  | 'termo'
   | 'auditoria'
   | 'conta'
   | 'sair'
@@ -273,6 +274,13 @@ const TRACOS: Record<NomeIcone, ReactNode> = {
     <>
       <path d="M3 10v4h3l7 4V6L6 10H3z" />
       <path d="M17 9a4 4 0 0 1 0 6" />
+    </>
+  ),
+  termo: (
+    <>
+      <path d="M7 3h7l4 4v14H7z" />
+      <path d="M14 3v4h4" />
+      <path d="m10 14 2 2 4-4" />
     </>
   ),
   auditoria: (

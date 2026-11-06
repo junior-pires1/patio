@@ -13,6 +13,7 @@ const MENU: { href: string; rotulo: string; icone: NomeIcone }[] = [
   { href: '/cursos', rotulo: 'Cursos e disciplinas', icone: 'cursos' },
   { href: '/publicacoes', rotulo: 'Publicações', icone: 'publicacoes' },
   { href: '/avisos', rotulo: 'Avisos', icone: 'avisos' },
+  { href: '/termo', rotulo: 'Termo LGPD', icone: 'termo' },
   { href: '/auditoria', rotulo: 'Auditoria', icone: 'auditoria' },
   { href: '/conta', rotulo: 'Minha conta', icone: 'conta' },
 ];

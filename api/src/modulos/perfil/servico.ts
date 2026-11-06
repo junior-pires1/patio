@@ -32,6 +32,7 @@ export const PERFIL_PROPRIO = {
   links: true,
   status: true,
   criadoEm: true,
+  termoPendente: true,
   curso: { select: { id: true, nome: true } },
   instituicao: { select: { id: true, nome: true, sigla: true, corPrimaria: true } },
   disciplinas: DISCIPLINAS,

@@ -1,4 +1,5 @@
 import { randomInt } from 'node:crypto';
+import { exigirVersaoAtual } from '../termos/servico';
 import type { z } from 'zod';
 import { naFaculdade, type Transacao } from '../../banco/prisma';
 import type { Contexto } from '../../contexto';
@@ -311,6 +312,7 @@ export async function cadastrar(
   const resultado = await naFaculdade(ctx.prisma, faculdade.id, async (tx) => {
     const falha = await usarCodigo(tx, dados.email, dados.codigo);
     if (falha) return falha;
+    await exigirVersaoAtual(tx, faculdade.id, dados.termo.versao);
 
     if (dados.cursoId && !(await tx.curso.findUnique({ where: { id: dados.cursoId } }))) {
       throw new ErroApp(422, 'curso_inexistente', 'Curso não encontrado.', {
@@ -327,6 +329,8 @@ export async function cadastrar(
         senhaHash,
         dataNascimento: dados.dataNascimento,
         emailVerificadoEm: new Date(),
+        termoVersao: dados.termo.versao,
+        termoAceitoEm: new Date(),
       },
       select: { id: true },
     });
